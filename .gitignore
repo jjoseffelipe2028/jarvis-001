@@ -1,0 +1,27 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+*.class
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Segredos (NUNCA vão para o GitHub)
+.env
+*.key
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
