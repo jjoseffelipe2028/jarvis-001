@@ -25,3 +25,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# oh-my-claudecode (estado local dos agentes)
+.omc/
+
+# Claude Code — configurações só minhas (plugins locais)
+.claude/settings.local.json
