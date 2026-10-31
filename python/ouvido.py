@@ -1,10 +1,9 @@
 """
-Jarvis 001 — Ouvidos (teste)
+Jarvis 001 — Ouvidos 👂
 
-Grava o microfone até você apertar Enter e transforma a fala em texto.
+Grava o microfone e transforma a fala em texto.
 Só OUVE: quem responde é o cérebro (chat.py).
 Tudo local: o áudio nunca sai do PC. 🔒
-(Na 1ª vez, baixa o modelo do Whisper do Hugging Face/Systran. Depois, offline.)
 """
 
 import queue
@@ -14,21 +13,26 @@ import sounddevice as sd
 from faster_whisper import WhisperModel
 
 TAXA = 16000      # o Whisper trabalha com 16 mil amostras por segundo
-MODELO = "small"  # tamanho do modelo (baixa 1 vez, ~500 MB)
+MODELO = "small"  # tamanho do modelo (já baixado)
 
 # Dica: palavras que eu uso muito. O ouvido lê antes de escutar e passa a acertar.
 DICA = ("Jarvis, José, EBAC, Java, Git, GitHub, cibersegurança, Obsidian, Claude, "
         "beleza, peraí, bora, valeu, mano.")
 
 
+def carregar_ouvido():
+    """Liga o ouvido (demora uns segundos). Fazer só 1 vez."""
+    print("👂 Carregando o ouvido...")
+    return WhisperModel(MODELO, device="cpu", compute_type="int8")
+
+
 def gravar():
-    """Liga o microfone no 1º Enter e desliga no 2º Enter."""
-    pedacos = queue.Queue()  # fila onde o áudio vai chegando
+    """Grava até apertar Enter. Devolve o áudio."""
+    pedacos = queue.Queue()
 
     def ao_receber(dados, frames, tempo, status):
-        pedacos.put(dados.copy())  # guarda cada pedaço de som
+        pedacos.put(dados.copy())
 
-    input("🎙️ Aperte Enter para COMEÇAR a falar...")
     with sd.InputStream(samplerate=TAXA, channels=1, dtype="float32",
                         callback=ao_receber):
         input("🔴 Gravando... aperte Enter para PARAR.")
@@ -38,22 +42,20 @@ def gravar():
         audio.append(pedacos.get())
     if not audio:
         return np.array([], dtype="float32")
-    return np.concatenate(audio).flatten()  # junta tudo num áudio só
+    return np.concatenate(audio).flatten()
 
 
-def main():
-    print("Carregando o ouvido (na 1ª vez baixa da internet)...")
-    modelo = WhisperModel(MODELO, device="cpu", compute_type="int8")
-
+def ouvir(modelo):
+    """Grava a minha voz e devolve o TEXTO do que eu falei."""
     audio = gravar()
     if audio.size == 0:
-        print("Nenhum áudio gravado.")
-        return
-
+        return ""
     segmentos, _ = modelo.transcribe(audio, language="pt", initial_prompt=DICA)
-    texto = " ".join(s.text.strip() for s in segmentos)
-    print(f"📝 Você disse: {texto}")
+    return " ".join(s.text.strip() for s in segmentos).strip()
 
 
+# Teste sozinho: python ouvido.py
 if __name__ == "__main__":
-    main()
+    ouvido = carregar_ouvido()
+    input("🎙️ Aperte Enter para COMEÇAR a falar...")
+    print(f"📝 Você disse: {ouvir(ouvido)}")

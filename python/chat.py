@@ -1,11 +1,13 @@
 """
-Jarvis 001 — Cérebro (versão 1: chat por texto)
+Jarvis 001 — Cérebro (versão 2: texto + voz)
 
 Conversa com o Gemma, que roda no PC pelo Ollama (offline).
+Agora também OUVE: Enter vazio = falar (ouvido.py, faster-whisper).
 Só conversa: não executa nada no computador. 🔒
 """
 
 import ollama  # biblioteca oficial do Ollama
+from ouvido import carregar_ouvido, ouvir  # o nosso ouvido (ouvido.py)
 
 MODELO = "gemma4:e2b"  # o modelo que baixamos (cabe na RTX 4050)
 
@@ -27,17 +29,24 @@ def main():
     # A conversa começa com a personalidade (mensagem de "sistema")
     historico = [{"role": "system", "content": PERSONALIDADE}]
 
-    print("🤖 Jarvis: Olá, José! Digite sua mensagem (ou 'sair' para encerrar).")
+    ouvido = carregar_ouvido()  # liga o ouvido 1 vez só (o "ligar o carro")
+
+    print("🤖 Jarvis: Olá, José! Digite, ou aperte Enter VAZIO para FALAR. ('sair' encerra)")
 
     while True:
         pergunta = input("\nVocê: ").strip()
 
-        if pergunta.lower() in ("sair", "exit", "tchau"):
+        if not pergunta:  # Enter vazio → modo voz 🎙️
+            pergunta = ouvir(ouvido)
+            if not pergunta:
+                print("🤖 Jarvis: Não ouvi nada, pode repetir?")
+                continue
+            print(f"🎙️ Você disse: {pergunta}")
+
+        # .strip(".!? ") tira o ponto que o ouvido coloca no fim da frase
+        if pergunta.lower().strip(".!? ") in ("sair", "exit", "tchau"):
             print("🤖 Jarvis: Até mais, José!")
             break
-
-        if not pergunta:  # ignora mensagem vazia
-            continue
 
         historico.append({"role": "user", "content": pergunta})
 
