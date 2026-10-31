@@ -31,3 +31,6 @@ Thumbs.db
 
 # Claude Code — configurações só minhas (plugins locais)
 .claude/settings.local.json
+
+# Vozes do Piper (pesadas, baixar com: python -m piper.download_voices pt_BR-faber-medium)
+python/vozes/

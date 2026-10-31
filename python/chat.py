@@ -1,13 +1,15 @@
 """
-Jarvis 001 — Cérebro (versão 2: texto + voz)
+Jarvis 001 — Cérebro (versão 3: ouve, pensa e fala)
 
 Conversa com o Gemma, que roda no PC pelo Ollama (offline).
-Agora também OUVE: Enter vazio = falar (ouvido.py, faster-whisper).
+OUVE: Enter vazio = falar (ouvido.py, faster-whisper).
+FALA: lê a resposta em voz alta (boca.py, Piper).
 Só conversa: não executa nada no computador. 🔒
 """
 
 import ollama  # biblioteca oficial do Ollama
 from ouvido import carregar_ouvido, ouvir  # o nosso ouvido (ouvido.py)
+from boca import carregar_boca, falar      # a nossa boca (boca.py)
 
 MODELO = "gemma4:e2b"  # o modelo que baixamos (cabe na RTX 4050)
 
@@ -30,6 +32,7 @@ def main():
     historico = [{"role": "system", "content": PERSONALIDADE}]
 
     ouvido = carregar_ouvido()  # liga o ouvido 1 vez só (o "ligar o carro")
+    boca = carregar_boca()      # liga a boca 1 vez só
 
     print("🤖 Jarvis: Olá, José! Digite, ou aperte Enter VAZIO para FALAR. ('sair' encerra)")
 
@@ -61,6 +64,7 @@ def main():
 
         print()
         historico.append({"role": "assistant", "content": resposta})
+        falar(boca, resposta.replace("*", ""))  # fala a resposta 🔊 (sem asteriscos)
 
 
 if __name__ == "__main__":
