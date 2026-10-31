@@ -16,6 +16,10 @@ from faster_whisper import WhisperModel
 TAXA = 16000      # o Whisper trabalha com 16 mil amostras por segundo
 MODELO = "small"  # tamanho do modelo (baixa 1 vez, ~500 MB)
 
+# Dica: palavras que eu uso muito. O ouvido lê antes de escutar e passa a acertar.
+DICA = ("Jarvis, José, EBAC, Java, Git, GitHub, cibersegurança, Obsidian, Claude, "
+        "beleza, peraí, bora, valeu, mano.")
+
 
 def gravar():
     """Liga o microfone no 1º Enter e desliga no 2º Enter."""
@@ -46,7 +50,7 @@ def main():
         print("Nenhum áudio gravado.")
         return
 
-    segmentos, _ = modelo.transcribe(audio, language="pt")
+    segmentos, _ = modelo.transcribe(audio, language="pt", initial_prompt=DICA)
     texto = " ".join(s.text.strip() for s in segmentos)
     print(f"📝 Você disse: {texto}")
 
