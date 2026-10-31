@@ -5,7 +5,8 @@ _Revisado pela dupla: 001 (Claude) escreveu, 002 (Gemini) revisou em 29/10/2026.
 
 ## Sobre o projeto
 Assistente local estilo Jarvis: escuta em português, responde por voz, roda IA **offline** (Ollama + `gemma4:e2b`) e automatiza a rotina de estudos do dono (Obsidian, GitHub, EBAC).
-- `python/` → cérebro e voz (OpenJarvis + Ollama). Fase 2.
+- `python/` → cérebro e voz: `chat.py` (Ollama, biblioteca oficial `ollama`) + ouvidos com `faster-whisper` + `sounddevice`. Fase 2. (OpenJarvis foi descartado em 30/10: não roda nativo no Windows.)
+- Python: venv em `python/.venv`; dependências em `python/requirements.txt` (`pip freeze`).
 - `java/` → "braços": API Spring Boot com Maven que executa só ações permitidas. Fase 3.
 - Plano completo em 7 fases no README.
 
