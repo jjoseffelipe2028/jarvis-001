@@ -60,3 +60,13 @@ O `explore` (haiku, barato) serve do jeito que está e não precisa de versão J
 **Cuidado com o `debugger` original:** a linha 73 manda "instalar dependências que faltam". Isso fere a regra "antes de qualquer pacote: o que é, quem mantém...". Use o `jarvis-depurador`.
 
 > 🔒 **Limite das versões Jarvis:** a lista `tools:` não consegue limitar **quais comandos** o Bash roda. A trava de verdade é o hook `guarda` mais as permissões do `settings.json`. As regras escritas no agente são a 2ª camada (defesa em profundidade: várias travas, uma atrás da outra).
+
+---
+
+## 📍 Onde paramos (02/11/2026)
+
+- ✅ **Sessão A:** pronta (análise acima + 5 versões Jarvis em `docs/agents/`, commit `c153aa3`).
+- ⏸️ **Sessão B:** parada no começo, a pedido do José. Nenhuma pesquisa foi feita e nada foi instalado.
+- ⬜ **Sessão C** (5 agentes novos) e ⬜ **Sessão D** (Maestro + skill `/nova-acao`): não começaram.
+
+**Para retomar:** pesquisar Trail of Bits, Superpowers, Spec Kit e Serena (só sites oficiais), depois os motores de jogo (Godot 4, Unity, Roblox Studio, Unreal).
