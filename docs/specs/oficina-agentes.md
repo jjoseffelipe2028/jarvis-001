@@ -130,8 +130,49 @@ _Fontes: só páginas oficiais (GitHub do dono e documentação oficial), lidas 
 
 ---
 
+## Sessão C — 5 agentes novos (em `docs/agents/`)
+
+| Agente | Foco | Modelo | Ferramentas | Destaque de segurança |
+|---|---|---|---|---|
+| `roteirista-video` | Vídeo | sonnet | Read, Glob, Write | Nunca inventa fala de Jesus: cita referência e tradução, ou marca `⚠️ CONFERIR` |
+| `remotion-dev` | Vídeo | sonnet | + Edit, Bash | Narração local (Piper); apresenta a licença do Remotion antes do `npm install` |
+| `game-designer` | Jogo | haiku | Read, Glob, Write | Ideia original; protótipo pequeno primeiro |
+| `game-dev` | Jogo | sonnet | Read, Grep, Glob, Write, Edit (**sem Bash**) | Pergunta o motor; não liga MCP de motor sem o José pedir |
+| `mentor-java` | Programar | sonnet | Read, Grep, Glob (**só lê**) | Ensina, não corrige pelo José |
+
+---
+
+## Sessão D — 🎼 o Maestro
+
+- **`docs/agents/maestro.md`:** recebe o pedido, escolhe **quem**, em que **ordem** e com qual **custo**, e escreve um ticket em `docs/tickets/`. Não executa nada. Usa haiku, porque escolher quem faz é tarefa barata.
+- **`docs/skills/nova-acao/SKILL.md`:** checklist do braço Java novo (allowlist → `@Valid` → pasta permitida → token → log `cliente=` → JUnit → Banca).
+
+### Como o Maestro vira a Central (Etapa 4)
+
+```
+ 🎙️ voz ou 🖱️ botão
+        ↓
+ 🎼 Maestro ──► 🎫 ticket (Status: 🟡 aguardando)
+                    ↓  José clica "Aprovar" na Central
+                 ✅ aprovado ──► agentes trabalham ──► 🏁 pronto
+                    ↑                    ↑
+       a Central lê o Status      cada agente = 1 boneco
+```
+
+1. **Botões = pedidos prontos.** Cada botão da Central ("🎬 Novo vídeo", "🦾 Nova ação", "🕹️ Novo jogo", "🧑‍⚖️ Revisar código") envia um pedido em português para o Maestro, igualzinho a falar com o Jarvis.
+2. **Bonecos = a tabela "O time" do Maestro.** Cada linha vira um boneco no HUD. O boneco anima conforme o **Status** do ticket em que ele está: parado (⬜), trabalhando (🔄), terminou (🏁), recusado (🔴).
+3. **Os tickets são a "memória" da Central.** A Central não guarda estado próprio: ela **lê** `docs/tickets/` por uma ação nova e só de leitura na API Java (ex.: `GET /acoes/tickets`). Aprovar vira outra ação, que escreve e por isso **exige o token** (`POST /acoes/tickets/{id}/aprovar`). As duas nascem com a `/nova-acao`.
+4. **Custo na tela.** Cada cartão de ticket mostra "🟢 grátis / 💰 / 💰💰". Você vê quanto do limite vai gastar **antes** de aprovar.
+5. **Voz:** "Jarvis, faz um vídeo sobre perdão" → ouvido (faster-whisper) → Gemma classifica de graça → Maestro → ticket → aparece na Central para aprovar.
+
+🔒 A Central **nunca executa direto**: o clique em "Aprovar" é sempre seu. Isso se chama *humano no circuito*: a IA propõe, a pessoa decide.
+
+---
+
 ## 📍 Onde paramos (02/11/2026)
 
 - ✅ **Sessão A:** pronta (commit `c153aa3`).
-- ✅ **Sessão B:** pronta (pesquisa acima; Unreal não confirmada porque o site bloqueia leitura automática).
-- ⬜ **Sessão C** (5 agentes novos) e ⬜ **Sessão D** (Maestro + skill `/nova-acao`).
+- ✅ **Sessão B:** pronta (commit `da01a45`; Unreal não confirmada porque o site bloqueia leitura automática).
+- ✅ **Sessão C:** pronta (commit `7eba38f`).
+- ✅ **Sessão D:** pronta (Maestro + `/nova-acao` + plano da Central).
+- ⏳ **Falta o José:** revisar os rascunhos e copiar para `.claude/agents/` e `.claude/skills/`. Depois disso, a Fase 1 pode ser marcada como ✅ no README.
