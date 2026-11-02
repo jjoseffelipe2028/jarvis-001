@@ -63,10 +63,75 @@ O `explore` (haiku, barato) serve do jeito que está e não precisa de versão J
 
 ---
 
+## Sessão B — pesquisa (nada foi instalado)
+
+_Fontes: só páginas oficiais (GitHub do dono e documentação oficial), lidas em 02/11/2026. Onde a página não dizia, está escrito "não informado"._
+
+### B1. Ferramentas para o Claude Code
+
+| | 🛡️ Trail of Bits Skills | ⚡ Superpowers | 📋 Spec Kit | 🧭 Serena |
+|---|---|---|---|---|
+| **O que é** | Loja ("marketplace") de ~45 plugins de segurança e auditoria | Método de trabalho em skills: ideia → plano → TDD → revisão | CLI que cria specs, plano e tarefas antes do código | Servidor MCP que dá ao agente "visão de IDE" (achar símbolo, referências, renomear) |
+| **Quem mantém** | Trail of Bits (empresa de segurança) | Jesse Vincent (obra) / Prime Radiant | GitHub (org `github`) | Oraios AI |
+| **Última versão** | Sem releases; último commit em 28/10/2026 | v7.0.1 (21/10/2026) | v1.2.5 (28/10/2026) | v2.1.0 (19/10/2026) |
+| **O que instala** | Plugins (skills); alguns pedem Semgrep/CodeQL | 15 skills + 1 hook | O CLI `specify` (Python, via `uv`) + comandos `/speckit-*` | O CLI `serena` + servidor MCP; **baixa language servers** na 1ª vez (Java: JDTLS + JRE 21) |
+| **Hooks?** | O plugin `gh-cli` tem hook SessionStart; os outros não informado | **Sim:** `SessionStart` (roda em todo início, limpeza e compactação de sessão) | "Extension hooks" próprios (não informado se são hooks do Claude Code) | Não |
+| **Manda dado para fora?** | `second-opinion` envia código ao Codex/Antigravity; o resto não informado | Só a versão (logo no "visual companion"); desliga com `SUPERPOWERS_DISABLE_TELEMETRY` | Não informado (baixa catálogos) | **Sim, telemetria leve** (versão, SO, linguagem); desliga com `SERENA_USAGE_REPORTING=false` |
+| **Custo em tokens** | Só quando a skill é usada | **Fixo em toda sessão** (texto injetado no início) | Só quando o comando é usado | Esquemas das ferramentas MCP em toda sessão (tamanho não informado) |
+| **Windows** | Não informado | ✅ Corrigido na v7.0.0 (precisa do Git Bash) | ✅ Tem scripts PowerShell | ✅ Funciona (config em `%USERPROFILE%\.serena\`) |
+| **Licença** | CC-BY-SA-4.0 | MIT | MIT | GPL-3.0 |
+
+**🧭 Serena escuta só em `127.0.0.1`?** ✅ **Sim, por padrão.** O MCP conversa por *stdio* (entrada e saída do próprio processo, sem porta). O painel web abre em `localhost:24282`, e a documentação diz que, por padrão, aceita conexões só do próprio PC. ⚠️ Mas o Serena tem a ferramenta `execute_shell_command` (roda comandos) e ferramentas que editam arquivos. O contexto `claude-code` desliga as que repetem as do Claude Code, e a própria documentação diz que **a única proteção total é rodar dentro de Docker**. Isso vai contra a regra "a IA nunca executa comando livre".
+
+**🛡️ Trail of Bits: 3 skills para Java/Spring e Python**
+1. **`insecure-defaults`**: acha senha fixa no código, segredo "de reserva" e configuração que falha aberta (ex.: `application.properties` perigoso). É a cara do Jarvis.
+2. **`static-analysis`**: roda Semgrep e CodeQL, que analisam Java e Python. ⚠️ Precisa instalar o Semgrep e/ou o CodeQL antes (avaliar à parte).
+3. **`differential-review`**: revisão de segurança **só do que mudou** (pelo git). É barata e combina com a Banca.
+
+❌ Evitar: `second-opinion` (manda código para fora), `code-improver` (corrige sozinho, sem supervisão), `gh-cli` (hook que intercepta o WebFetch). `supply-chain-risk-auditor` não cobre Maven.
+
+### ✅ Recomendação: **Spec Kit** (e não Superpowers)
+
+- **Combina com o Modo Arquiteto:** especificar → planejar → tarefas, com você aprovando cada etapa. É o mesmo caminho de `docs/specs` → `docs/tickets`.
+- **Sem custo fixo:** só gasta tokens quando você chama um `/speckit-*`. O Superpowers injeta texto em **toda** sessão e se diz "obrigatório, não sugestão".
+- **Mantido pelo GitHub**, licença MIT, com suporte a Windows e PowerShell.
+- O Superpowers usa *subagent-driven development* (vários agentes em sequência), que é caro e parecido com os modos que o CLAUDE.md proíbe.
+- ⚠️ O README do Spec Kit usa o Copilot como exemplo. A integração com o Claude existe (release 1.2.0), mas o nome exato da opção tem que ser conferido em `specify init --help`.
+
+### Ordem de instalação sugerida (uma por sessão, com sua aprovação)
+
+| # | O quê | Comando oficial | Por quê nessa ordem |
+|---|---|---|---|
+| 1 | Trail of Bits → só `insecure-defaults` | `/plugin marketplace add trailofbits/skills` → `/plugin menu` (escolher só esse) | Só skill, sem binário e sem hook. É o menor risco e o maior ganho em segurança |
+| 2 | Spec Kit | `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.2.5` | Versão fixa (`@v1.2.5`). Testar o `specify init` numa **pasta de teste** antes de rodar no Jarvis |
+| 3 | Serena (opcional, depois) | `uv tool install -p 3.13 serena-agent` → `serena init` → `claude mcp add serena -- serena start-mcp-server --context claude-code --project "$(pwd)"` | Só vale quando o código Java crescer. Hoje são 2 classes. Antes de instalar: `SERENA_USAGE_REPORTING=false` e desligar o `execute_shell_command` |
+
+### B2. Motores de jogo
+
+| | 🟦 Godot 4 | ⬛ Unity 6 | 🟥 Roblox Studio | ⚪ Unreal Engine 5 |
+|---|---|---|---|---|
+| **Versão** | 4.7.2 (18/08/2026) | 6000.3.27f2 (30/10/2026) | Sempre a mais nova (atualiza sozinho) | ⚠️ não confirmado (site bloqueou) |
+| **Linguagem** | GDScript (tipo Python), C# | C# | Luau (tipo Lua) | C++ e Blueprints (blocos visuais) |
+| **Licença e custo** | **MIT, grátis, sem royalties** | Personal **grátis até US$ 200 mil/ano** de receita; Pro US$ 2.310/ano. Runtime Fee **cancelada** (set/2024) | Grátis | ⚠️ De memória, não confirmado: grátis, **5% de royalty** acima de US$ 1 milhão por jogo |
+| **2D** | ⭐ Excelente (motor 2D dedicado) | Bom | Fraco (o foco é 3D) | Fraco |
+| **3D pesado** | Médio | Bom | Leve e estilizado | ⭐ O melhor (gráfico realista) |
+| **Multiplayer** | Tem API própria (você hospeda) | Netcode + serviços pagos por uso | ⭐ **Já vem pronto**, servidores da Roblox | Replicação embutida |
+| **Publicar** | PC, web, Android, iOS (consoles via terceiros) | PC, web, mobile, AR/VR; console só no Pro | PC, Mac, mobile, Xbox, PlayStation, VR (automático) | PC, consoles, mobile |
+| **Ganhar dinheiro** | Vende na Steam/itch.io (100% seu, menos a loja) | Unity Ads e compras no app | Passes, produtos, assinaturas, anúncios → **DevEx: 10.000 Robux = US$ 38**, saque mínimo de 30.000 Robux, 13+ anos | Lojas (Steam, Epic) |
+| **IA / MCP oficial** | ❌ Não achei oficial (só da comunidade, então não instalar sem avaliar) | ✅ **MCP oficial + plugin oficial para Claude Code** (grátis); o Assistant interno é pago depois do teste | ✅ **MCP embutido no Studio**, com Claude Code na lista. ⚠️ Roda código Luau e faz `http_get` | ⚠️ não confirmado |
+| **RTX 4050 6 GB** | ✅ Leve (pede Vulkan 1.0) | ✅ Roda bem 2D e 3D médio | ✅ Muito leve | ⚠️ Roda, mas 6 GB de VRAM é apertado para Nanite/Lumen (os gráficos mais pesados) |
+
+**Recomendação:**
+- **(a) 1º protótipo → Godot 4.7.** Grátis para sempre, leve, e o GDScript é fácil. O 2D é ótimo para aprender o ciclo "ideia → jogo jogável" em dias.
+- **(b) Jogo 3D pesado → Unreal 5**, se o objetivo for gráfico realista. Mas no seu notebook (6 GB) **o Unity 6 é a escolha mais prática**: roda melhor, tem MCP oficial para o Claude Code e o C# é parecido com Java.
+- **(c) Ganhar dinheiro rápido → Roblox.** Os jogadores já estão lá, o multiplayer e os servidores são de graça, e a monetização vem pronta. Atenção: o DevEx paga pouco (US$ 38 a cada 10 mil Robux) e exige 30 mil Robux para sacar.
+
+> 🔒 Os MCPs de jogo (Unity e Roblox) deixam a IA **ler e mudar o seu projeto e rodar código** dentro do motor. Se for usar, ligue só durante a sessão e com o projeto salvo no Git.
+
+---
+
 ## 📍 Onde paramos (02/11/2026)
 
-- ✅ **Sessão A:** pronta (análise acima + 5 versões Jarvis em `docs/agents/`, commit `c153aa3`).
-- ⏸️ **Sessão B:** parada no começo, a pedido do José. Nenhuma pesquisa foi feita e nada foi instalado.
-- ⬜ **Sessão C** (5 agentes novos) e ⬜ **Sessão D** (Maestro + skill `/nova-acao`): não começaram.
-
-**Para retomar:** pesquisar Trail of Bits, Superpowers, Spec Kit e Serena (só sites oficiais), depois os motores de jogo (Godot 4, Unity, Roblox Studio, Unreal).
+- ✅ **Sessão A:** pronta (commit `c153aa3`).
+- ✅ **Sessão B:** pronta (pesquisa acima; Unreal não confirmada porque o site bloqueia leitura automática).
+- ⬜ **Sessão C** (5 agentes novos) e ⬜ **Sessão D** (Maestro + skill `/nova-acao`).
