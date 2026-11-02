@@ -1,8 +1,5 @@
 package io.github.jjoseffelipe2028.bracos.acoes;
 
-// ⚠️ Escrito pela 001 em 01/11/2026 para revisão.
-// TAREFA DO JOSÉ: apagar e redigitar sozinho (regra "Java eu digito").
-
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;

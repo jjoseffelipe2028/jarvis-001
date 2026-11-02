@@ -4,7 +4,7 @@
 
 Um assistente estilo Jarvis que roda **no meu próprio PC**: me escuta em português, responde por voz e automatiza minha rotina de estudos — sem enviar meus dados para a nuvem.
 
-> 🚧 Projeto em construção — **Fase 2 de 7**: o cérebro já conversa por texto; os ouvidos (voz → texto) estão sendo ligados.
+> 🚧 Projeto em construção — **Fase 2 de 7: braços em Java**. A base em Python (cérebro, ouvido e boca) já funciona; a API Java já tem a 1ª ação (`/acoes/hora`) com teste.
 
 ## Como funciona
 
@@ -33,13 +33,15 @@ A IA **nunca** executa comandos direto no computador: ela só **pede**, e a API 
 
 ## Fases
 
-- [x] 1. Oficina — ferramentas, repositório e travas de segurança
-- [ ] 2. Cérebro e voz (Python) — 🧠 cérebro ✅ · 🎙️ ouvidos 🔄 · 🔊 voz ⬜
-- [ ] 3. Braços em Java (API REST)
-- [ ] 4. Integração Python + Java
-- [ ] 5. Escritório dos agentes (pixel art)
-- [ ] 6. Segurança e vitrine
-- [ ] 7. Loops da dupla Claude + Gemini
+**Base pronta:** repositório com travas de segurança · 🧠 cérebro (`chat.py`) · 🎙️ ouvido (`ouvido.py`) · 🔊 boca (`boca.py`).
+
+- [x] 1. Oficina Turbo — skills, hooks (guarda) e a Banca de revisão
+- [ ] 2. Braços em Java — `daily`, `pendencias`, `git-status`, segurança e JUnit · 🔄 1ª ação `/acoes/hora` ✅
+- [ ] 3. Integração voz ↔ Java
+- [ ] 4. Central web futurista — HUD, bonecos dos agentes, botões
+- [ ] 5. Módulos — Sentinela (só avisa), Vídeos (Remotion), Biblioteca offline (RAG)
+- [ ] 6. Dupla 001 + 002 em loop (GitHub Issues)
+- [ ] 7. Vitrine — gitleaks, OWASP, README, CI
 
 ## Tecnologias
 
@@ -47,7 +49,8 @@ A IA **nunca** executa comandos direto no computador: ela só **pede**, e a API 
 |---|---|---|
 | Cérebro | [Ollama](https://ollama.com) + `gemma4:e2b` | 💻 local (`127.0.0.1`) |
 | Ouvidos | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + sounddevice | 💻 local (o áudio não sai do PC) |
-| Braços | Java 21 + Spring Boot | 💻 local (Fase 3) |
+| Boca | [Piper](https://github.com/rhasspy/piper) (voz pt_BR) | 💻 local |
+| Braços | Java 21 + Spring Boot 4.1.2 ([como rodar](java/README.md)) | 💻 local (`127.0.0.1:8080`) |
 | Time de IA | Claude Code (001) + Antigravity CLI (002) | revisão cruzada |
 
 ## Como rodar (Windows)
