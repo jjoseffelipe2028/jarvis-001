@@ -35,7 +35,7 @@ A IA **nunca** executa comandos direto no computador: ela só **pede**, e a API 
 
 **Base pronta:** repositório com travas de segurança · 🧠 cérebro (`chat.py`) · 🎙️ ouvido (`ouvido.py`) · 🔊 boca (`boca.py`).
 
-- [x] 1. Oficina Turbo — skills, hooks (guarda) e a Banca de revisão
+- [ ] 1. Oficina Turbo — 🔄 em andamento · guarda (hook) ✅ · Banca ✅ · falta analisar: 19 agentes do oh-my-claudecode, Trail of Bits, Superpowers ou Spec Kit, Serena
 - [ ] 2. Braços em Java — `daily`, `pendencias`, `git-status`, segurança e JUnit · 🔄 1ª ação `/acoes/hora` ✅
 - [ ] 3. Integração voz ↔ Java
 - [ ] 4. Central web futurista — HUD, bonecos dos agentes, botões
