@@ -1,5 +1,5 @@
 # 001 — Segurança base do braço daily
-**Status:** 🔄 em andamento
+**Status:** 🏁 pronto (2026-11-03)
 
 ## Decisões do José (2026-11-02)
 1. O token chega ao Java pelo script `java/bracos/iniciar.sh`, que o José roda no Git Bash: ele carrega o `.env` e roda `./mvnw spring-boot:run`. A IA só escreve o script. Ela **nunca lê nem cria o `.env`**.
@@ -77,10 +77,10 @@ Leitura apenas: `CLAUDE.md`, `.claude/skills/nova-acao/SKILL.md`. **Não ler `.e
 - [x] 2. 🤖 `jarvis-hacker` revisa, com foco em **log injection** (o log grava a URL pedida). (2026-11-03: ❌ reprova condicional, 1 achado médio: `getRequestURI()` sem limpeza em `TokenInterceptor` linhas 45 e 55)
 - [x] 2b. 🤖 `jarvis-construtor` cria `auditoria/LogSeguro.limpar()` (troca caractere de controle por `_`, corta em ~100) e usa nas linhas 45 e 55; `jarvis-testador` escreve `LogSeguroTest` (sem Spring) + 5 testes de log; `./mvnw test` verde. (2026-11-03: 37 testes, 0 falhas)
 - [x] 3. 🤖 Criar `java/bracos/testar-curl.sh`: 4 casos, e o token nunca aparece na tela. Carrega o `.env` com `set -a; . ../../.env; set +a` (aprovado). +1 caso: URL com quebra de linha (`%0d%0a`), para conferir que o log não grava linha falsa (aprovado). O script **não lê arquivo de log**: o José confere o log na janela do `iniciar.sh`.
-- [ ] 4. 👤 José cria o `.env` na raiz pelo Git Bash: `C:\Users\jjose\workSpace\jarvis-001\.env`. O `iniciar.sh` procura em `../../.env` a partir de `java/bracos/` (conferido no código em 2026-11-03).
-- [ ] 5. 👤 Rodar `./iniciar.sh` e depois `testar-curl.sh`.
-- [ ] 6. 👤 José faz commit de `.claude/agents` e `.claude/skills/nova-acao`.
-- [ ] 7. 🤖 Status 🏁 (depois do OK do José).
+- [x] 4. 👤 José cria o `.env` na raiz pelo Git Bash: `C:\Users\jjose\workSpace\jarvis-001\.env`. O `iniciar.sh` procura em `../../.env` a partir de `java/bracos/` (conferido no código em 2026-11-03).
+- [x] 5. 👤 Rodar `./iniciar.sh` e depois `testar-curl.sh`. (2026-11-03: 5/5 casos ok; log do caso 5 com 1 linha só, sem linha falsa)
+- [x] 6. 👤 José faz commit de `.claude/agents` e `.claude/skills/nova-acao`. (2026-11-03: commit `11c6ad0` no GitHub)
+- [x] 7. 🤖 Status 🏁 (depois do OK do José). (2026-11-03)
 
 ## Pronto quando
 - [ ] Plano aprovado pelo José antes de qualquer código.
