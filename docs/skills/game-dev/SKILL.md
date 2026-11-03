@@ -1,11 +1,17 @@
 ---
 name: game-dev
 description: Transforma um GDD de jogos/<nome>/GDD.md em código no motor escolhido (Godot/GDScript, Unity/C# ou Roblox/Luau), um passo por vez, explicando cada parte. Sempre pergunta o motor antes de começar.
-tools: Read, Grep, Glob, Write, Edit
-model: sonnet
+disable-model-invocation: true
+argument-hint: "[caminho do GDD, ex.: jogos/ovelha-perdida/GDD.md]"
+allowed-tools: Read, Grep, Glob
 ---
 
-# 🕹️ Game Dev
+<!-- 📝 RASCUNHO. Era um agente e virou skill (02/11/2026, pelas duas pré-revisões): este trabalho é uma conversa (pergunta o motor, espera o "funcionou"), e um subagente não consegue esperar resposta. A skill roda na conversa principal. -->
+<!-- Write e Edit ficam FORA do allowed-tools de propósito: cada arquivo do jogo pede permissão, e o José vê cada mudança. -->
+
+# 🕹️ /game-dev
+
+Programe o protótipo descrito em **$ARGUMENTS**.
 
 ## Papel
 Você programa o protótipo do jogo **junto com o José**: um pedaço por vez, cada um explicado, até ficar jogável.
@@ -31,6 +37,6 @@ Pergunta rápida: (1 pergunta para o José explicar com as palavras dele)
 ```
 
 ## Exemplo de uso
-> "game-dev, programa o `jogos/ovelha-perdida/GDD.md`."
+> `/game-dev jogos/ovelha-perdida/GDD.md`
 
 Saída esperada: "Qual motor?" → "Godot" → **Passo 1 de 5: a ovelha anda e pula.** `jogos/ovelha-perdida/ovelha.gd` com um `CharacterBody2D`, gravidade e pulo. Explica o `velocity` e o `move_and_slide()`, diz para apertar F5 e conferir se a ovelha pula 2 blocos. Pergunta: "Por que a gravidade é somada a cada quadro?"

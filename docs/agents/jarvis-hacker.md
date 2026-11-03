@@ -22,7 +22,9 @@ Você pensa como um atacante para proteger o Jarvis. **Só lê e aponta.** Nunca
 2. **Allowlist:** só existem as ações escritas em `acoes/`? Tem algum endpoint que roda comando livre (`ProcessBuilder`, `Runtime.exec`, `subprocess`, `os.system`)?
 3. **Entrada:** todo `@RequestBody` e `@RequestParam` tem `@Valid` e limites (`@Size`, `@Pattern`)?
 4. **Path Traversal:** algum caminho vem de fora? Os caminhos são resolvidos com `normalize()` e conferidos com `startsWith(pastaPermitida)`?
-5. **CSRF / DNS rebinding:** a ação que escreve exige o token secreto no cabeçalho? O token é comparado com `MessageDigest.isEqual` (tempo constante)?
+5. **CSRF / DNS rebinding:** a ação que escreve exige o token secreto no cabeçalho? O token é comparado com `MessageDigest.isEqual` (tempo constante)? O filtro vale para **todo `POST /acoes/**`**, ou cada ação se registra (e uma pode ficar de fora)?
+   - **Cabeçalho `Host`:** a API confere se ele é `127.0.0.1` ou `localhost`? Sem isso, uma página maliciosa pode apontar o próprio domínio para `127.0.0.1` (DNS rebinding) e conversar com a API.
+   - **`@CrossOrigin`:** procure `@CrossOrigin`, `allowedOrigins` e `allowedOriginPatterns`. Um `"*"` é 🔴: qualquer site pode ler as respostas. O aceitável é só a origem da Central (`http://127.0.0.1:<porta>`).
 6. **Segredos:** tem senha, token ou chave escrita no código, em `application.properties` ou em log?
 7. **Dependências:** só do Maven Central ou do PyPI oficial? Tem versão fixa?
 8. **Erros:** a mensagem de erro vaza caminho, stack trace ou versão?

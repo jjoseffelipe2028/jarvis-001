@@ -137,7 +137,7 @@ _Fontes: só páginas oficiais (GitHub do dono e documentação oficial), lidas 
 | `roteirista-video` | Vídeo | sonnet | Read, Glob, Write | Nunca inventa fala de Jesus: cita referência e tradução, ou marca `⚠️ CONFERIR` |
 | `remotion-dev` | Vídeo | sonnet | + Edit, Bash | Narração local (Piper); apresenta a licença do Remotion antes do `npm install` |
 | `game-designer` | Jogo | haiku | Read, Glob, Write | Ideia original; protótipo pequeno primeiro |
-| `game-dev` | Jogo | sonnet | Read, Grep, Glob, Write, Edit (**sem Bash**) | Pergunta o motor; não liga MCP de motor sem o José pedir |
+| `/game-dev` (**virou skill**, em `docs/skills/game-dev/`) | Jogo | modelo da sessão | `allowed-tools: Read, Grep, Glob` (Write e Edit pedem permissão; **sem Bash**) | Pergunta o motor e espera o José a cada passo. Por isso é skill: um subagente não consegue esperar |
 | `mentor-java` | Programar | sonnet | Read, Grep, Glob (**só lê**) | Ensina, não corrige pelo José |
 
 ---
