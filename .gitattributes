@@ -1,0 +1,2 @@
+# Scripts de shell sempre com quebra de linha LF (senão o Git Bash dá erro $'\r')
+*.sh text eol=lf
