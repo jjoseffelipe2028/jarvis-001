@@ -19,7 +19,7 @@ Montar as travas de segurança da API Java antes de qualquer ação de escrita: 
 - `erros/ErrosHandler`: erro de validação vira 400 com mensagem curta, sem stack trace.
 - `auditoria/Cliente`: aceita só `python` ou `central` no cabeçalho `X-Jarvis-Cliente`; qualquer outro valor vira `desconhecido`. Serve só para log, não para decisão de segurança.
 - Testes JUnit das regras acima.
-- `java/bracos/iniciar.sh` (novo): carrega o `.env` (na mesma pasta ou em um caminho fixo combinado no plano) com `set -a; . ./.env; set +a` e roda `./mvnw spring-boot:run`. Se o `.env` não existir, para com uma mensagem clara e **não cria** o arquivo. Nunca imprime o valor do token. O script não lê, não cria e não mostra o `.env` durante o desenvolvimento.
+- `java/bracos/iniciar.sh` (novo): carrega o `.env` da raiz do projeto (`../../.env`, a partir de `java/bracos/`) com `set -a; . ../../.env; set +a` e roda `./mvnw spring-boot:run`. Se o `.env` não existir, para com uma mensagem clara e **não cria** o arquivo. Nunca imprime o valor do token. O script não lê, não cria e não mostra o `.env` durante o desenvolvimento.
 - Conferir que `.env` está no `.gitignore`.
 
 **NÃO entra:**
@@ -39,6 +39,9 @@ Montar as travas de segurança da API Java antes de qualquer ação de escrita: 
 | 5 | `mentor-java` | Faz 1 pergunta de entrevista para o José explicar com as palavras dele (ex.: "Por que o filtro vale para todo `POST /acoes/**`?") | Pergunta, sem código | 💰💰 sonnet |
 
 Fora deste ticket (depois do Ticket 002): `/banca` e `jarvis-escritor` (README do `java/`).
+Ticket 002: incluir teste de contrato das rotas `POST /acoes/**` (lista todas as rotas e falha se alguma escapar do token).
+Ticket 002: filtro de cabeçalho `Host` (só `127.0.0.1:8080` e `localhost:8080`) contra DNS rebinding nos `GET` que devolvem dados (achado baixo do `jarvis-hacker`, 2026-11-03).
+Ticket 002: teste (JUnit, não no `testar-curl.sh`) que falha se algum `log.*` usar `request.get...` direto, sem `LogSeguro.limpar()`.
 
 ## Arquivos envolvidos
 - `java/bracos/pom.xml`
@@ -66,6 +69,18 @@ Leitura apenas: `CLAUDE.md`, `.claude/skills/nova-acao/SKILL.md`. **Não ler `.e
 | Stack trace vaza detalhes internos | `ErrosHandler` responde mensagem curta |
 | Cliente falso no log | `X-Jarvis-Cliente` aceito só como `python`/`central`; é só para auditoria |
 | Acesso da rede | Servidor só em `127.0.0.1:8080` (já configurado; conferir que não mudou) |
+
+## Falta
+🤖 = agente · 👤 = José
+
+- [x] 1. 🤖 `jarvis-testador` revisa os testes. (2026-11-03: 20 testes, 0 falhas)
+- [x] 2. 🤖 `jarvis-hacker` revisa, com foco em **log injection** (o log grava a URL pedida). (2026-11-03: ❌ reprova condicional, 1 achado médio: `getRequestURI()` sem limpeza em `TokenInterceptor` linhas 45 e 55)
+- [x] 2b. 🤖 `jarvis-construtor` cria `auditoria/LogSeguro.limpar()` (troca caractere de controle por `_`, corta em ~100) e usa nas linhas 45 e 55; `jarvis-testador` escreve `LogSeguroTest` (sem Spring) + 5 testes de log; `./mvnw test` verde. (2026-11-03: 37 testes, 0 falhas)
+- [x] 3. 🤖 Criar `java/bracos/testar-curl.sh`: 4 casos, e o token nunca aparece na tela. Carrega o `.env` com `set -a; . ../../.env; set +a` (aprovado). +1 caso: URL com quebra de linha (`%0d%0a`), para conferir que o log não grava linha falsa (aprovado). O script **não lê arquivo de log**: o José confere o log na janela do `iniciar.sh`.
+- [ ] 4. 👤 José cria o `.env` na raiz pelo Git Bash: `C:\Users\jjose\workSpace\jarvis-001\.env`. O `iniciar.sh` procura em `../../.env` a partir de `java/bracos/` (conferido no código em 2026-11-03).
+- [ ] 5. 👤 Rodar `./iniciar.sh` e depois `testar-curl.sh`.
+- [ ] 6. 👤 José faz commit de `.claude/agents` e `.claude/skills/nova-acao`.
+- [ ] 7. 🤖 Status 🏁 (depois do OK do José).
 
 ## Pronto quando
 - [ ] Plano aprovado pelo José antes de qualquer código.

@@ -6,6 +6,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import io.github.jjoseffelipe2028.bracos.auditoria.Cliente;
+import io.github.jjoseffelipe2028.bracos.auditoria.LogSeguro;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -42,7 +43,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         // 503 primeiro: sem token configurado, ninguém passa
         if (hashEsperado == null) {
             log.warn("cliente={} acao={} resultado=negado motivo=token_nao_configurado",
-                    cliente, request.getRequestURI());
+                    cliente, LogSeguro.limpar(request.getRequestURI()));
             responder(response, 503, "token nao configurado");
             return false;
         }
@@ -52,7 +53,7 @@ public class TokenInterceptor implements HandlerInterceptor {
         boolean ok = recebido != null && MessageDigest.isEqual(hashEsperado, sha256(recebido));
         if (!ok) {
             log.warn("cliente={} acao={} resultado=negado motivo=token_invalido",
-                    cliente, request.getRequestURI());
+                    cliente, LogSeguro.limpar(request.getRequestURI()));
             responder(response, 401, "nao autorizado");
             return false;
         }
