@@ -29,6 +29,7 @@ cd java/bracos
 | Método | Endereço | O que faz | Exemplo de resposta |
 |---|---|---|---|
 | `GET` | `/acoes/hora` | Data e hora de agora (horário de Brasília) | `{"hora":"23:45","data":"01/11/2026"}` |
+| `POST` 🔒 | `/acoes/daily` | Acrescenta `- HH:mm texto` no daily de hoje do Obsidian | `{"arquivo":"2026-11-08.md","resultado":"ok"}` |
 
 Testar na mão (com a API rodando):
 
@@ -36,17 +37,22 @@ Testar na mão (com a API rodando):
 curl http://127.0.0.1:8080/acoes/hora
 ```
 
+O `POST` precisa do token (`X-Jarvis-Token`) e da pasta `JARVIS_PASTA_DAILY` no `.env`.
+
 ## Segurança 🔒
 
 **Já tem:**
 - Só escuta em `127.0.0.1` (`application.properties`): nada aberto para a rede.
-- Só existem as ações escritas em `AcoesController` (allowlist).
-- Log de auditoria em toda ação: `acao=<nome> resultado=<ok|erro>`.
+- Só existem as ações escritas à mão nos controllers (allowlist).
+- Texto gravado no Obsidian é "desarmado": sem quebra de linha, invisíveis ou Markdown/HTML ativo.
+- Token secreto em todo `POST/PUT/PATCH/DELETE /acoes/**`, comparado em tempo constante (contra CSRF). Sem token configurado: 503.
+- Filtro de `Host`: só `localhost` e `127.0.0.1` (contra DNS rebinding).
+- Validação de toda entrada com `@Valid`; erro vira JSON curto, sem stack trace nem caminho.
+- Escrita só na pasta permitida (anti Path Traversal); nome do arquivo gerado pelo servidor.
+- Log de auditoria: `cliente= acao= resultado=`, limpo contra log injection (`LogSeguro`).
+- Testes-guarda: toda rota POST sem token dá 401 · nenhum log usa dado cru.
 
-**Planejado (antes das ações que recebem dados ou escrevem arquivo):**
-- Validar toda entrada com `@Valid` (`spring-boot-starter-validation`).
-- Token secreto no cabeçalho, lido do `.env` (contra CSRF e DNS rebinding).
-- Ler/escrever só em pastas permitidas (anti Path Traversal).
+**Planejado:** Spring Security, Dependabot e CodeQL.
 
 ## Estrutura
 
@@ -57,11 +63,13 @@ bracos/
     ├── main/
     │   ├── java/.../bracos/
     │   │   ├── BracosApplication.java       liga a API
-    │   │   └── acoes/AcoesController.java   as ações (allowlist)
-    │   └── resources/application.properties endereço e porta
-    └── test/java/.../bracos/
-        ├── BracosApplicationTests.java      a API liga?
-        └── acoes/AcoesControllerTest.java   /acoes/hora devolve o formato certo?
+    │   │   ├── acoes/AcoesController.java   /acoes/hora
+    │   │   ├── acoes/daily/                 /acoes/daily (Request, Service, Controller)
+    │   │   ├── seguranca/                   porteiros: Host e token
+    │   │   ├── erros/                       erros viram JSON curto
+    │   │   └── auditoria/                   Cliente e LogSeguro
+    │   └── resources/application.properties endereço, porta, token e pasta (do .env)
+    └── test/java/.../bracos/                87 testes (./mvnw test)
 ```
 
 Revisões deste código: [`docs/reviews/`](../docs/reviews/).

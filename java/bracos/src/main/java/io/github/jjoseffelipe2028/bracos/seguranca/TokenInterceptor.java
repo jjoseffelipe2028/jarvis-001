@@ -21,6 +21,8 @@ public class TokenInterceptor implements HandlerInterceptor {
 
     public static final String CABECALHO = "X-Jarvis-Token";
 
+    private static final java.util.Set<String> METODOS_SO_LEITURA = java.util.Set.of("GET", "HEAD", "OPTIONS");
+
     private static final Logger log = LoggerFactory.getLogger(TokenInterceptor.class);
 
     private final byte[] hashEsperado; // null = token não configurado
@@ -34,8 +36,9 @@ public class TokenInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        // Só POST passa pelo porteiro (GET /acoes/hora continua aberto)
-        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+        // Só métodos de LEITURA passam sem token (GET /acoes/hora continua aberto).
+        // POST, PUT, PATCH, DELETE e qualquer outro: porteiro. Ação nova já nasce protegida.
+        if (METODOS_SO_LEITURA.contains(request.getMethod().toUpperCase(java.util.Locale.ROOT))) {
             return true;
         }
         String cliente = Cliente.de(request.getHeader(Cliente.CABECALHO));

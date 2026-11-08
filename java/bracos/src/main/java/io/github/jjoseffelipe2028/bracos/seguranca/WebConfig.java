@@ -20,6 +20,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // Ordem importa: primeiro confere o Host (DNS rebinding), depois o token
+        registry.addInterceptor(new HostInterceptor()).addPathPatterns("/acoes/**");
         registry.addInterceptor(new TokenInterceptor(token)).addPathPatterns("/acoes/**");
     }
 }
