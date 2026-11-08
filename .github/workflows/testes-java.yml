@@ -1,0 +1,39 @@
+# Roda os testes do braço Java (bracos) a cada push e pull request.
+# Peças oficiais do GitHub: actions/checkout e actions/setup-java.
+name: Testes Java (bracos)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # botão "Run workflow" para rodar na mão
+
+# Menor privilégio: o robô só LÊ o repositório.
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: java/bracos
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false # não deixa a senha do robô salva no disco
+
+      - name: Instalar Java 21 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: java/bracos/pom.xml
+
+      - name: Dar permissão de execução ao mvnw
+        run: chmod +x mvnw
+
+      - name: Rodar os testes
+        run: ./mvnw -B test
