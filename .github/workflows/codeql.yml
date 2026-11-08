@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Baixar o código
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           persist-credentials: false # não deixa a senha do robô salva no disco
 
