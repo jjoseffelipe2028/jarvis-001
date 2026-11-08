@@ -1,0 +1,20 @@
+# Dependabot: robô oficial do GitHub que vigia as bibliotecas do Jarvis.
+# Se uma versão tiver falha conhecida (CVE) ou ficar velha, ele abre um PR para atualizar.
+# Nada entra sozinho: o José revisa e aprova cada PR.
+version: 2
+updates:
+  # Bibliotecas Java (pom.xml do braço)
+  - package-ecosystem: maven
+    directory: /java/bracos
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencias, java]
+
+  # Peças dos robôs do GitHub Actions (checkout, setup-java, codeql)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencias, ci]

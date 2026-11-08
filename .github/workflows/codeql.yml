@@ -1,0 +1,40 @@
+# CodeQL: robô oficial do GitHub que LÊ o código procurando falhas de segurança
+# (injeção, path traversal, log injection etc.). Resultado: aba Security > Code scanning.
+name: CodeQL (seguranca do Java)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1' # toda segunda, 06:00 de Brasília: pega falha nova mesmo sem push
+  workflow_dispatch: # botão "Run workflow" para rodar na mão
+
+# Menor privilégio: lê o código e só escreve o relatório de segurança
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  analisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false # não deixa a senha do robô salva no disco
+
+      - name: Ligar o CodeQL (Java)
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: none # lê o código direto, sem precisar compilar
+          queries: security-extended # regras de segurança mais completas
+
+      - name: Analisar
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:java-kotlin
