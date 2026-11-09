@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false # não deixa a senha do robô salva no disco
 
       - name: Instalar Python 3.13
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
