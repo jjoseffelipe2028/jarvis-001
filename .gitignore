@@ -35,3 +35,6 @@ logs/
 
 # Vozes do Piper (pesadas, baixar com: python -m piper.download_voices pt_BR-faber-medium)
 python/vozes/
+
+# Chave de uso unico da Central (Ticket 015): nunca no Git
+.central-chave

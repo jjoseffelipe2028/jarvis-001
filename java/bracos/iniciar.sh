@@ -17,4 +17,7 @@ set +a
 # Log de auditoria em arquivo (Ticket 010). O .env pode trocar o caminho.
 export JARVIS_LOG="${JARVIS_LOG:-logs/bracos.log}"
 
+# Chave de uso unico da Central (Ticket 015). Fica em java/bracos/.central-chave (fora do Git).
+export JARVIS_CHAVE_CENTRAL="${JARVIS_CHAVE_CENTRAL:-.central-chave}"
+
 ./mvnw spring-boot:run

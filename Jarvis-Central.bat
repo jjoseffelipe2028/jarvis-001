@@ -1,5 +1,5 @@
 @echo off
-REM Jarvis 001 - Central v0 (Ticket 014)
+REM Jarvis 001 - Central (Tickets 014 e 015)
 REM Liga a API (se estiver desligada), espera ela responder e abre a Central em "modo app".
 REM Tudo em 127.0.0.1: nada sai do PC. Este arquivo nao le nem mostra o token.
 setlocal
@@ -33,10 +33,18 @@ pause
 exit /b 1
 
 :abrir
-REM 4) Abre a Central em janela propria, sem barra de endereco.
+REM 4) Le a chave de USO UNICO da Central (a API cria ao ligar e troca a cada uso).
+REM    Ela vai depois do "#": o navegador nao manda essa parte pela rede nem para o log.
+set "CHAVE="
+set "ARQ_CHAVE=%~dp0java\bracos\.central-chave"
+if exist "%ARQ_CHAVE%" set /p CHAVE=<"%ARQ_CHAVE%"
+set "DESTINO=%URL%"
+if defined CHAVE set "DESTINO=%URL%#k=%CHAVE%"
+
+REM 5) Abre a Central em janela propria, sem barra de endereco.
 if not exist "%EDGE%" (
-  start "" "%URL%"
+  start "" "%DESTINO%"
 ) else (
-  start "" "%EDGE%" --app=%URL% --window-size=1440,900
+  start "" "%EDGE%" --app=%DESTINO% --window-size=1440,900
 )
 exit /b 0

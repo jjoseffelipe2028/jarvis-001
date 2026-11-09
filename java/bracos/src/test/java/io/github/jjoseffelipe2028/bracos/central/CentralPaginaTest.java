@@ -91,7 +91,11 @@ class CentralPaginaTest {
     @Test
     void jsNuncaMexeComToken() throws IOException {
         String js = ler("central.js");
-        assertFalse(js.contains("X-Jarvis"), "a Central não pode mandar cabeçalho de token");
+        for (String cabecalho : new String[] {"X-Jarvis-Token", "X-Jarvis-Assinatura", "X-Jarvis-Nonce"}) {
+            assertFalse(js.contains(cabecalho), "a Central não pode mandar " + cabecalho);
+        }
+        assertFalse(js.contains("document.cookie"), "o crachá é HttpOnly: o JS nem tenta ler");
+        assertTrue(js.contains("history.replaceState"), "a chave de uso único some do endereço");
         assertFalse(js.contains("localStorage") || js.contains("sessionStorage"), "nada guardado no navegador");
         assertTrue(js.contains("credentials: \"omit\""), "fetch sem cookies");
     }

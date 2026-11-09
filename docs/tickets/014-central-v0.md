@@ -25,7 +25,7 @@ Dois cliques num ícone e abre a **Central do Jarvis**: uma janela própria (par
 ## Evidências
 - Java: **221** testes, 0 falhas (+9: `CentralPaginaTest`).
 - Teste real (18:43): API desligada → 2 cliques no ícone → API ligou minimizada → Central abriu com **API ● online**, relógio e data. Print do José.
-- Commit: _(preencher)_
+- Commit: `a054afc`
 
 ## Fica para depois
 - **v1:** botões dos módulos com ações reais + cartão "🌐 isso vai para a nuvem" com Aceitar/Recusar para 001/002.

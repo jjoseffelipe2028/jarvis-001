@@ -66,7 +66,28 @@
       <p>Um planeja, o outro contesta. José aprova.</p>
       <div class="mic">🎙️ "Bom dia, Jarvis"</div>
     </div>
-    <div class="aviso-nuvem">🌐 001 e 002 ficam na nuvem: só com o seu <b>Aceitar</b> (chega na v1)</div>
+    <section class="comando" aria-label="Comandos">
+      <div class="comando-topo"><b>⚡ COMANDOS</b> <span id="conexao" class="esperando">🔑 conectando…</span></div>
+      <div class="botoes">
+        <button id="bt-pendencias" type="button">📋 Pendências</button>
+        <button id="bt-git" type="button">🌿 Git</button>
+        <button id="bt-nuvem" type="button">🌐 Pedir ao 001</button>
+      </div>
+      <div id="nuvem" class="nuvem" hidden>
+        <textarea id="nuvem-texto" maxlength="500" rows="2" placeholder="O que você quer pedir ao 001 (Claude)?"></textarea>
+        <button id="bt-preparar" type="button">Preparar pedido</button>
+        <div id="cartao" class="cartao" hidden>
+          <div>🌐 <b>Isso vai para a nuvem (Claude):</b></div>
+          <div id="cartao-texto" class="cartao-texto"></div>
+          <div class="botoes">
+            <button id="bt-aceitar" type="button" class="aceitar">Aceitar</button>
+            <button id="bt-recusar" type="button" class="recusar">Recusar</button>
+          </div>
+        </div>
+      </div>
+      <ul id="saida" class="saida"><li class="fu">Clique num comando.</li></ul>
+    </section>
+    <div class="aviso-nuvem">🌐 001 e 002 ficam na nuvem: nada sai do PC sem o seu <b>Aceitar</b></div>
     <div class="pixel">👾 Escritório pixel · espaço reservado (v2)</div>
   </section>
 
@@ -103,7 +124,7 @@
 
 <footer class="rodape">
   <span class="ok">✅ pronto</span> <span class="nx">▸ próximo</span> <span class="fu">○ depois</span>
-  <span class="sep">·</span> Central v0 (Ticket 014) · José Felipe
+  <span class="sep">·</span> Central v1 (Ticket 015) · José Felipe
 </footer>
 
 <script src="central.js"></script>
