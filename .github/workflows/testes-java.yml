@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false # não deixa a senha do robô salva no disco
 
       - name: Instalar Java 21 (Temurin)
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
