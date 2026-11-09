@@ -1,5 +1,5 @@
 # 007 — Assinatura por pedido: o token nunca viaja
-**Status:** 🔄 aguardando aprovação do José (construído com ele dormindo, 2026-11-09)
+**Status:** ✅ aprovado pelo José (2026-11-09)
 **Criado:** 2026-11-09 pela 001 · resolve os 🟡 1, 2 e 3 do Ticket 006
 
 ## O problema que sobrou do 006
@@ -35,7 +35,7 @@ O `X-Jarvis-Token` direto continua aceito **só para os seus testes com `curl`**
   4. 🟢 Lista de nonces lotada (10.000 em 2 min) → 503; só quem tem a chave lota. Aceito.
   5. 🟢 Corrida no mapa → sem nonce duplicado (`putIfAbsent` atômico). Aceito.
   6. 🟢 Lê até 64 KB antes do Host → porta só local, limite existe. Aceito.
-- Commit: _(preencher)_
+- Commit: `19e2ff0` (2026-11-09, aprovado pelo José após teste real por voz)
 
 ## 🎤 Pergunta para o José
 > Se alguém **copiar** um pedido assinado inteiro (com a assinatura), por que ele não consegue mandar de novo?

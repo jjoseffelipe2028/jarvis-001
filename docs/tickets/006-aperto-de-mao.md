@@ -1,5 +1,5 @@
 # 006 — Aperto de mão (challenge-response) antes do token
-**Status:** 🔄 aguardando aprovação do José (2026-11-09). Complementado pelo 007: o token não viaja mais.
+**Status:** ✅ aprovado pelo José (2026-11-09). Complementado pelo 007: o token não viaja mais.
 **Criado:** 2026-11-09 pela 001 · corrige o achado 🟡 1 do Ticket 005
 
 ## O problema
@@ -27,7 +27,7 @@ Com a API Java desligada, qualquer programa do PC pode abrir a porta 8080 e se p
   4. 🟡 Rota pública sem limite de uso nem log.
   - **Solução definitiva (ticket futuro):** **nunca mandar o token**. Cada pedido vai **assinado** (`HMAC(token, método|rota|corpo|hora|nonce)`); a API confere e recusa hora velha e nonce repetido. Resolve 1, 2 e 3 de uma vez.
 - Teste manual: _(José: reiniciar a API e repetir "quais minhas pendências?" no `chat.py`)_
-- Commit: _(preencher)_
+- Commit: `19e2ff0` (2026-11-09, aprovado pelo José após teste real por voz)
 
 ## 🎤 Pergunta para o José
 > No aperto de mão, por que o Python manda um número **novo** a cada vez, em vez de sempre o mesmo?

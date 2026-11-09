@@ -72,6 +72,8 @@ Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 
 Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fichas de cada ticket.
 
+**Revisão OWASP Top 10 (2025):** 7 ✅ · 3 🟡 em melhoria, cada item com o arquivo da defesa → [`docs/seguranca-owasp.md`](docs/seguranca-owasp.md). Histórico varrido com **gitleaks**: 0 segredos.
+
 ## 🧰 Tecnologias
 
 | Parte | Ferramenta | Roda onde |
@@ -110,7 +112,8 @@ python chat.py
 - [ ] Central web com os agentes trabalhando em tempo real
 - [ ] Módulos: Sentinela (só avisa), Vídeos, Biblioteca offline
 - [ ] Dupla 001 + 002 em loop com GitHub Issues
-- [ ] Spring Security e revisão OWASP Top 10 completa
+- [x] Revisão OWASP Top 10 + gitleaks + portas testadas pela rede
+- [ ] Spring Security
 
 ## 👤 Autor
 

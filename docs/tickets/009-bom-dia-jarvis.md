@@ -1,5 +1,5 @@
 # 009 — "Bom dia, Jarvis" (Fase 4, parte 3: rotina)
-**Status:** 🔄 aguardando aprovação do José (construído com ele dormindo, 2026-11-09)
+**Status:** ✅ aprovado pelo José (2026-11-09)
 **Criado:** 2026-11-09 pela 001
 
 ## O que faz
@@ -20,7 +20,7 @@ NOVO `python/rotinas.py` + `python/tests/test_rotinas.py` (10 testes) · `intenc
 - Revisão `jarvis-hacker` (2026-11-09): **✅ aprova**; corrigidos: alarme de impostor/401 agora **interrompe** o resumo ("Atenção, José: ...") e número infinito não derruba. Aceito: um "bom dia" da TV faz o Jarvis ler o resumo (só leitura).
 - **Teste real** (API numa porta separada, token fictício): "Boa noite, José! São 03:04. Você tem 25 pendências. A primeira: ... No Jarvis tem 28 arquivos sem commit. E a Cyber? ..." ✅ · com token errado: "Atenção, José: Quem respondeu na porta da API não provou ser o Jarvis." ✅
 - Teste manual: _(José: `python chat.py` → "bom dia, Jarvis")_
-- Commit: _(preencher)_
+- Commit: `19e2ff0` (2026-11-09, aprovado pelo José após teste real por voz)
 
 ## 🎤 Pergunta para o José
 > Se a API Java estiver desligada, o que o "bom dia" responde, e por que isso é melhor do que dar erro?

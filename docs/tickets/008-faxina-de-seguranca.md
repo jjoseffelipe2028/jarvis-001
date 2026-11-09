@@ -1,5 +1,5 @@
 # 008 — Faxina de segurança (os 🟡 e 🟢 que ficaram para depois)
-**Status:** 🔄 aguardando aprovação do José (construído com ele dormindo, 2026-11-09)
+**Status:** ✅ aprovado pelo José (2026-11-09)
 **Criado:** 2026-11-09 pela 001
 
 ## O que entrou
@@ -22,7 +22,7 @@
   7. 🟢 Ordem da limpeza (invisível antes, acentos depois) → **corrigido**.
   - Aceitos: 5 (um neto que nasce e órfã em menos de 50 ms ainda escapa: limite do Java sem "Job Object"; risco baixo para `git status`).
 - **Teste real** (API numa porta separada): tudo funcionando com pedidos assinados.
-- Commit: _(preencher)_
+- Commit: `19e2ff0` (2026-11-09, aprovado pelo José após teste real por voz)
 
 ## 🎤 Pergunta para o José
 > Por que o erro genérico **não** pode simplesmente transformar tudo em 500?
