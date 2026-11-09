@@ -14,4 +14,7 @@ set -a
 . ../../.env
 set +a
 
+# Log de auditoria em arquivo (Ticket 010). O .env pode trocar o caminho.
+export JARVIS_LOG="${JARVIS_LOG:-logs/bracos.log}"
+
 ./mvnw spring-boot:run

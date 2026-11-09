@@ -72,7 +72,7 @@ Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 
 Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fichas de cada ticket.
 
-**Revisão OWASP Top 10 (2025):** 7 ✅ · 3 🟡 em melhoria, cada item com o arquivo da defesa → [`docs/seguranca-owasp.md`](docs/seguranca-owasp.md). Histórico varrido com **gitleaks**: 0 segredos.
+**Revisão OWASP Top 10 (2025):** 9 ✅ · 1 🟡 em melhoria, cada item com o arquivo da defesa → [`docs/seguranca-owasp.md`](docs/seguranca-owasp.md). Histórico varrido com **gitleaks**: 0 segredos.
 
 ## 🧰 Tecnologias
 

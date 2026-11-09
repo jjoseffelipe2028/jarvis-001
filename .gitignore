@@ -23,8 +23,9 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Logs (a API grava em java/bracos/logs/, inclusive os .gz antigos)
 *.log
+logs/
 
 # oh-my-claudecode (estado local dos agentes)
 .omc/
