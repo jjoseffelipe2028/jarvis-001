@@ -1,60 +1,96 @@
 # 🤖 Jarvis 001
 
-**Central de automação local com IA offline — Java + Python**
+[![Testes Java](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-java.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-java.yml)
+[![CodeQL](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/codeql.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/codeql.yml)
+![Java 21](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot 4](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F)
+![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
 
-Um assistente estilo Jarvis que roda **no meu próprio PC**: me escuta em português, responde por voz e automatiza minha rotina de estudos — sem enviar meus dados para a nuvem.
+**Assistente local com IA offline, em português: Python no cérebro, Java nos braços e segurança em primeiro lugar.**
 
-> 🚧 Projeto em construção — **Fase 2 de 7: braços em Java**. A base em Python (cérebro, ouvido e boca) já funciona; a API Java já tem a 1ª ação (`/acoes/hora`) com teste.
+O Jarvis roda **no meu próprio PC**. Ele me escuta, responde por voz e automatiza minha rotina de estudos (notas do Obsidian, tarefas pendentes, Git), **sem mandar meus dados para a nuvem**.
 
-## Como funciona
+A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede*, e uma API em Java decide se a ação existe numa lista fechada (allowlist), confere o token e registra tudo.
+
+---
+
+## ✨ Destaques para quem está avaliando
+
+| | |
+|---|---|
+| ☕ **API REST em Java 21 + Spring Boot 4** | 4 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
+| 🔒 **Segurança como requisito** | Token em tempo constante, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
+| 🧪 **134 testes automatizados** | JUnit 5 + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| ⚙️ **CI/CD no GitHub** | Testes a cada push (Actions), análise de segurança (CodeQL) e atualização de dependências (Dependabot) |
+| 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
+| 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
+
+## 🏗️ Como funciona
 
 ```
 🎙️ Eu falo
    ↓
-🐍 PYTHON — cérebro e voz (IA local)
+🐍 PYTHON: cérebro e voz (IA local)
    • ouve (faster-whisper) e entende (Ollama + Gemma)
-   • escolhe uma ação
-   ↓  API local (só localhost)
-☕ JAVA — braços (Spring Boot)
-   • executa apenas ações permitidas
-   • registra tudo em log
+   • escolhe UMA ação da lista
+   ↓  HTTP só em 127.0.0.1 + token secreto
+☕ JAVA: braços (Spring Boot)
+   • porteiros: Host → token → validação
+   • executa só ações da allowlist, dentro de pastas permitidas
+   • log de auditoria (sem dado pessoal)
    ↓
-🕹️ Painel — agentes trabalhando em tempo real
+📁 Obsidian (notas) · 🌿 Git
 ```
 
-A IA **nunca** executa comandos direto no computador: ela só **pede**, e a API em Java decide se a ação é permitida.
+## ☕ API (braços em Java)
 
-## Estrutura
+| Método | Rota | O que faz |
+|---|---|---|
+| `GET` | `/acoes/hora` | Data e hora de Brasília (única rota pública) |
+| `POST` 🔒 | `/acoes/daily` | Escreve uma linha no daily de hoje do Obsidian |
+| `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos últimos 7 dailys |
+| `GET` 🔒 | `/acoes/git-status` | Diz se o repositório tem algo sem commit (só números) |
 
-| Pasta | O que tem |
-|---|---|
-| `python/` | Cérebro e voz do Jarvis |
-| `java/` | API com as ações (Spring Boot) |
+Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 
-## Fases
+## 🔒 Segurança: ameaça → defesa → prova
 
-**Base pronta:** repositório com travas de segurança · 🧠 cérebro (`chat.py`) · 🎙️ ouvido (`ouvido.py`) · 🔊 boca (`boca.py`).
+| Ameaça | Defesa | Prova (teste) |
+|---|---|---|
+| Site malicioso chamando a API pelo navegador (CSRF) | Token secreto em **todo** `/acoes/**`, fechado por padrão, comparado em tempo constante | `TokenInterceptorTest`, `RotasPostContratoTest` |
+| DNS rebinding | Só aceita `Host` = `localhost` / `127.0.0.1` | `HostInterceptorTest` |
+| Truques de URL para furar o porteiro (`//`, `%2F`, `/../`) | Lista pública com comparação **exata** | `TruquesDeUrlServidorRealTest` (Tomcat de verdade) |
+| Ler/escrever fora da pasta (Path Traversal) | Pasta só da config, nome de arquivo gerado pelo servidor, `normalize` + `startsWith`, sem seguir atalhos | `DailyServiceTest`, `PendenciasServiceTest` |
+| Injeção de comando | Comando `git` **fixo**, sem shell, sem variáveis `GIT_*` de fora, tempo e saída limitados | `GitStatusServiceTest` |
+| `.git/config` malicioso executando programa | `core.fsmonitor` desligado no comando | ataque real no teste: o git cru executa, o Jarvis não |
+| Markdown/HTML ativo na nota (imagem que vaza IP, DataviewJS) | Texto "desarmado" com `\` | `DailyServiceTest` |
+| Log injection | `LogSeguro.limpar()` + teste que lê o código-fonte | `LogSemDadoCruTest` |
+| Vazamento de dado pessoal | Respostas e logs sem caminho, sem texto do usuário e sem stack trace | testes de controller |
 
-- [ ] 1. Oficina Turbo — 🔄 em andamento · guarda (hook) ✅ · Banca ✅ · falta analisar: 19 agentes do oh-my-claudecode, Trail of Bits, Superpowers ou Spec Kit, Serena
-- [ ] 2. Braços em Java — `daily`, `pendencias`, `git-status`, segurança e JUnit · 🔄 1ª ação `/acoes/hora` ✅
-- [ ] 3. Integração voz ↔ Java
-- [ ] 4. Central web futurista — HUD, bonecos dos agentes, botões
-- [ ] 5. Módulos — Sentinela (só avisa), Vídeos (Remotion), Biblioteca offline (RAG)
-- [ ] 6. Dupla 001 + 002 em loop (GitHub Issues)
-- [ ] 7. Vitrine — gitleaks, OWASP, README, CI
+Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fichas de cada ticket.
 
-## Tecnologias
+## 🧰 Tecnologias
 
 | Parte | Ferramenta | Roda onde |
 |---|---|---|
-| Cérebro | [Ollama](https://ollama.com) + `gemma4:e2b` | 💻 local (`127.0.0.1`) |
-| Ouvidos | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + sounddevice | 💻 local (o áudio não sai do PC) |
-| Boca | [Piper](https://github.com/rhasspy/piper) (voz pt_BR) | 💻 local |
-| Braços | Java 21 + Spring Boot 4.1.2 ([como rodar](java/README.md)) | 💻 local (`127.0.0.1:8080`) |
-| Time de IA | Claude Code (001) + Antigravity CLI (002) | revisão cruzada |
+| Braços | Java 21 + Spring Boot 4.1.2 + Maven | 💻 `127.0.0.1:8080` |
+| Testes | JUnit 5, MockMvc, Mockito | 💻 + GitHub Actions |
+| Cérebro | [Ollama](https://ollama.com) + `gemma4:e2b` | 💻 local |
+| Ouvidos | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + sounddevice | 💻 local |
+| Boca | [Piper](https://github.com/OHF-Voice/piper1-gpl) (voz pt_BR) | 💻 local |
+| CI/Segurança | GitHub Actions, CodeQL, Dependabot | ☁️ GitHub |
+| Time de IA | Claude Code (001) + Antigravity CLI (002), com revisão cruzada | 💻 |
 
-## Como rodar (Windows)
+## 🚀 Como rodar
 
+**API Java** (precisa de Java 21):
+```bash
+cd java/bracos
+./mvnw test              # 134 testes
+./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
+```
+
+**Cérebro e voz** (Python 3.13 + Ollama com `gemma4:e2b`):
 ```bash
 cd python
 python -m venv .venv
@@ -62,20 +98,20 @@ source .venv/Scripts/activate   # Git Bash
 pip install -r requirements.txt
 python chat.py
 ```
-Ou dois cliques em `iniciar_jarvis.bat`. Precisa do Ollama rodando com o modelo `gemma4:e2b`.
 
-## Segurança 🔒
+## 🗺️ Roteiro
 
-- Tudo roda localmente (`127.0.0.1`), nada aberto para a rede.
-- Ações só de uma lista permitida (allowlist).
-- Senhas e chaves fora do Git (`.env` no `.gitignore`).
-- Travas para a IA: o Claude Code **não lê o `.env`** e **não edita as próprias regras** (`.claude/`) — testado.
-- Dependências conferidas antes de instalar (só fonte oficial).
-- Revisão com OWASP Top 10.
+- [x] Base: cérebro (`chat.py`), ouvido (`ouvido.py`) e boca (`boca.py`), tudo offline
+- [x] **Braços em Java**: `hora`, `daily`, `pendencias`, `git-status` · segurança · 134 testes · CI
+- [ ] Integração voz ↔ Java ("Jarvis, quais minhas pendências?")
+- [ ] Central web com os agentes trabalhando em tempo real
+- [ ] Módulos: Sentinela (só avisa), Vídeos, Biblioteca offline
+- [ ] Dupla 001 + 002 em loop com GitHub Issues
+- [ ] Spring Security e revisão OWASP Top 10 completa
 
-## Autor
+## 👤 Autor
 
-**José Felipe** — estudante de Java Back-end e Cibersegurança (EBAC).
+**José Felipe**: estudante de Java Back-end e Cibersegurança (EBAC), em busca da primeira vaga em tecnologia.
 
 ## Licença
 
