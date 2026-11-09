@@ -27,7 +27,7 @@ piper-tts==1.8.0
 protobuf==7.36.2
 pycparser==3.12
 pydantic==2.14.2
-pydantic_core==2.50.2
+pydantic_core==2.50.4
 PyYAML==6.0.3
 sounddevice==0.5.6
 tokenizers==0.23.3
