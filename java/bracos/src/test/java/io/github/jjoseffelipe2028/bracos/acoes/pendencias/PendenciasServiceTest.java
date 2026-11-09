@@ -151,6 +151,16 @@ class PendenciasServiceTest {
         assertEquals("abc def g", listar().pendencias().get(0).texto());
     }
 
+    /** Ticket 008: letras "em branco" e acentos empilhados (zalgo) não passam. */
+    @Test
+    void letraEmBrancoEZalgo_saemLimpos() throws Exception {
+        nota("2026-11-08.md", "- [ ] ㅤ⠀\n- [ ] á́́́́b\n");
+
+        List<Pendencia> itens = listar().pendencias();
+        assertEquals(1, itens.size(), "a tarefa só de letras em branco não conta");
+        assertEquals("á́b", itens.get(0).texto());
+    }
+
     @Test
     void acentoEUtf8() throws Exception {
         nota("2026-11-08.md", "- [ ] revisão de ação — café ☕\n");

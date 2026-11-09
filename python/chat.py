@@ -13,6 +13,7 @@ from ouvido import carregar_ouvido, ouvir  # o nosso ouvido (ouvido.py)
 from boca import carregar_boca, falar      # a nossa boca (boca.py)
 from bracos import Bracos, ErroBraco       # ponte para a API Java (bracos.py)
 from intencoes import detectar, responder, seguro  # pedido de ação ou conversa? (intencoes.py)
+from rotinas import bom_dia                # "bom dia, Jarvis" (rotinas.py)
 
 MODELO = "gemma4:e2b"  # o modelo que baixamos (cabe na RTX 4050)
 
@@ -29,7 +30,7 @@ PERSONALIDADE = (
     "Se não souber algo, diga que não sabe em vez de inventar. "
     "Você NÃO executa nada no computador: nunca diga que apagou, instalou, abriu ou enviou algo. "
     "Se pedirem uma ação, diga que só faz as ações da lista: anotar no daily, pendências, "
-    "git status e hora."
+    "git status, hora e o resumo de bom dia."
 )
 
 
@@ -37,6 +38,8 @@ def executar_acao(bracos, acao, argumento):
     """Pede a ação aos braços Java e devolve a frase para falar."""
     if acao == "proibida":
         return responder("proibida", None)
+    if acao == "bom_dia":
+        return bom_dia(bracos)  # junta hora + pendências + git (Ticket 009)
     try:
         if acao == "daily":
             dados = bracos.registrar_daily(argumento)

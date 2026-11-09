@@ -59,4 +59,5 @@ No `chat.py` (digitando ou falando):
 ## 🎤 Pergunta para o José
 > Por que o resultado das pendências **não** vai para o histórico do Gemma, se ia deixar a conversa mais "esperta"?
 
-**Resposta do José:** _(preencher)_
+**Resposta do José:** "porque as pendências não estão confirmadas, pode vir qualquer coisa" (quase ✅).
+**Completa (001):** o texto das notas é dado não confiável. No histórico, ele vira **prompt injection**: uma nota com "ignore suas regras..." poderia ser obedecida pelo Gemma como ordem. Regra: dado de fora nunca vira instrução para a IA.

@@ -137,6 +137,34 @@ class GitStatusServiceTest {
         assertFalse(amb.containsKey("git_config_global"));
         assertEquals("/bin", amb.get("PATH"));
         assertEquals("0", amb.get("GIT_TERMINAL_PROMPT"));
+        // Ticket 008: config do sistema e global ignoradas
+        assertEquals("1", amb.get("GIT_CONFIG_NOSYSTEM"));
+        assertEquals("/dev/null", amb.get("GIT_CONFIG_GLOBAL"));
+    }
+
+    /** Ticket 008: um "git" que cria um NETO e sai. O neto não pode ficar vivo (órfão). */
+    @Test
+    void netoQueFicaVivo_eMortoTambem() throws Exception {
+        Path pidArquivo = pasta.resolve("neto.pid");
+        String java = ProcessHandle.current().info().command().orElse("java");
+        Path dormir = Files.createDirectories(pasta.resolve("prog")).resolve("Dorme.java");
+        Files.writeString(dormir, "public class Dorme { public static void main(String[] a) throws Exception { Thread.sleep(120_000); } }");
+        String jv = java.replace("\\", "\\\\");
+        String dv = dormir.toString().replace("\\", "\\\\");
+        String pv = pidArquivo.toString().replace("\\", "\\\\");
+        List<String> cmd = programaJava("Pai",
+                "Process neto = new ProcessBuilder(\"" + jv + "\", \"" + dv + "\").inheritIO().start();"
+                        + "java.nio.file.Files.writeString(java.nio.file.Path.of(\"" + pv + "\"), \"\" + neto.pid());"
+                        + "Thread.sleep(1500);");
+        GitStatusService s = new GitStatusService(pasta.toString(), cmd, Duration.ofSeconds(20));
+
+        assertThrows(AcaoIndisponivelException.class, s::consultar); // o neto segura a saída aberta
+        long pid = Long.parseLong(Files.readString(pidArquivo).trim());
+        long limite = System.currentTimeMillis() + 5_000;
+        while (ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false) && System.currentTimeMillis() < limite) {
+            Thread.sleep(100);
+        }
+        assertFalse(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false), "o neto ficou vivo");
     }
 
     @Test

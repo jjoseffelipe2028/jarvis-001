@@ -30,4 +30,16 @@ class RotaTesteController {
     Map<String, String> testeMetodos() {
         return Map.of("ok", "sim");
     }
+
+    /** Ticket 008: parâmetro numérico (para testar "abc" → 400). */
+    @org.springframework.web.bind.annotation.GetMapping("/teste-numero")
+    Map<String, String> numero(@org.springframework.web.bind.annotation.RequestParam int n) {
+        return Map.of("n", String.valueOf(n));
+    }
+
+    /** Ticket 008: erro inesperado com dado sensível na mensagem. Não pode vazar. */
+    @PostMapping("/teste-explode")
+    Map<String, String> explode() {
+        throw new UnsupportedOperationException("C:/Users/segredo/senha.txt");
+    }
 }

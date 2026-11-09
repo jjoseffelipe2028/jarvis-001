@@ -119,6 +119,30 @@ class TokenInterceptorTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Ticket 008: erro inesperado vira 500 curto, sem a mensagem de dentro. */
+    @Test
+    void erroInesperado_500SemVazarMensagem() throws Exception {
+        mockMvc.perform(post("/acoes/teste-explode").header(TokenInterceptor.CABECALHO, TOKEN_CERTO))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("{\"erro\":\"erro interno\"}"));
+    }
+
+    /** Ticket 008: o erro genérico não pode engolir o 405 do Spring (vira 500 por engano). */
+    @Test
+    void metodoErrado_continua405() throws Exception {
+        mockMvc.perform(get("/acoes/teste-token").header(TokenInterceptor.CABECALHO, TOKEN_CERTO))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(content().string(not(containsString("Exception"))));
+    }
+
+    /** Achado 6 (008): parâmetro do tipo errado é erro de quem pediu (400), não do servidor (500). */
+    @Test
+    void parametroDoTipoErrado_400() throws Exception {
+        mockMvc.perform(get("/acoes/teste-numero").param("n", "abc").header(TokenInterceptor.CABECALHO, TOKEN_CERTO))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("{\"erro\":\"entrada invalida\"}"));
+    }
+
     @Test
     void getHora_continuaAbertoSemToken() throws Exception {
         mockMvc.perform(get("/acoes/hora")).andExpect(status().isOk());

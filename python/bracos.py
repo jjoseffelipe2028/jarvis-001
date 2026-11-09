@@ -10,11 +10,17 @@ Travas:
 - Proxy desligado: uma variável HTTP_PROXY no PC não desvia o pedido (nem o token).
 - Redirecionamento recusado: a API nunca redireciona; se acontecer, é golpe → para.
 - Resposta com no máximo 1 MB e tempo limite de 10 s.
+- Aperto de mão: a API prova que conhece o segredo (HMAC). Impostor é recusado.
+- O token NUNCA viaja: cada pedido vai assinado (HMAC + hora + nonce de uso único).
 """
 
+import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -25,16 +31,47 @@ TEMPO_LIMITE = 10
 ENV_DA_RAIZ = Path(__file__).resolve().parent.parent / ".env"
 # Formato aceito para o token: sem espaço nem quebra de linha (evita erro que imprime o valor)
 FORMATO_TOKEN = re.compile(r"[A-Za-z0-9._~+/=-]{8,512}")
+# Aperto de mão: o mesmo prefixo do ProvaController.java
+PREFIXO_PROVA = "jarvis-servidor:"
+# Assinatura por pedido: o mesmo rótulo do Assinatura.java
+ROTULO_SUBCHAVE = b"jarvis-assinatura-v1"
+DESLIGADA = "Os braços Java estão desligados. Rode o iniciar.sh."
+IMPOSTOR = "Quem respondeu na porta da API não provou ser o Jarvis. Não mandei nada."
 
 
 class ErroBraco(Exception):
-    """Falha ao falar com os braços. A mensagem já é uma frase curta para o José."""
+    """Falha ao falar com os braços. A mensagem já é uma frase curta para o José.
+    `status` = código HTTP da API (401, 503...) quando houver."""
+
+    def __init__(self, mensagem, status=None):
+        super().__init__(mensagem)
+        self.status = status
+
+    @property
+    def alarme(self):
+        """True = possível ataque (impostor ou assinatura recusada): nunca esconder do José."""
+        return self.args[0] == IMPOSTOR or self.status == 401
 
 
 class _SemRedirecionar(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         # Seguir um redirecionamento levaria o token para outro endereço
         raise ErroBraco("A API tentou me redirecionar. Parei por segurança.")
+
+
+def assinar(token, metodo, rota, corpo, hora=None, nonce=None):
+    """
+    Assina um pedido (Ticket 007), igual ao Assinatura.java:
+    subchave = HMAC(token, "jarvis-assinatura-v1")
+    assinatura = HMAC(subchave, MÉTODO\\nROTA\\nHORA\\nNONCE\\nSHA256(corpo))
+    O token fica no PC: só a assinatura viaja. Um nonce novo por pedido impede repetir o pedido.
+    """
+    hora = str(int(time.time())) if hora is None else hora
+    nonce = secrets.token_hex(16) if nonce is None else nonce
+    subchave = hmac.new(token.encode("utf-8"), ROTULO_SUBCHAVE, hashlib.sha256).digest()
+    mensagem = "\n".join([metodo, rota, hora, nonce, hashlib.sha256(corpo).hexdigest()])
+    assinatura = hmac.new(subchave, mensagem.encode("utf-8"), hashlib.sha256).hexdigest()
+    return {"X-Jarvis-Hora": hora, "X-Jarvis-Nonce": nonce, "X-Jarvis-Assinatura": assinatura}
 
 
 def ler_token(env=os.environ, arquivo=ENV_DA_RAIZ):
@@ -95,21 +132,52 @@ class Bracos:
             raise ErroBraco("Estou sem o token. Confira o JARVIS_TOKEN no .env.")
         if not FORMATO_TOKEN.fullmatch(self._token):
             raise ErroBraco("O token do .env tem um formato estranho (espaço ou quebra de linha?).")
+        self._conferir_servidor()  # a API prova quem é (Ticket 006)
         dados = None if corpo is None else json.dumps(corpo).encode("utf-8")
         pedido = urllib.request.Request(self._endereco + rota, data=dados, method=metodo)
-        pedido.add_header("X-Jarvis-Token", self._token)
+        # Ticket 007: o token NUNCA viaja. O pedido vai assinado (vale 1 vez, por 60 s).
+        for nome, valor in assinar(self._token, metodo, rota, dados or b"").items():
+            pedido.add_header(nome, valor)
         pedido.add_header("X-Jarvis-Cliente", "python")
         if dados is not None:
             pedido.add_header("Content-Type", "application/json")
+        return self._enviar(pedido)
+
+    def _conferir_servidor(self):
+        """
+        Aperto de mão (challenge-response) ANTES de mandar o token. 🔒
+        Mando um número aleatório; só a API verdadeira, que conhece o token, sabe devolver
+        HMAC-SHA256(token, "jarvis-servidor:" + número). Um programa impostor na porta 8080
+        não sabe, e o token não sai daqui.
+        """
+        desafio = secrets.token_hex(16)  # 32 letras hex, novo a cada pedido (não dá para repetir)
+        pedido = urllib.request.Request(
+            f"{self._endereco}/acoes/prova?desafio={desafio}", method="GET")  # SEM o token
+        pedido.add_header("X-Jarvis-Cliente", "python")
+        try:
+            dados = self._enviar(pedido)
+        except ErroBraco as e:
+            # Desligada ou ocupada (503) é problema comum, não ataque: mostra a frase certa
+            if e.args and e.args[0] == DESLIGADA or e.status == 503:
+                raise
+            raise ErroBraco(IMPOSTOR) from None
+        esperado = hmac.new(self._token.encode("utf-8"),
+                            (PREFIXO_PROVA + desafio).encode("utf-8"), hashlib.sha256).hexdigest()
+        recebido = dados.get("prova")
+        # compare_digest: compara em tempo constante (não dá pista pelo tempo de resposta)
+        if not isinstance(recebido, str) or not hmac.compare_digest(esperado, recebido):
+            raise ErroBraco(IMPOSTOR)
+
+    def _enviar(self, pedido):
         try:
             with self._abridor.open(pedido, timeout=TEMPO_LIMITE) as resposta:
                 return _ler_json(resposta)
         except urllib.error.HTTPError as e:
-            raise ErroBraco(_frase_do_erro(e.code, _ler_json_seguro(e))) from None
+            raise ErroBraco(_frase_do_erro(e.code, _ler_json_seguro(e)), status=e.code) from None
         except ErroBraco:
             raise
         except (urllib.error.URLError, ConnectionError, TimeoutError, OSError):
-            raise ErroBraco("Os braços Java estão desligados. Rode o iniciar.sh.") from None
+            raise ErroBraco(DESLIGADA) from None
         except Exception:
             # Qualquer outra falha (resposta torta etc.): frase fixa, sem traceback e sem dados
             raise ErroBraco("Falha ao falar com os braços Java.") from None
@@ -146,6 +214,8 @@ _MOTIVOS_503 = {
     "git demorou demais": "o git demorou demais",
     "repositorio indisponivel": "a pasta não é um repositório git",
     "saida do git grande demais": "a saída do git ficou grande demais",
+    "muitos pedidos": "a API está ocupada agora, tenta de novo em 1 segundo",
+    "tente de novo": "a API está ocupada agora, tenta de novo em 1 segundo",
 }
 
 

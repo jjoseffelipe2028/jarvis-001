@@ -9,6 +9,7 @@ Lista (allowlist):
 - "quais minhas pendências?"          → pendências
 - "tenho algo sem commit?"            → git-status
 - "que horas são?"                    → hora
+- "bom dia, Jarvis" (frase inteira)   → resumo do dia (rotinas.py)
 - Pedido de ação fora da lista ("apaga", "instala"...) → "não posso fazer isso".
 """
 
@@ -16,7 +17,7 @@ import re
 import unicodedata
 
 # Resultado da detecção: (acao, argumento). acao in ACOES ou "proibida".
-ACOES = ("daily", "pendencias", "git_status", "hora")
+ACOES = ("daily", "pendencias", "git_status", "hora", "bom_dia")
 
 
 def _sem_acento(texto):
@@ -43,6 +44,9 @@ _PENDENCIAS = re.compile(_PEDIDO + r".*\b(?:pendencias?|tarefas?\s+(?:abertas?|p
                          r"|^\s*(?:jarvis[\s,]+)?o\s+que\s+(?:falta|tenho\s+pra\s+fazer)\b")
 _GIT = re.compile(_PEDIDO + r".*\b(?:commit\w*|git\s*status)\b")
 _HORA = re.compile(r"^\s*(?:jarvis[\s,]+)?(?:que\s+horas?\s+(?:sao|e)|que\s+dia\s+e\s+hoje)\b")
+# Ticket 009: a frase INTEIRA tem que ser o cumprimento ("bom dia jarvis"), senão é conversa
+_BOM_DIA = re.compile(r"^\s*(?:jarvis[\s,]+)?(?:bom\s+dia|boa\s+tarde|boa\s+noite|resumo\s+do\s+dia|como\s+(?:ta|esta)\s+meu\s+dia)"
+                      r"(?:[\s,]+jarvis)?[\s.!?]*$")
 
 # Verbos de ação perigosa ou fora da lista: o Jarvis recusa em vez de "conversar" sobre fazer
 _PROIBIDA = re.compile(
@@ -70,6 +74,8 @@ def detectar(frase):
         return ("git_status", None)
     if _HORA.search(normal):
         return ("hora", None)
+    if _BOM_DIA.match(normal):
+        return ("bom_dia", None)
     return None
 
 
@@ -94,7 +100,7 @@ def responder(acao, dados):
     """Frase curta e SEGURA para falar. Resposta torta da API não derruba o Jarvis."""
     try:
         return seguro(_responder(acao, dados))
-    except (TypeError, ValueError, AttributeError, KeyError):
+    except (TypeError, ValueError, AttributeError, KeyError, OverflowError):
         return "A API respondeu algo inesperado."
 
 

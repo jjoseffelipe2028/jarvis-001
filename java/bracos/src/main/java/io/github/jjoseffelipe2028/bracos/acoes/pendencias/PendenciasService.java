@@ -44,7 +44,10 @@ public class PendenciasService {
     // Controle, invisíveis (ex.: U+202E que inverte o texto) e surrogate solto viram espaço.
     // O U+200D fica: ele monta emojis compostos.
     private static final Pattern INVISIVEL =
-            Pattern.compile("[[\\p{Cc}\\p{Cf}\\p{Cs}\\u2028\\u2029]&&[^\\u200D]]");
+            Pattern.compile("[[\\p{Cc}\\p{Cf}\\p{Cs}\\u2028\\u2029\\u115F\\u1160\\u2800\\u3164\\uFFA0]&&[^\\u200D]]");
+    // Ticket 008: letras "em branco" (U+3164 etc.) acima; e "zalgo" (muitos acentos empilhados):
+    // mais de 2 marcas seguidas viram só as 2 primeiras
+    private static final Pattern ACENTOS_EMPILHADOS = Pattern.compile("(\\p{M}{2})\\p{M}+");
 
     /** Uma tarefa aberta e o dia (nome da nota) em que ela está. */
     public record Pendencia(String dia, String texto) {
@@ -138,7 +141,9 @@ public class PendenciasService {
 
     /** Tira invisíveis e corta em 300 caracteres (sem partir emoji no meio). */
     static String limpar(String texto) {
-        String limpo = INVISIVEL.matcher(texto).replaceAll(" ").strip();
+        // Primeiro os invisíveis (senão um invisível no meio "quebra" a pilha de acentos), depois a pilha
+        String semInvisivel = INVISIVEL.matcher(texto).replaceAll(" ");
+        String limpo = ACENTOS_EMPILHADOS.matcher(semInvisivel).replaceAll("$1").strip();
         if (limpo.codePointCount(0, limpo.length()) > LIMITE_TEXTO) {
             limpo = limpo.substring(0, limpo.offsetByCodePoints(0, LIMITE_TEXTO)) + "...";
         }

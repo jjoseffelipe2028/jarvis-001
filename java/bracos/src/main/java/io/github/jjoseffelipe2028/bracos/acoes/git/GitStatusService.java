@@ -162,8 +162,11 @@ public class GitStatusService {
         // Lê a saída em paralelo (com limite), enquanto o relógio conta o tempo
         FutureTask<byte[]> leitura = new FutureTask<>(() -> lerComLimite(processo.getInputStream()));
         Thread.ofVirtual().start(leitura);
+        // Ticket 008: anota os filhos e netos ENQUANTO o git está vivo (depois que ele sai,
+        // não dá mais para achar os netos órfãos). No fim, mata todos os anotados.
+        java.util.Set<ProcessHandle> arvore = new java.util.HashSet<>();
         try {
-            boolean terminou = processo.waitFor(limiteTempo.toMillis(), TimeUnit.MILLISECONDS);
+            boolean terminou = esperarAnotandoFilhos(processo, arvore);
             if (!terminou) {
                 throw new AcaoIndisponivelException("git demorou demais");
             }
@@ -180,8 +183,13 @@ public class GitStatusService {
             Thread.currentThread().interrupt();
             throw new AcaoIndisponivelException("git interrompido");
         } finally {
-            // Em qualquer saída (erro, demora, saída gigante): o processo não fica vivo
-            processo.descendants().forEach(ProcessHandle::destroyForcibly);
+            // Em qualquer saída (erro, demora, saída gigante): ninguém da árvore fica vivo.
+            // Só pergunta os filhos se o git ainda está VIVO: morto, o número (PID) dele pode já
+            // ser de outro programa do José, e mataríamos os filhos errados.
+            if (processo.isAlive()) {
+                processo.descendants().forEach(arvore::add);
+            }
+            arvore.forEach(ProcessHandle::destroyForcibly);
             processo.destroyForcibly();
             // Fechar a saída destrava a leitura (cancel sozinho não solta um cano preso)
             try {
@@ -193,11 +201,33 @@ public class GitStatusService {
         }
     }
 
+    /** Espera o git terminar (até o limite), anotando a árvore de processos a cada 50 ms. */
+    private boolean esperarAnotandoFilhos(Process processo, java.util.Set<ProcessHandle> arvore)
+            throws InterruptedException {
+        long fim = System.nanoTime() + limiteTempo.toNanos();
+        while (true) {
+            if (processo.isAlive()) {
+                processo.descendants().forEach(arvore::add);
+            }
+            long resta = fim - System.nanoTime();
+            if (resta <= 0) {
+                return false;
+            }
+            if (processo.waitFor(Math.min(TimeUnit.NANOSECONDS.toMillis(resta) + 1, 50), TimeUnit.MILLISECONDS)) {
+                return true;
+            }
+        }
+    }
+
     /** Apaga GIT_* herdadas (podem trocar o repositório ou a config) e desliga perguntas. */
     static void limparAmbiente(Map<String, String> ambiente) {
         ambiente.keySet().removeIf(k -> k.toUpperCase(Locale.ROOT).startsWith("GIT_"));
         ambiente.put("GIT_TERMINAL_PROMPT", "0"); // nunca pede senha
         ambiente.put("GIT_OPTIONAL_LOCKS", "0");
+        // Ticket 008: só a config do PRÓPRIO repositório vale. A do sistema e a global (~/.gitconfig)
+        // são ignoradas: uma chave perigosa lá não entra no "git status" do Jarvis.
+        ambiente.put("GIT_CONFIG_NOSYSTEM", "1");
+        ambiente.put("GIT_CONFIG_GLOBAL", "/dev/null");
         ambiente.put("LC_ALL", "C");              // mensagens em inglês fixo: o leitor abaixo depende delas
     }
 

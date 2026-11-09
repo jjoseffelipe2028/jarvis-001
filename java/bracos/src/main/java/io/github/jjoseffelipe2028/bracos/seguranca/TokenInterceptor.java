@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Porteiro de todo /acoes/**: exige o cabeçalho X-Jarvis-Token. 🔒
+ * Porteiro de todo /acoes/**: exige um pedido ASSINADO (Ticket 007, ver Assinatura)
+ * ou o cabeçalho X-Jarvis-Token (testes manuais com curl). 🔒
  * Evita CSRF (página maliciosa chamando a API) e adivinhação do token por tempo de resposta.
  * Bloqueio por padrão: só as rotas de ROTAS_PUBLICAS (leitura sem dado pessoal) passam sem token.
  */
@@ -25,16 +26,22 @@ public class TokenInterceptor implements HandlerInterceptor {
     private static final java.util.Set<String> METODOS_SO_LEITURA = java.util.Set.of("GET", "HEAD", "OPTIONS");
 
     /** Únicas rotas abertas sem token. Comparação EXATA: qualquer variação cai no porteiro. */
-    static final java.util.Set<String> ROTAS_PUBLICAS = java.util.Set.of("/acoes/hora");
+    // /acoes/prova é pública de propósito: é o "aperto de mão" que acontece ANTES de o token sair do Python
+    static final java.util.Set<String> ROTAS_PUBLICAS = java.util.Set.of("/acoes/hora", "/acoes/prova");
 
     private static final Logger log = LoggerFactory.getLogger(TokenInterceptor.class);
 
     private final byte[] hashEsperado; // null = token não configurado
+    private final Assinatura assinatura; // null = token não configurado
 
     public TokenInterceptor(String tokenConfigurado) {
-        this.hashEsperado = (tokenConfigurado == null || tokenConfigurado.isBlank())
-                ? null
-                : sha256(tokenConfigurado);
+        this(tokenConfigurado, java.time.Clock.systemUTC());
+    }
+
+    TokenInterceptor(String tokenConfigurado, java.time.Clock relogio) {
+        boolean semToken = tokenConfigurado == null || tokenConfigurado.isBlank();
+        this.hashEsperado = semToken ? null : sha256(tokenConfigurado);
+        this.assinatura = semToken ? null : new Assinatura(tokenConfigurado, relogio);
     }
 
     @Override
@@ -57,7 +64,33 @@ public class TokenInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // Jeito 1 (Ticket 007, o do Python): pedido ASSINADO. O token nunca viaja.
+        if (request.getHeader(Assinatura.CAB_ASSINATURA) != null) {
+            String rota = request.getRequestURI()
+                    + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
+            byte[] corpo = CorpoGuardadoFilter.corpo(request);
+            Assinatura.Resultado r = corpo == null
+                    ? Assinatura.Resultado.FORMATO // o corpo não foi guardado: não dá para conferir → recusa
+                    : assinatura.conferir(request.getMethod(), rota,
+                            request.getHeader(Assinatura.CAB_HORA), request.getHeader(Assinatura.CAB_NONCE),
+                            corpo, request.getHeader(Assinatura.CAB_ASSINATURA));
+            if (r == Assinatura.Resultado.OK) {
+                return true;
+            }
+            // Motivo = nome fixo do enum (não vem de fora)
+            log.warn("cliente={} acao={} resultado=negado motivo=assinatura_{}",
+                    cliente, LogSeguro.limpar(request.getRequestURI()), r.name().toLowerCase(java.util.Locale.ROOT));
+            responder(response, r == Assinatura.Resultado.LOTADO ? 503 : 401,
+                    r == Assinatura.Resultado.LOTADO ? "tente de novo" : "nao autorizado");
+            return false;
+        }
+
+        // Jeito 2 (para testes manuais com curl): o token no cabeçalho.
+        // Fica registrado no log, para o José ver se algo além dos testes manuais usa este caminho.
         String recebido = request.getHeader(CABECALHO);
+        if (recebido != null) {
+            log.info("cliente={} acao={} aviso=token_simples", cliente, LogSeguro.limpar(request.getRequestURI()));
+        }
         // Compara os hashes SHA-256 em tempo constante (esconde também o tamanho do token)
         boolean ok = recebido != null && MessageDigest.isEqual(hashEsperado, sha256(recebido));
         if (!ok) {

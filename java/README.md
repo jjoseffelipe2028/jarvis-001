@@ -32,6 +32,7 @@ cd java/bracos
 | `POST` 🔒 | `/acoes/daily` | Acrescenta `- HH:mm texto` no daily de hoje do Obsidian | `{"arquivo":"2026-11-08.md","resultado":"ok"}` |
 | `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos dailys dos últimos 7 dias | `{"pendencias":[{"dia":"2026-11-08","texto":"estudar Git"}],"total":1,"ignorados":0}` |
 | `GET` 🔒 | `/acoes/git-status` | Tem algo sem commit no repositório? (só números) | `{"branch":"main","limpo":false,"alterados":2,"novos":1,"aFrente":0,"atras":0}` |
+| `GET` | `/acoes/prova?desafio=<hex>` | Aperto de mão: devolve HMAC(token, desafio) para o Python saber que é a API verdadeira | `{"prova":"74442c56..."}` |
 
 Testar na mão (com a API rodando):
 
@@ -39,7 +40,7 @@ Testar na mão (com a API rodando):
 curl http://127.0.0.1:8080/acoes/hora
 ```
 
-As rotas 🔒 precisam do token (`X-Jarvis-Token`) e das pastas no `.env` (`JARVIS_PASTA_DAILY`, `JARVIS_PASTA_GIT`). Só `/acoes/hora` é aberta.
+As rotas 🔒 precisam do token (`X-Jarvis-Token`) e das pastas no `.env` (`JARVIS_PASTA_DAILY`, `JARVIS_PASTA_GIT`). Só `/acoes/hora` e `/acoes/prova` (aperto de mão) são abertas.
 
 ## Segurança 🔒
 
@@ -47,7 +48,8 @@ As rotas 🔒 precisam do token (`X-Jarvis-Token`) e das pastas no `.env` (`JARV
 - Só escuta em `127.0.0.1` (`application.properties`): nada aberto para a rede.
 - Só existem as ações escritas à mão nos controllers (allowlist).
 - Texto gravado no Obsidian é "desarmado": sem quebra de linha, invisíveis ou Markdown/HTML ativo.
-- Token secreto em **todo** `/acoes/**` (fechado por padrão, até no `GET`), comparado em tempo constante (contra CSRF). Só `/acoes/hora` é pública. Sem token configurado: 503.
+- Pedido **assinado** (HMAC + hora + nonce de uso único): o cliente Python nunca manda o token. O token direto só para testes com curl (fica no log).
+- Token secreto em **todo** `/acoes/**` (fechado por padrão, até no `GET`), comparado em tempo constante (contra CSRF). Só `/acoes/hora` e `/acoes/prova` são públicas. Sem token configurado: 503.
 - Leitura do Obsidian (`pendencias`): só os 7 últimos dailys, nomes gerados pelo servidor, sem seguir atalho, com limites de tamanho.
 - Programa externo (`git-status`): comando **fixo** e sem shell (anti injeção de comando), `core.fsmonitor` desligado, variáveis `GIT_*` apagadas, 5 s e 64 KB no máximo, resposta só com números.
 - Filtro de `Host`: só `localhost` e `127.0.0.1` (contra DNS rebinding).
@@ -77,7 +79,7 @@ bracos/
     │   │   ├── erros/                       erros viram JSON curto
     │   │   └── auditoria/                   Cliente e LogSeguro
     │   └── resources/application.properties endereço, porta, token e pasta (do .env)
-    └── test/java/.../bracos/                134 testes (./mvnw test)
+    └── test/java/.../bracos/                158 testes (./mvnw test)
 ```
 
 Revisões deste código: [`docs/reviews/`](../docs/reviews/).

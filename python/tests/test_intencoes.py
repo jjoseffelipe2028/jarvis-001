@@ -42,7 +42,7 @@ class DetectarTest(unittest.TestCase):
 
     def test_conversa_normal_vai_pro_gemma(self):
         for frase in ("O que é uma API?", "me explica o que é Path Traversal",
-                      "bom dia Jarvis", "", None):
+                      "bom dia, tudo bem com você?", "", None):
             self.assertIsNone(detectar(frase), frase)
 
     def test_texto_do_daily_nao_e_reinterpretado(self):

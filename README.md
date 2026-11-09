@@ -20,7 +20,7 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 |---|---|
 | ☕ **API REST em Java 21 + Spring Boot 4** | 4 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
 | 🔒 **Segurança como requisito** | Token em tempo constante, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **134 testes automatizados** | JUnit 5 + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| 🧪 **158 testes Java + 60 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
 | ⚙️ **CI/CD no GitHub** | Testes a cada push (Actions), análise de segurança (CodeQL) e atualização de dependências (Dependabot) |
 | 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
@@ -46,10 +46,11 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 
 | Método | Rota | O que faz |
 |---|---|---|
-| `GET` | `/acoes/hora` | Data e hora de Brasília (única rota pública) |
+| `GET` | `/acoes/hora` | Data e hora de Brasília (pública) |
 | `POST` 🔒 | `/acoes/daily` | Escreve uma linha no daily de hoje do Obsidian |
 | `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos últimos 7 dailys |
 | `GET` 🔒 | `/acoes/git-status` | Diz se o repositório tem algo sem commit (só números) |
+| `GET` | `/acoes/prova` | Aperto de mão: prova (HMAC) que esta é a API verdadeira, antes de o Python mandar o token |
 
 Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 
@@ -65,6 +66,8 @@ Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 | `.git/config` malicioso executando programa | `core.fsmonitor` desligado no comando | ataque real no teste: o git cru executa, o Jarvis não |
 | Markdown/HTML ativo na nota (imagem que vaza IP, DataviewJS) | Texto "desarmado" com `\` | `DailyServiceTest` |
 | Log injection | `LogSeguro.limpar()` + teste que lê o código-fonte | `LogSemDadoCruTest` |
+| Programa impostor na porta 8080 roubando o token | Aperto de mão (challenge-response com HMAC) antes de o token sair do Python | `ProvaControllerTest`, `test_bracos.py` |
+| Pedido copiado, repetido ou alterado no caminho | **O token nunca viaja**: cada pedido vai assinado (HMAC + hora + nonce de uso único) | `AssinaturaTest`, `AssinaturaDePontaAPontaTest` |
 | Vazamento de dado pessoal | Respostas e logs sem caminho, sem texto do usuário e sem stack trace | testes de controller |
 
 Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fichas de cada ticket.
@@ -86,7 +89,7 @@ Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fich
 **API Java** (precisa de Java 21):
 ```bash
 cd java/bracos
-./mvnw test              # 134 testes
+./mvnw test              # 158 testes
 ./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
 ```
 
@@ -102,8 +105,8 @@ python chat.py
 ## 🗺️ Roteiro
 
 - [x] Base: cérebro (`chat.py`), ouvido (`ouvido.py`) e boca (`boca.py`), tudo offline
-- [x] **Braços em Java**: `hora`, `daily`, `pendencias`, `git-status` · segurança · 134 testes · CI
-- [ ] Integração voz ↔ Java ("Jarvis, quais minhas pendências?")
+- [x] **Braços em Java**: `hora`, `daily`, `pendencias`, `git-status` · segurança · 158 testes · CI
+- [x] Integração voz ↔ Java: pendências, git-status, daily, "bom dia, Jarvis" · pedidos assinados
 - [ ] Central web com os agentes trabalhando em tempo real
 - [ ] Módulos: Sentinela (só avisa), Vídeos, Biblioteca offline
 - [ ] Dupla 001 + 002 em loop com GitHub Issues
