@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -20,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
+import io.github.jjoseffelipe2028.bracos.acoes.PastaSegura;
 import io.github.jjoseffelipe2028.bracos.erros.AcaoIndisponivelException;
 import io.github.jjoseffelipe2028.bracos.erros.EntradaInvalidaException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -144,27 +144,12 @@ public class DailyService {
 
     /** Garante que o arquivo fica DENTRO da pasta permitida (anti Path Traversal). */
     static Path dentroDaPasta(Path base, String nomeArquivo) {
-        Path alvo = base.resolve(nomeArquivo).normalize();
-        if (!alvo.startsWith(base) || alvo.equals(base)) {
-            throw new IllegalStateException("caminho fora da pasta permitida");
-        }
-        return alvo;
+        return PastaSegura.dentroDaPasta(base, nomeArquivo);
     }
 
     /** Pasta vazia ou que não existe → 503 (falha fechada: na dúvida, nega). */
     private Path pastaPermitida() {
-        if (pastaConfigurada == null || pastaConfigurada.isBlank()) {
-            throw new AcaoIndisponivelException("pasta nao configurada");
-        }
-        try {
-            Path base = Path.of(pastaConfigurada).toRealPath();
-            if (!Files.isDirectory(base)) {
-                throw new AcaoIndisponivelException("pasta indisponivel");
-            }
-            return base;
-        } catch (IOException | InvalidPathException e) {
-            throw new AcaoIndisponivelException("pasta indisponivel");
-        }
+        return PastaSegura.base(pastaConfigurada);
     }
 
     private static boolean terminaComQuebraDeLinha(SeekableByteChannel canal, long tamanho) throws IOException {

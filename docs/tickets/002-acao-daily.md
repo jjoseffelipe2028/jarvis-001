@@ -47,4 +47,5 @@ Resposta: `{"arquivo":"2026-11-08.md","resultado":"ok"}` (só o nome, nunca o ca
 ## 🎤 Pergunta para o José
 > Por que o **nome do arquivo** é gerado pelo servidor e não vem no pedido? Que ataque isso evita?
 
-**Resposta do José:** _(preencher)_
+**Resposta do José:** "porque o servidor que escolhe" (parcial).
+**Completa (001):** se o nome viesse no pedido, um atacante mandaria `../../algo` e escreveria fora da pasta (**Path Traversal**). Com o servidor gerando o nome (`AAAA-MM-DD.md`), quem pede não controla **onde** grava.

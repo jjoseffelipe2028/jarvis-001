@@ -14,14 +14,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Porteiro de todo POST /acoes/**: exige o cabeçalho X-Jarvis-Token. 🔒
+ * Porteiro de todo /acoes/**: exige o cabeçalho X-Jarvis-Token. 🔒
  * Evita CSRF (página maliciosa chamando a API) e adivinhação do token por tempo de resposta.
+ * Bloqueio por padrão: só as rotas de ROTAS_PUBLICAS (leitura sem dado pessoal) passam sem token.
  */
 public class TokenInterceptor implements HandlerInterceptor {
 
     public static final String CABECALHO = "X-Jarvis-Token";
 
     private static final java.util.Set<String> METODOS_SO_LEITURA = java.util.Set.of("GET", "HEAD", "OPTIONS");
+
+    /** Únicas rotas abertas sem token. Comparação EXATA: qualquer variação cai no porteiro. */
+    static final java.util.Set<String> ROTAS_PUBLICAS = java.util.Set.of("/acoes/hora");
 
     private static final Logger log = LoggerFactory.getLogger(TokenInterceptor.class);
 
@@ -36,9 +40,11 @@ public class TokenInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        // Só métodos de LEITURA passam sem token (GET /acoes/hora continua aberto).
-        // POST, PUT, PATCH, DELETE e qualquer outro: porteiro. Ação nova já nasce protegida.
-        if (METODOS_SO_LEITURA.contains(request.getMethod().toUpperCase(java.util.Locale.ROOT))) {
+        // Só LEITURA em rota PÚBLICA passa sem token (ex.: GET /acoes/hora).
+        // Todo o resto (POST, PUT, DELETE e até GET com dado pessoal, como /acoes/pendencias): porteiro.
+        // Ação nova já nasce protegida.
+        boolean leitura = METODOS_SO_LEITURA.contains(request.getMethod().toUpperCase(java.util.Locale.ROOT));
+        if (leitura && ROTAS_PUBLICAS.contains(request.getRequestURI())) {
             return true;
         }
         String cliente = Cliente.de(request.getHeader(Cliente.CABECALHO));

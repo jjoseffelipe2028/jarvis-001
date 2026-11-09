@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.github.jjoseffelipe2028.bracos.acoes.daily.DailyService;
+import io.github.jjoseffelipe2028.bracos.acoes.pendencias.PendenciasService;
 import io.github.jjoseffelipe2028.bracos.erros.ErrosHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * Se alguém criar uma rota POST fora de /acoes/**, este teste quebra.
  */
 @WebMvcTest
-@Import({DailyService.class, WebConfig.class, ErrosHandler.class})
+@Import({DailyService.class, PendenciasService.class, WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste")
 class RotasPostContratoTest {
 
@@ -80,6 +81,49 @@ class RotasPostContratoTest {
             }
         }
         assertEquals(List.of(), semProtecao, "rotas que alteram dados sem exigir token");
+    }
+
+    /**
+     * Contrato do Ticket 003: GET também é fechado por padrão. 🔒
+     * Toda rota GET em /acoes/** fora de ROTAS_PUBLICAS sem token → 401.
+     * Se alguém criar um GET novo com dado pessoal e esquecer o token, este teste quebra.
+     */
+    @Test
+    void todaRotaGetForaDaListaPublicaExigeToken() throws Exception {
+        List<String> rotasGet = new ArrayList<>();
+        for (Map.Entry<RequestMappingInfo, HandlerMethod> e : mapeamentos.getHandlerMethods().entrySet()) {
+            if (e.getValue().getBeanType().getName().equals(SPRING_ERRO)) {
+                continue;
+            }
+            Set<RequestMethod> metodos = e.getKey().getMethodsCondition().getMethods();
+            if (!metodos.isEmpty() && !metodos.contains(RequestMethod.GET)) {
+                continue;
+            }
+            for (String rota : e.getKey().getPatternValues()) {
+                if (rota.startsWith("/acoes/") && !TokenInterceptor.ROTAS_PUBLICAS.contains(rota)) {
+                    rotasGet.add(rota);
+                }
+            }
+        }
+        assertFalse(rotasGet.isEmpty(), "o teste precisa achar pelo menos uma rota GET protegida");
+
+        List<String> semProtecao = new ArrayList<>();
+        for (String rota : rotasGet) {
+            String url = rota.replaceAll("\\{[^}]+}", "x");
+            int status = mockMvc.perform(MockMvcRequestBuilders.get(url)).andReturn().getResponse().getStatus();
+            if (status != 401) {
+                semProtecao.add("GET " + rota + " → " + status);
+            }
+        }
+        assertEquals(List.of(), semProtecao, "rotas GET com dado sem exigir token");
+    }
+
+    @Test
+    void getEmRotaQueNaoExisteSemToken_401() throws Exception {
+        // Fechado por padrão: nem dá para descobrir quais rotas existem sem o token
+        int status = mockMvc.perform(MockMvcRequestBuilders.get("/acoes/nao-existe"))
+                .andReturn().getResponse().getStatus();
+        assertEquals(401, status);
     }
 
     /** Uma rota PUT/DELETE nova também precisa de token (achado 3 do jarvis-hacker). */
