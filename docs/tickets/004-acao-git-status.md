@@ -47,4 +47,5 @@
 ## 🎤 Pergunta para o José
 > Por que o Jarvis roda o `git` **sem** passar por um terminal (`cmd`/`bash`)? O que um atacante faria se passasse?
 
-**Resposta do José:** _(preencher)_
+**Resposta do José:** "porque o Jarvis roda no próprio PC" ❌ (isso é a trava do `127.0.0.1`).
+**Certa (001):** num terminal, `;`, `&&` e `|` juntam comandos. Se algo de fora entrasse, `git status; del arquivo` rodaria o `del` também (**injeção de comando**). Sem terminal, o `ProcessBuilder` passa cada argumento separado: o `;` é só texto. → **Rever com o José.**
