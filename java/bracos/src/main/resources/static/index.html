@@ -88,7 +88,6 @@
       <ul id="saida" class="saida"><li class="fu">Clique num comando.</li></ul>
     </section>
     <div class="aviso-nuvem">🌐 001 e 002 ficam na nuvem: nada sai do PC sem o seu <b>Aceitar</b></div>
-    <div class="pixel">👾 Escritório pixel · espaço reservado (v2)</div>
   </section>
 
   <section class="coluna">
@@ -122,11 +121,28 @@
   </section>
 </main>
 
+<section class="escritorio" aria-label="Escritório dos agentes">
+  <div class="esc-topo"><b>👾 ESCRITÓRIO DOS AGENTES</b> <span class="fu">clique numa skill e veja o time trabalhar</span></div>
+  <div class="esc-palco">
+    <canvas id="esc-cena" width="256" height="144" aria-label="Escritório em pixel art: 001, Jarvis e 002 nas mesas"></canvas>
+    <div class="esc-scan"></div>
+    <div class="esc-camada" id="esc-camada"></div>
+  </div>
+  <div class="esc-grade" id="esc-skills"></div>
+  <div class="esc-legenda">
+    <span><span class="esc-st ar">no ar</span> funciona na Central</span>
+    <span><span class="esc-st term">via terminal</span> prepara o pedido; você aceita e cola no Claude Code</span>
+    <span><span class="esc-st breve">em breve</span> chega com ticket próprio</span>
+  </div>
+  <div class="esc-narra"><b>🎙️ JARVIS NARRA</b><ul id="esc-log"></ul></div>
+</section>
+
 <footer class="rodape">
   <span class="ok">✅ pronto</span> <span class="nx">▸ próximo</span> <span class="fu">○ depois</span>
-  <span class="sep">·</span> Central v1 (Ticket 015) · José Felipe
+  <span class="sep">·</span> Central v2 (Ticket 016) · José Felipe
 </footer>
 
 <script src="central.js"></script>
+<script src="escritorio.js"></script>
 </body>
 </html>

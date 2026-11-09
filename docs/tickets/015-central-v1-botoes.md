@@ -33,7 +33,7 @@ Escreve o pedido → **Preparar** → cartão "Isso vai para a nuvem (Claude)" �
 - Java: **238** testes, 0 falhas (+17): `ChaveDaCentralTest` (4), `SessoesDaCentralTest` (4), `CentralControllerTest` (9, com ataques: chave repetida, chave errada, site de fora, `Sec-Fetch-Site: cross-site`, Host falso, botão sem crachá, crachá sem cabeçalho). `CentralPaginaTest` agora também exige que o JS não toque em `document.cookie` e apague a chave do endereço.
 - Nenhum teste grava chave na pasta do projeto (a chave só liga pelo `iniciar.sh`).
 - Teste real (19:01, José): ícone → "🔓 conectada" → Pendências (25) → Git (limpo=false, a v1 ainda sem commit) → cartão "Pedir ao 001" → Aceitar copiou, nada enviado. Log: `sessao ok`, `pendencias ok`, `git-status ok`.
-- Commit: _(preencher)_
+- Commit: `c9aa3ab`
 
 ## Fica para depois
 - Mais botões (relatório de vídeo, daily) — cada um com ticket.
