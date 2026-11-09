@@ -1,13 +1,13 @@
 annotated-types==0.8.0
-anyio==4.15.1
+anyio==4.16.0
 av==19.0.2
 certifi==2026.10.23
 cffi==2.1.1
 click==8.5.0
 colorama==0.4.6
-ctranslate2==4.8.4
+ctranslate2==4.8.5
 faster-whisper==1.2.1
-filelock==4.2.5
+filelock==4.2.9
 flatbuffers==25.12.19
 fsspec==2026.9.0
 h11==0.16.0
@@ -26,8 +26,8 @@ pathvalidate==3.3.1
 piper-tts==1.8.0
 protobuf==7.36.2
 pycparser==3.12
-pydantic==2.14.2
-pydantic_core==2.50.2
+pydantic==2.14.3
+pydantic_core==2.50.4
 PyYAML==6.0.3
 sounddevice==0.5.6
 tokenizers==0.23.3
