@@ -15,7 +15,7 @@
 ## Evidências
 - Python: **61** testes, 0 falhas (+1: `test_pendencia_terminando_em_ponto_nao_vira_ponto_duplo`).
 - Diagrama conferido com o Mermaid oficial (v11.4.1) no navegador: sintaxe OK. Corrigido um rótulo que começava com `1.` e virava lista.
-- Commit: _(preenchido no próximo ticket)_
+- Commit: `e3890f9`
 
 ## 🎤 Pergunta para o José
 > No diagrama, por que a seta "não é ação" vai para o Gemma, e não para o Java?

@@ -11,6 +11,7 @@ import java.util.Set;
 import io.github.jjoseffelipe2028.bracos.acoes.daily.DailyService;
 import io.github.jjoseffelipe2028.bracos.acoes.git.GitStatusService;
 import io.github.jjoseffelipe2028.bracos.acoes.pendencias.PendenciasService;
+import io.github.jjoseffelipe2028.bracos.acoes.video.PortaoDoLaboratorio;
 import io.github.jjoseffelipe2028.bracos.erros.ErrosHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * Se alguém criar uma rota POST fora de /acoes/**, este teste quebra.
  */
 @WebMvcTest
-@Import({DailyService.class, PendenciasService.class, GitStatusService.class, WebConfig.class, ErrosHandler.class})
+@Import({DailyService.class, PendenciasService.class, GitStatusService.class, PortaoDoLaboratorio.class,
+        WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste")
 class RotasPostContratoTest {
 
