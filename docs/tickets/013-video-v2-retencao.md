@@ -39,7 +39,7 @@ Depois de postar, o José copia os números do painel da plataforma. O Jarvis di
 
 ## Evidências
 - Java: **212** testes, 0 falhas (+30). Os testes do daily continuam passando depois da troca para `TextoSeguro`.
-- Commit: _(preencher)_
+- Commit: `c6ca40e`
 
 ## ⚙️ Para ligar no PC (o José faz)
 Acrescentar no `.env` (a 001 não lê o `.env`):

@@ -1,2 +1,5 @@
 # Scripts de shell sempre com quebra de linha LF (senão o Git Bash dá erro $'\r')
 *.sh text eol=lf
+
+# Scripts do Windows sempre com CRLF (o cmd.exe se confunde com LF)
+*.bat text eol=crlf

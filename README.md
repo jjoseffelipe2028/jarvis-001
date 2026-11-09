@@ -22,7 +22,7 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 |---|---|
 | ☕ **API REST em Java 21 + Spring Boot 4** | 6 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
 | 🔒 **Segurança como requisito** | Pedidos assinados com HMAC (o segredo nunca viaja), anti replay, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **212 testes Java + 61 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| 🧪 **221 testes Java + 61 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
 | ⚙️ **CI/CD no GitHub** | 4 robôs a cada push: testes Java, testes Python, CodeQL e gitleaks (segredos). Dependabot vigia Maven, pip e Actions |
 | 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
@@ -99,9 +99,11 @@ Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fich
 **API Java** (precisa de Java 21):
 ```bash
 cd java/bracos
-./mvnw test              # 212 testes
+./mvnw test              # 221 testes
 ./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
 ```
+
+**Central** (Windows): 2 cliques em `Jarvis-Central.bat` → liga a API e abre a tela do Jarvis.
 
 **Cérebro e voz** (Python 3.13 + Ollama com `gemma4:e2b`):
 ```bash
@@ -117,7 +119,8 @@ python chat.py
 - [x] Base: cérebro (`chat.py`), ouvido (`ouvido.py`) e boca (`boca.py`), tudo offline
 - [x] **Braços em Java**: `hora`, `daily`, `pendencias`, `git-status` · segurança · 158 testes · CI
 - [x] Integração voz ↔ Java: pendências, git-status, daily, "bom dia, Jarvis" · pedidos assinados
-- [ ] Central web com os agentes trabalhando em tempo real
+- [x] **Central v0**: tela do Jarvis em modo app, aberta por um ícone na Área de Trabalho (100% offline)
+- [ ] Central v1/v2: botões com ações reais e escritório pixel com os agentes
 - [ ] Módulos: Sentinela (só avisa), Vídeos, Biblioteca offline
 - [ ] Dupla 001 + 002 em loop com GitHub Issues
 - [x] Revisão OWASP Top 10 + gitleaks + portas testadas pela rede
