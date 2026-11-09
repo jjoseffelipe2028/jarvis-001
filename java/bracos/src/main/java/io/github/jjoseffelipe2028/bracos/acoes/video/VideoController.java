@@ -22,9 +22,13 @@ public class VideoController {
     private static final Logger log = LoggerFactory.getLogger(VideoController.class);
 
     private final PortaoDoLaboratorio portao;
+    private final AnalisadorDeRetencao analisador;
+    private final RelatorioService relatorios;
 
-    public VideoController(PortaoDoLaboratorio portao) {
+    public VideoController(PortaoDoLaboratorio portao, AnalisadorDeRetencao analisador, RelatorioService relatorios) {
         this.portao = portao;
+        this.analisador = analisador;
+        this.relatorios = relatorios;
     }
 
     @PostMapping("/avaliar")
@@ -41,6 +45,28 @@ public class VideoController {
             return resultado;
         } catch (RuntimeException e) {
             log.warn("cliente={} acao=video_avaliar resultado=erro motivo={}", cliente, e.getClass().getSimpleName());
+            throw e;
+        }
+    }
+
+    /**
+     * POST /acoes/video/relatorio → analisa a retenção e grava uma nota em decisions/videos (V2). 🔒
+     * Devolve só o NOME da nota, a previsão, a decisão de dublagem e os achados.
+     */
+    @PostMapping("/relatorio")
+    public Analise relatorio(
+            @Valid @RequestBody RelatorioRequest pedido,
+            @RequestHeader(value = Cliente.CABECALHO, required = false) String clienteBruto) {
+
+        String cliente = Cliente.de(clienteBruto);
+        try {
+            Analise analise = analisador.analisar(pedido);
+            String arquivo = relatorios.gravar(pedido, analise);
+            // Nunca loga o título nem o caminho
+            log.info("cliente={} acao=video_relatorio resultado=ok", cliente);
+            return analise.comArquivo(arquivo);
+        } catch (RuntimeException e) {
+            log.warn("cliente={} acao=video_relatorio resultado=erro motivo={}", cliente, e.getClass().getSimpleName());
             throw e;
         }
     }

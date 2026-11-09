@@ -17,9 +17,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Pattern;
 
 import io.github.jjoseffelipe2028.bracos.acoes.PastaSegura;
+import io.github.jjoseffelipe2028.bracos.acoes.TextoSeguro;
 import io.github.jjoseffelipe2028.bracos.erros.AcaoIndisponivelException;
 import io.github.jjoseffelipe2028.bracos.erros.EntradaInvalidaException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,15 +44,6 @@ public class DailyService {
     static final long LIMITE_NOTA_BYTES = 1024 * 1024;
 
     private static final DateTimeFormatter FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm");
-
-    // Controle (Cc), invisíveis (Cf, ex.: U+202E que inverte o texto), surrogate solto (Cs)
-    // e separadores de linha Unicode. O U+200D fica: ele monta emojis compostos.
-    private static final Pattern INVISIVEL =
-            Pattern.compile("[[\\p{Cc}\\p{Cf}\\p{Cs}\\u2028\\u2029]&&[^\\u200D]]");
-
-    // Caracteres que ativam marcação no Obsidian: imagem ![](), link [], código `, HTML <>,
-    // DataviewJS $=, Templater <% %>, chaves {} e tabela |. A barra \ primeiro (é o próprio escape).
-    private static final Pattern MARCACAO = Pattern.compile("([\\\\`*_\\[\\]<>!$%{}|])");
 
     private static final Set<OpenOption> ABRIR_EXISTENTE =
             Set.of(StandardOpenOption.READ, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS);
@@ -135,11 +126,7 @@ public class DailyService {
      * 2) marcação ganha "\" na frente: o Obsidian mostra o caractere, mas não executa nada.
      */
     static String desarmar(String texto) {
-        if (texto == null) {
-            return "";
-        }
-        String semInvisivel = INVISIVEL.matcher(texto).replaceAll(" ").strip();
-        return MARCACAO.matcher(semInvisivel).replaceAll("\\\\$1");
+        return TextoSeguro.desarmar(texto); // regra compartilhada (Ticket 013)
     }
 
     /** Garante que o arquivo fica DENTRO da pasta permitida (anti Path Traversal). */

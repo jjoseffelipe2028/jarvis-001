@@ -24,8 +24,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** POST /acoes/video/avaliar de ponta a ponta (porteiros + validação + regra). */
 @WebMvcTest(VideoController.class)
-@Import({PortaoDoLaboratorio.class, WebConfig.class, ErrosHandler.class})
-@TestPropertySource(properties = "jarvis.token=token-de-teste") // valor FICTÍCIO
+@Import({PortaoDoLaboratorio.class, AnalisadorDeRetencao.class, RelatorioService.class,
+        WebConfig.class, ErrosHandler.class})
+@TestPropertySource(properties = {"jarvis.token=token-de-teste", // valor FICTÍCIO
+        "jarvis.pastas.decisoes="})            // relatório: pasta configurada só no teste próprio
 @ExtendWith(OutputCaptureExtension.class)
 class VideoControllerTest {
 
@@ -87,5 +89,15 @@ class VideoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(corpo))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.erro").value("entrada invalida"));
+    }
+
+    @Test
+    void relatorioSemPastaConfigurada_503() throws Exception {
+        String corpo = "{\"titulo\":\"x\",\"plataforma\":\"facebook\",\"duracaoSeg\":190,"
+                + "\"proporcao3sPara1min\":55,\"mediaAssistidaSeg\":80,\"ctrPct\":4}";
+        mockMvc.perform(post("/acoes/video/relatorio")
+                        .header(TokenInterceptor.CABECALHO, TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON).content(corpo))
+                .andExpect(status().isServiceUnavailable());
     }
 }

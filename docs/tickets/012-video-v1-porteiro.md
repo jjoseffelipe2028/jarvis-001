@@ -33,7 +33,7 @@ O Brasil é o laboratório. Só o vídeo que **provar retenção** na página br
 
 ## Evidências
 - Java: **182** testes, 0 falhas (+24).
-- Commit: _(preencher)_
+- Commit: `65b0c3e`
 
 ## Fica para depois
 - O Python ainda não chama esta rota por voz (entra junto com o V2).

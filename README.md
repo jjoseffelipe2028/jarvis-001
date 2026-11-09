@@ -20,9 +20,9 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 
 | | |
 |---|---|
-| ☕ **API REST em Java 21 + Spring Boot 4** | 4 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
+| ☕ **API REST em Java 21 + Spring Boot 4** | 6 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
 | 🔒 **Segurança como requisito** | Pedidos assinados com HMAC (o segredo nunca viaja), anti replay, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **158 testes Java + 61 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| 🧪 **212 testes Java + 61 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
 | ⚙️ **CI/CD no GitHub** | 4 robôs a cada push: testes Java, testes Python, CodeQL e gitleaks (segredos). Dependabot vigia Maven, pip e Actions |
 | 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
@@ -56,6 +56,8 @@ flowchart TD
 | `POST` 🔒 | `/acoes/daily` | Escreve uma linha no daily de hoje do Obsidian |
 | `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos últimos 7 dailys |
 | `GET` 🔒 | `/acoes/git-status` | Diz se o repositório tem algo sem commit (só números) |
+| `POST` 🔒 | `/acoes/video/avaliar` | Vídeos V1: decide se o vídeo merece dublagem ("Laboratório Brasil") |
+| `POST` 🔒 | `/acoes/video/relatorio` | Vídeos V2: analisa a retenção e grava erros + ajustes no Obsidian |
 | `GET` | `/acoes/prova` | Aperto de mão: prova (HMAC) que esta é a API verdadeira, antes de qualquer pedido |
 
 Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
@@ -97,7 +99,7 @@ Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fich
 **API Java** (precisa de Java 21):
 ```bash
 cd java/bracos
-./mvnw test              # 158 testes
+./mvnw test              # 212 testes
 ./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
 ```
 

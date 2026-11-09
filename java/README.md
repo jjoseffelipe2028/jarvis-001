@@ -32,6 +32,8 @@ cd java/bracos
 | `POST` 🔒 | `/acoes/daily` | Acrescenta `- HH:mm texto` no daily de hoje do Obsidian | `{"arquivo":"2026-11-08.md","resultado":"ok"}` |
 | `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos dailys dos últimos 7 dias | `{"pendencias":[{"dia":"2026-11-08","texto":"estudar Git"}],"total":1,"ignorados":0}` |
 | `GET` 🔒 | `/acoes/git-status` | Tem algo sem commit no repositório? (só números) | `{"branch":"main","limpo":false,"alterados":2,"novos":1,"aFrente":0,"atras":0}` |
+| `POST` 🔒 | `/acoes/video/avaliar` | Laboratório Brasil: o vídeo pode ir para a dublagem? (V1) | `{"libera":true,"motivos":["proporção 3s→1min acima de 50%"]}` |
+| `POST` 🔒 | `/acoes/video/relatorio` | Analisa a retenção e grava uma nota em `decisions/videos` (V2) | `{"arquivo":"2026-11-09-164210-retencao.md","previsao":"forte",...}` |
 | `GET` | `/acoes/prova?desafio=<hex>` | Aperto de mão: devolve HMAC(token, desafio) para o Python saber que é a API verdadeira | `{"prova":"74442c56..."}` |
 
 Testar na mão (com a API rodando):
@@ -40,7 +42,7 @@ Testar na mão (com a API rodando):
 curl http://127.0.0.1:8080/acoes/hora
 ```
 
-As rotas 🔒 precisam do token (`X-Jarvis-Token`) e das pastas no `.env` (`JARVIS_PASTA_DAILY`, `JARVIS_PASTA_GIT`). Só `/acoes/hora` e `/acoes/prova` (aperto de mão) são abertas.
+As rotas 🔒 precisam do token (`X-Jarvis-Token`) e das pastas no `.env` (`JARVIS_PASTA_DAILY`, `JARVIS_PASTA_GIT`, `JARVIS_PASTA_DECISOES`). Só `/acoes/hora` e `/acoes/prova` (aperto de mão) são abertas.
 
 ## Segurança 🔒
 
