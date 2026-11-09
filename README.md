@@ -1,7 +1,9 @@
 # 🤖 Jarvis 001
 
 [![Testes Java](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-java.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-java.yml)
+[![Testes Python](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-python.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/testes-python.yml)
 [![CodeQL](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/codeql.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/codeql.yml)
+[![gitleaks](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/jjoseffelipe2028/jarvis-001/actions/workflows/gitleaks.yml)
 ![Java 21](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot 4](https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F)
 ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
@@ -10,7 +12,7 @@
 
 O Jarvis roda **no meu próprio PC**. Ele me escuta, responde por voz e automatiza minha rotina de estudos (notas do Obsidian, tarefas pendentes, Git), **sem mandar meus dados para a nuvem**.
 
-A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede*, e uma API em Java decide se a ação existe numa lista fechada (allowlist), confere o token e registra tudo.
+A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede*, e uma API em Java decide se a ação existe numa lista fechada (allowlist), confere a assinatura do pedido e registra tudo.
 
 ---
 
@@ -19,28 +21,32 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 | | |
 |---|---|
 | ☕ **API REST em Java 21 + Spring Boot 4** | 4 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
-| 🔒 **Segurança como requisito** | Token em tempo constante, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **158 testes Java + 60 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
-| ⚙️ **CI/CD no GitHub** | Testes a cada push (Actions), análise de segurança (CodeQL) e atualização de dependências (Dependabot) |
+| 🔒 **Segurança como requisito** | Pedidos assinados com HMAC (o segredo nunca viaja), anti replay, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
+| 🧪 **158 testes Java + 61 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| ⚙️ **CI/CD no GitHub** | 4 robôs a cada push: testes Java, testes Python, CodeQL e gitleaks (segredos). Dependabot vigia Maven, pip e Actions |
 | 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
 
 ## 🏗️ Como funciona
 
+```mermaid
+flowchart TD
+    U["🎙️ Eu falo"] --> O
+    subgraph PY["🐍 Python: cérebro e voz, 100% local"]
+        O["Ouvido: faster-whisper"] --> I["intencoes.py: regras fixas escolhem UMA ação"]
+        I -->|"não é ação"| G["Gemma via Ollama: só conversa, não executa"]
+    end
+    I -->|"aperto de mão HMAC + pedido assinado (o token nunca viaja), só 127.0.0.1"| H
+    subgraph JV["☕ Java: braços, Spring Boot"]
+        H["Porteiros: Host → assinatura → validação"] --> A["Allowlist: hora · daily · pendencias · git-status"]
+        A --> L["Log de auditoria em arquivo"]
+    end
+    A --> OB["📁 Obsidian"]
+    A --> GT["🌿 Git: sem shell, argumentos fixos"]
+    A -->|"resposta volta ao Python"| B["🔊 Boca: Piper fala a resposta"]
 ```
-🎙️ Eu falo
-   ↓
-🐍 PYTHON: cérebro e voz (IA local)
-   • ouve (faster-whisper) e entende (Ollama + Gemma)
-   • escolhe UMA ação da lista
-   ↓  HTTP só em 127.0.0.1 + token secreto
-☕ JAVA: braços (Spring Boot)
-   • porteiros: Host → token → validação
-   • executa só ações da allowlist, dentro de pastas permitidas
-   • log de auditoria (sem dado pessoal)
-   ↓
-📁 Obsidian (notas) · 🌿 Git
-```
+
+**Por que assim:** se a IA for enganada (prompt injection), ela não tem como agir. Quem escolhe a ação são regras fixas, e o Java só executa o que está na lista.
 
 ## ☕ API (braços em Java)
 
@@ -50,7 +56,7 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 | `POST` 🔒 | `/acoes/daily` | Escreve uma linha no daily de hoje do Obsidian |
 | `GET` 🔒 | `/acoes/pendencias` | Tarefas abertas (`- [ ]`) dos últimos 7 dailys |
 | `GET` 🔒 | `/acoes/git-status` | Diz se o repositório tem algo sem commit (só números) |
-| `GET` | `/acoes/prova` | Aperto de mão: prova (HMAC) que esta é a API verdadeira, antes de o Python mandar o token |
+| `GET` | `/acoes/prova` | Aperto de mão: prova (HMAC) que esta é a API verdadeira, antes de qualquer pedido |
 
 Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 
@@ -66,7 +72,7 @@ Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 | `.git/config` malicioso executando programa | `core.fsmonitor` desligado no comando | ataque real no teste: o git cru executa, o Jarvis não |
 | Markdown/HTML ativo na nota (imagem que vaza IP, DataviewJS) | Texto "desarmado" com `\` | `DailyServiceTest` |
 | Log injection | `LogSeguro.limpar()` + teste que lê o código-fonte | `LogSemDadoCruTest` |
-| Programa impostor na porta 8080 roubando o token | Aperto de mão (challenge-response com HMAC) antes de o token sair do Python | `ProvaControllerTest`, `test_bracos.py` |
+| Programa impostor na porta 8080 se passando pela API | Aperto de mão (challenge-response com HMAC): sem a prova, o Python não manda nada | `ProvaControllerTest`, `test_bracos.py` |
 | Pedido copiado, repetido ou alterado no caminho | **O token nunca viaja**: cada pedido vai assinado (HMAC + hora + nonce de uso único) | `AssinaturaTest`, `AssinaturaDePontaAPontaTest` |
 | Vazamento de dado pessoal | Respostas e logs sem caminho, sem texto do usuário e sem stack trace | testes de controller |
 

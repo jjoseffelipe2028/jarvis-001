@@ -68,6 +68,7 @@ def _bom_dia(bracos):
                 partes.append("Nenhuma pendência nos últimos 7 dias.")
             else:
                 primeira = _limpar_para_falar(itens[0].get("texto", "")) if itens else ""
+                primeira = primeira.rstrip(" .!?…")  # a nota já pode terminar em ponto: evita ".."
                 plural = "pendência" if total == 1 else "pendências"
                 partes.append(f"Você tem {total} {plural}. A primeira: {primeira}.")
         except (TypeError, ValueError, AttributeError, IndexError, OverflowError):

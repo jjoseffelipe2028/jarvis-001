@@ -92,6 +92,14 @@ class BomDiaTest(unittest.TestCase):
                          pend={"total": 1, "pendencias": [{"texto": "x\x1b[2Jy"}]}, git=None)
         self.assertNotIn("\x1b", bom_dia(b))
 
+    def test_pendencia_terminando_em_ponto_nao_vira_ponto_duplo(self):
+        # Bug visto no teste por voz de 09/11: "...menu Share).."
+        b = BracosFalsos(hora={"hora": "08:00"},
+                         pend={"total": 1, "pendencias": [{"texto": "Mostrar o protótipo ao irmão."}]}, git=None)
+        frase = bom_dia(b)
+        self.assertIn("A primeira: Mostrar o protótipo ao irmão.", frase)
+        self.assertNotIn("..", frase)
+
     def test_cumprimento_pela_hora(self):
         self.assertEqual(_cumprimento("05:00"), "Bom dia")
         self.assertEqual(_cumprimento("11:59"), "Bom dia")
