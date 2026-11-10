@@ -10,8 +10,8 @@ from rotinas import _cumprimento, bom_dia
 class BracosFalsos:
     """Imita o Bracos. Cada braço pode devolver dados ou falhar."""
 
-    def __init__(self, hora=None, pend=None, git=None):
-        self._r = {"hora": hora, "pendencias": pend, "git_status": git}
+    def __init__(self, hora=None, pend=None, git=None, portas=None, integ=None):
+        self._r = {"hora": hora, "pendencias": pend, "git_status": git, "portas": portas, "integridade": integ}
         self.chamados = []
 
     def _resp(self, nome):
@@ -29,6 +29,15 @@ class BracosFalsos:
 
     def git_status(self):
         return self._resp("git_status")
+
+    def portas(self):
+        return self._resp("portas")
+
+    def integridade(self):
+        return self._resp("integridade")
+
+    def golpe(self, texto):
+        raise AssertionError("o bom dia não analisa mensagem")
 
     def registrar_daily(self, texto):
         raise AssertionError("o bom dia NUNCA pode escrever")
@@ -50,7 +59,32 @@ class BomDiaTest(unittest.TestCase):
     def test_so_le_nunca_escreve(self):
         b = BracosFalsos(hora={"hora": "09:00"}, pend={"total": 0}, git={"limpo": True})
         bom_dia(b)
-        self.assertEqual(sorted(b.chamados), ["git_status", "hora", "pendencias"])
+        self.assertEqual(sorted(b.chamados), ["git_status", "hora", "integridade", "pendencias", "portas"])
+
+    def test_sentinela_tranquila_vem_antes_da_cyber(self):
+        # Ticket 024
+        b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                         portas={"alertas": 0, "jarvisSoNoPc": True}, integ={"alterados": 0})
+        frase = bom_dia(b)
+        self.assertIn("Sentinela: portas sem alerta e travas iguais. E a Cyber?", frase)
+
+    def test_sentinela_em_alerta_vem_logo_depois_do_bom_dia(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                         portas={"alertas": 1, "jarvisSoNoPc": False}, integ={"alterados": 1})
+        frase = bom_dia(b)
+        self.assertTrue(frase.startswith(
+            "Bom dia, José! São 08:00. Sentinela em alerta: a API do Jarvis está aberta para a rede; "
+            "1 alerta nas portas; 1 trava mudou. Peça os detalhes antes de tudo."), frase)
+
+    def test_sentinela_fora_do_ar_ou_torta_nao_derruba(self):
+        fora = ErroBraco("sentinela so no windows")
+        frase = bom_dia(BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                                     portas=fora, integ=fora))
+        self.assertNotIn("Sentinela", frase)
+        self.assertIn("Cyber", frase)
+        frase = bom_dia(BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                                     portas={"alertas": "muitos"}, integ={"alterados": 0}))
+        self.assertIn("Sentinela: travas iguais.", frase)
 
     def test_um_braco_falhando_nao_derruba_o_resto(self):
         b = BracosFalsos(hora={"hora": "14:00"}, pend=ErroBraco("x"), git={"limpo": True})

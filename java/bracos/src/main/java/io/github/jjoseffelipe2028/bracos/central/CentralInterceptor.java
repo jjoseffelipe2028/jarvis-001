@@ -15,6 +15,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 1) Cabeçalho X-Jarvis-Central: 1 obrigatório. Um site de fora que tentar mandar isso
  *    cai no "preflight" de CORS, e a API não libera CORS: o navegador barra antes.
  * 2) Se vier Origin, tem que ser a própria Central (http://127.0.0.1:porta ou localhost).
+ *    Na ESCRITA (POST em /central/acoes/**, Ticket 020) o Origin é obrigatório.
  * 3) Se vier Sec-Fetch-Site, tem que ser "same-origin".
  * 4) Em /central/acoes/**: crachá (cookie) válido.
  * Criado pelo WebConfig (não é @Component), só quando a Central existe.
@@ -44,6 +45,11 @@ public class CentralInterceptor implements HandlerInterceptor {
         if (origem != null && !origemPropria(origem, request)) {
             return negar(response, rota, 403, "origem_estranha");
         }
+        if (origem == null && escrita(request) && rota.startsWith("/central/acoes/")) {
+            // Ticket 020: ação que ESCREVE exige Origin. O navegador sempre manda Origin num POST;
+            // pedido sem ele não veio da Central (ex.: script de fora tentando escrever no cofre).
+            return negar(response, rota, 403, "escrita_sem_origem");
+        }
         String site = request.getHeader("Sec-Fetch-Site");
         if (site != null && !"same-origin".equals(site)) {
             return negar(response, rota, 403, "pedido_de_outro_site");
@@ -52,6 +58,12 @@ public class CentralInterceptor implements HandlerInterceptor {
             return negar(response, rota, 401, "sem_cracha");
         }
         return true;
+    }
+
+    /** Tudo que não é só leitura (GET/HEAD) conta como escrita. */
+    static boolean escrita(HttpServletRequest request) {
+        String metodo = request.getMethod();
+        return !"GET".equals(metodo) && !"HEAD".equals(metodo);
     }
 
     private static boolean origemPropria(String origem, HttpServletRequest request) {

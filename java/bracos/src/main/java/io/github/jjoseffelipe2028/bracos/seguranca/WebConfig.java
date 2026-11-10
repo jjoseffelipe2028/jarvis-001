@@ -32,7 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // Ticket 017: só ANOTA o resultado no fim (não decide nada). Vem antes dos porteiros
         // para que um pedido recusado também vire evento.
-        quadroEventos.ifAvailable(q -> registry.addInterceptor(new EventosInterceptor(q)).addPathPatterns("/acoes/**"));
+        // Tickets 020/023: o daily e o detector de golpe pela Central também viram evento (até recusados).
+        quadroEventos.ifAvailable(q -> registry.addInterceptor(new EventosInterceptor(q))
+                .addPathPatterns("/acoes/**", "/central/acoes/daily", "/central/acoes/sentinela/golpe"));
         // Ordem importa: primeiro confere o Host (DNS rebinding), depois o token
         registry.addInterceptor(new HostInterceptor()).addPathPatterns("/acoes/**");
         registry.addInterceptor(new TokenInterceptor(token)).addPathPatterns("/acoes/**");

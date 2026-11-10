@@ -1,4 +1,4 @@
-// Central v2 (Ticket 016): escritório pixel dos agentes. 🔒
+// Central v2/v3 (Tickets 016 a 021): escritório pixel dos agentes. 🔒
 // - Tudo desenhado em código num <canvas>: nenhuma imagem, fonte ou biblioteca de fora.
 // - Texto na tela só com textContent.
 // - Não chama a API sozinho: usa pedir() da central.js (crachá HttpOnly, mesma origem).
@@ -360,7 +360,26 @@
           return { fala: limpo ? "Tudo commitado ✅" : "Tem trabalho sem commit 🌿",
                    linha: "Jarvis: branch " + String(s && s.branch) + (limpo ? " em dia." : " com mudanças sem commit."), saida: formatarGit(s) };
         }) },
-      { ic: "📝", nome: "Daily do dia", st: "breve", rodar: async () => emBreve(J, "O daily pela Central") },
+      { ic: "📝", nome: "Daily do dia", st: "ar", rodar: async () => { // Ticket 020: só abre o campo; salvar exige Confirmar
+          abrirDaily(); dizer(J, "Escreve e confirma 📝", 4000); narrar("Jarvis abriu o daily. Nada é salvo sem o seu Confirmar.");
+        } },
+      { ic: "🛡️", nome: "Sentinela: portas", st: "ar", rodar: () => rotinaReal("/central/acoes/sentinela/portas", "Vigiando as portas... 🛡️", (r) => {
+          const n = (v) => (Number.isInteger(v) ? v : 0);
+          const rede = n(r && r.abertasParaARede), alertas = n(r && r.alertas);
+          return { fala: alertas > 0 ? "🚨 " + alertas + " alerta(s)!" : rede + " porta(s) na rede 🛡️",
+                   linha: "Sentinela: " + rede + " porta(s) abertas para a rede, " + alertas + " alerta(s). Só aviso; quem fecha é você.",
+                   saida: formatarPortas(r) };
+        }) }, // Ticket 021
+      { ic: "🔏", nome: "Sentinela: travas", st: "ar", rodar: () => rotinaReal("/central/acoes/sentinela/integridade", "Conferindo as travas... 🔏", (r) => {
+          const n = (v) => (Number.isInteger(v) ? v : 0);
+          const alterados = n(r && r.alterados);
+          return { fala: alterados > 0 ? "🚨 " + alterados + " trava(s) mudaram!" : "Travas intactas 🔏",
+                   linha: alterados > 0 ? "🚨 Sentinela: " + alterados + " trava(s) mudaram desde que a API ligou." : "Sentinela: todas as travas iguais desde que a API ligou.",
+                   saida: formatarIntegridade(r) };
+        }) }, // Ticket 022
+      { ic: "🎣", nome: "Detector de golpe", st: "ar", rodar: async () => { // Ticket 023: só abre o campo
+          abrirGolpe(); dizer(J, "Cola a mensagem 🎣", 4000); narrar("Jarvis abriu o detector de golpe. Ele só lê o texto: nunca abre link.");
+        } },
       { ic: "🎬", nome: "Porteiro de vídeo", st: "breve", rodar: async () => emBreve(J, "O porteiro de vídeo pela Central") },
       { ic: "📊", nome: "Relatório de retenção", st: "breve", rodar: async () => emBreve(J, "O relatório de retenção pela Central") },
       { ic: "🎙️", nome: "Narrar em voz alta", st: "ar", rodar: async () => { const b = document.getElementById("esc-voz"); if (b && !b.hidden) b.click(); } }, // Ticket 018: liga/desliga o 🔊
@@ -512,6 +531,9 @@
     "git-status": { nome: "o Git", fala: "Git conferido 🌿", voz: "Git conferido." },
     "video-avaliar": { nome: "a avaliação de vídeo", fala: "Vídeo avaliado 🎬", voz: "Vídeo avaliado." },
     "video-relatorio": { nome: "o relatório de retenção", fala: "Relatório salvo 📊", voz: "Relatório salvo." },
+    "sentinela": { nome: "a vigia de portas", fala: "Portas vigiadas 🛡️", voz: "Portas vigiadas." }, // Ticket 021
+    "integridade": { nome: "a conferência das travas", fala: "Travas conferidas 🔏", voz: "Travas conferidas." }, // Ticket 022
+    "golpe": { nome: "a análise de golpe", fala: "Mensagem analisada 🎣", voz: "Mensagem analisada." }, // Ticket 023
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
   const elVivo = document.getElementById("esc-vivo");
@@ -546,7 +568,13 @@
       falar("Falha em " + acao.nome + ".");
     }
   }
+  // Uma escuta por vez. Depois de uma ação feita na Central (evento "jarvis:acao"), confere já.
+  let proximaEscuta = 0, ouvindo = false, deNovo = false;
+  function agendarEscuta(ms) { clearTimeout(proximaEscuta); proximaEscuta = setTimeout(ouvir, ms); }
+  document.addEventListener("jarvis:acao", () => { if (ouvindo) deNovo = true; else agendarEscuta(400); });
   async function ouvir() {
+    ouvindo = true;
+    let espera = 10000;
     try {
       const r = await pedir("/central/acoes/eventos?depois=" + Math.max(ultimoEvento, 0));
       const fim = Number.isSafeInteger(r && r.ultimo) ? r.ultimo : 0;
@@ -559,13 +587,16 @@
       }
       ultimoEvento = fim; // se a API reiniciou (fim menor), recomeça sem reagir ao passado
       sinal(true);
-      setTimeout(ouvir, 10000);
     } catch {
       sinal(false);
-      setTimeout(ouvir, 60000); // sem crachá ou API desligada: tenta de novo com calma
+      espera = 60000; // sem crachá ou API desligada: tenta de novo com calma
+    } finally {
+      ouvindo = false;
+      agendarEscuta(deNovo ? 400 : espera);
+      deNovo = false;
     }
   }
-  setTimeout(ouvir, 4000); // espera a Central trocar a chave pelo crachá
+  agendarEscuta(4000); // espera a Central trocar a chave pelo crachá
 
   narrar("Escritório abrindo...");
   requestAnimationFrame(quadro);

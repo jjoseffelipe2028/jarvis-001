@@ -82,6 +82,10 @@ button:disabled { opacity: .5; cursor: wait; }
 textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030712; border: 1px solid #e879f977; border-radius: 8px; padding: 6px 8px; resize: vertical; }
 .cartao { border: 1px dashed #e879f9; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .cartao-texto { background: #030712; border-radius: 6px; padding: 6px 8px; color: #e9d5ff; white-space: pre-wrap; word-break: break-word; }
+.daily-linha { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.cartao-daily { border-color: var(--verde); }
+#daily-texto { border-color: #4ade8077; }
+#golpe-texto { border-color: #fbbf2477; }
 .saida { list-style: none; margin-top: 10px; max-height: 180px; overflow-y: auto; font-size: 14px; }
 .saida li { padding: 3px 0; border-bottom: 1px dashed #1e293b; }
 .saida li:last-child { border: 0; }

@@ -16,12 +16,17 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 public class EventosInterceptor implements HandlerInterceptor {
 
-    static final Map<String, String> ROTAS = Map.of(
-            "POST /acoes/daily", "daily",
-            "GET /acoes/pendencias", "pendencias",
-            "GET /acoes/git-status", "git-status",
-            "POST /acoes/video/avaliar", "video-avaliar",
-            "POST /acoes/video/relatorio", "video-relatorio");
+    static final Map<String, String> ROTAS = Map.ofEntries(
+            Map.entry("POST /acoes/daily", "daily"),
+            Map.entry("GET /acoes/pendencias", "pendencias"),
+            Map.entry("GET /acoes/git-status", "git-status"),
+            Map.entry("POST /acoes/video/avaliar", "video-avaliar"),
+            Map.entry("POST /acoes/video/relatorio", "video-relatorio"),
+            Map.entry("POST /central/acoes/daily", "daily"), // Ticket 020: daily pela Central
+            Map.entry("GET /acoes/sentinela/portas", "sentinela"), // Ticket 021: vigia de portas pela voz
+            Map.entry("GET /acoes/sentinela/integridade", "integridade"), // Ticket 022: vigia de integridade
+            Map.entry("POST /acoes/sentinela/golpe", "golpe"), // Ticket 023: detector de golpe
+            Map.entry("POST /central/acoes/sentinela/golpe", "golpe"));
 
     private final QuadroDeEventos quadro;
 
@@ -36,7 +41,15 @@ public class EventosInterceptor implements HandlerInterceptor {
         if (acao == null) {
             return;
         }
-        quadro.registrar(acao, resultado(response.getStatus(), ex), Cliente.de(request.getHeader(Cliente.CABECALHO)));
+        quadro.registrar(acao, resultado(response.getStatus(), ex), cliente(request));
+    }
+
+    /** Rota da Central é sempre "central"; nas outras, o cabeçalho (só para o log, nunca para decidir). */
+    static String cliente(HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/central/")) {
+            return "central";
+        }
+        return Cliente.de(request.getHeader(Cliente.CABECALHO));
     }
 
     static String resultado(int status, Exception ex) {

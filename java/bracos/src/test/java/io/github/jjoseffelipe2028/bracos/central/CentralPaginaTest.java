@@ -1,5 +1,6 @@
 package io.github.jjoseffelipe2028.bracos.central;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -122,6 +123,44 @@ class CentralPaginaTest {
         assertFalse(js.contains("falar(e."), "a voz nunca fala texto vindo da API");
         String html = ler("index.html");
         assertTrue(html.contains("id=\"esc-voz\"") && html.contains("aria-pressed=\"false\""), "botão de voz começa mudo");
+    }
+
+    @Test
+    void dailyPelaCentral_soComConfirmar_eSoPorUmLugar() throws IOException {
+        String js = ler("central.js");
+        String html = ler("index.html");
+        // Ticket 020: escrever no cofre exige Revisar → Confirmar
+        assertTrue(html.contains("id=\"bt-daily-confirmar\"") && html.contains("id=\"bt-daily-cancelar\""), "falta a confirmação");
+        assertTrue(html.contains("id=\"daily-cartao\" class=\"cartao cartao-daily\" hidden"), "o cartão começa escondido");
+        assertTrue(html.contains("maxlength=\"2000\""), "mesmo limite da API");
+        assertTrue(js.contains("enviar(\"/central/acoes/daily\""), "o POST sai só da central.js");
+        // Só 2 POSTs na Central inteira: o crachá (/central/sessao) e o daily (enviar)
+        assertEquals(2, ocorrencias(js, "method: \"POST\""), "POST novo na Central precisa de ticket");
+        String esc = ler("escritorio.js");
+        assertTrue(esc.contains("abrirDaily()"), "a skill do escritório só abre o campo");
+        assertFalse(esc.contains("enviar("), "o escritório nunca escreve sozinho");
+    }
+
+    @Test
+    void golpePelaCentral_soMandaOTexto_eONivelEConferido() throws IOException {
+        String js = ler("central.js");
+        String html = ler("index.html");
+        // Ticket 023: campo com o mesmo limite da API; envio só pelo enviar() que já existe
+        assertTrue(html.contains("id=\"golpe-texto\" maxlength=\"4000\""), "mesmo limite da API");
+        assertTrue(html.contains("id=\"golpe\" class=\"nuvem\" hidden"), "o campo começa escondido");
+        assertTrue(js.contains("enviar(\"/central/acoes/sentinela/golpe\", { texto })"), "manda só o texto");
+        // Só 2 chamadas de enviar(): daily e golpe. Qualquer outra precisa de ticket.
+        assertEquals(2, ocorrencias(js, "enviar(\""), "envio novo na Central precisa de ticket");
+        assertTrue(js.contains("Object.hasOwn(NIVEL_GOLPE, r.nivel)"), "nível fora da lista é recusado");
+        assertTrue(ler("escritorio.js").contains("abrirGolpe()"), "a skill do escritório só abre o campo");
+    }
+
+    private static int ocorrencias(String texto, String trecho) {
+        int n = 0;
+        for (int i = texto.indexOf(trecho); i >= 0; i = texto.indexOf(trecho, i + 1)) {
+            n++;
+        }
+        return n;
     }
 
     @Test

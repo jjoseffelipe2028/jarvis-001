@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Guarda o corpo do pedido em /acoes/** (até 64 KB) para a assinatura poder conferir os bytes
+ * Guarda o corpo do pedido em /acoes/** e /central/** (até 64 KB) para a assinatura poder conferir os bytes
  * EXATOS que chegaram, e o controller ainda conseguir ler o JSON depois. 🔒
  * Corpo maior que 64 KB → 413, antes de qualquer outra coisa (anti DoS de memória).
  */
@@ -31,7 +31,9 @@ public class CorpoGuardadoFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/acoes/");
+        // Ticket 019: a Central (/central/**) também tem limite (achado 2 da revisão de 10/11)
+        String rota = request.getRequestURI();
+        return !(rota.startsWith("/acoes/") || rota.startsWith("/central/"));
     }
 
     @Override

@@ -1,0 +1,124 @@
+package io.github.jjoseffelipe2028.bracos.acoes.sentinela;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.Duration;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+
+/** Ticket 023: golpes brasileiros de verdade (modelos comuns) e mensagens normais. 🎣 */
+class DetectorDeGolpeTest {
+
+    private final DetectorDeGolpe detector = new DetectorDeGolpe();
+
+    private DetectorDeGolpe.Veredito v(String texto) {
+        return detector.analisar(texto);
+    }
+
+    private static boolean temMotivo(DetectorDeGolpe.Veredito r, String trecho) {
+        return r.motivos().stream().anyMatch(m -> m.contains(trecho));
+    }
+
+    @Test
+    void falsoParente_comPix_eAlto() {
+        DetectorDeGolpe.Veredito r = v("Oi mãe, troquei de número! Salva esse contato. "
+                + "Preciso pagar um boleto urgente, me faz um PIX? Depois te devolvo.");
+        assertEquals(DetectorDeGolpe.ALTO, r.nivel());
+        assertTrue(temMotivo(r, "falso parente"));
+        assertTrue(temMotivo(r, "PIX"));
+        assertTrue(temMotivo(r, "Pressa"));
+    }
+
+    @Test
+    void smsDeBancoFalso_comLinkImitando_eAlto() {
+        DetectorDeGolpe.Veredito r = v("NUBANK: sua conta será bloqueada hoje. Regularize em http://nubank-seguranca.xyz/login");
+        assertEquals(DetectorDeGolpe.ALTO, r.nivel());
+        assertEquals(1, r.links());
+        assertTrue(temMotivo(r, "imita banco"));
+        assertTrue(temMotivo(r, ".xyz"));
+        assertTrue(temMotivo(r, "sem cadeado"));
+    }
+
+    @Test
+    void codigoDoWhatsApp_eAlto() {
+        DetectorDeGolpe.Veredito r = v("Te mandei um código de verificação por engano, pode me passar o código que chegou? É urgente");
+        assertEquals(DetectorDeGolpe.ALTO, r.nivel());
+        assertTrue(temMotivo(r, "senha ou código"));
+    }
+
+    @Test
+    void premioComLinkEncurtado_eAlto_masSoUmSinal_eSuspeito() {
+        assertEquals(DetectorDeGolpe.ALTO, v("Parabéns! Você ganhou um prêmio, resgate em bit.ly/premio123").nivel());
+        assertEquals(DetectorDeGolpe.SUSPEITO, v("Seu boleto vence dia 15, pague pelo app.").nivel());
+    }
+
+    @Test
+    void truquesDeLink() {
+        assertTrue(temMotivo(v("acesse https://www.itau.com.br@golpe.example/x"), "DEPOIS do @"));
+        assertTrue(temMotivo(v("entra aqui http://192.168.10.5/premio"), "IP"));
+        assertTrue(temMotivo(v("veja https://xn--nbank-wva.com/"), "punycode"));
+        assertTrue(temMotivo(v("entra em https://nubаnk.com.br/login"), "punycode"), "\"а\" russo no lugar do \"a\"");
+        assertTrue(temMotivo(v("clica bit.ly/3abcd"), "encurtado"));
+        assertTrue(temMotivo(v("taxa da encomenda: correios-entrega.online/pagar"), "imita"));
+    }
+
+    @Test
+    void siteOficial_naoEImitacao() {
+        DetectorDeGolpe.Veredito r = v("Fatura disponível no app ou em https://www.nubank.com.br/ajuda e https://www.gov.br/receitafederal");
+        assertFalse(temMotivo(r, "imita"), "nubank.com.br e gov.br são oficiais");
+        assertTrue(DetectorDeGolpe.imitaMarca("nubank.com.br.golpe.example"), "marca oficial no começo não engana");
+        assertFalse(DetectorDeGolpe.imitaMarca("app.itaucard.com.br"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Bom dia! Amanhã tem aula de Java às 19h, não esquece.",
+            "O commit de hoje passou no CI, tudo verde.",
+            "Vamos almoçar no sábado? Leva a sua mãe também."})
+    void mensagemNormal_eBaixo(String texto) {
+        DetectorDeGolpe.Veredito r = v(texto);
+        assertEquals(DetectorDeGolpe.BAIXO, r.nivel(), texto);
+        assertTrue(r.conselho().contains("nunca passe senha"));
+    }
+
+    @Test
+    void respostaNuncaDevolveOTextoColado() {
+        DetectorDeGolpe.Veredito r = v("<script>alert(1)</script> PIX urgente bit.ly/xss");
+        for (String m : r.motivos()) {
+            assertFalse(m.contains("<script>") || m.contains("xss"), "motivo é texto fixo: " + m);
+        }
+        assertFalse(r.conselho().contains("script"));
+    }
+
+    @Test
+    void cadaMotivoContaUmaVez_eLinksTemLimite() {
+        StringBuilder muitos = new StringBuilder("PIX PIX PIX ");
+        for (int i = 0; i < 50; i++) {
+            muitos.append("bit.ly/a").append(i).append(' ');
+        }
+        DetectorDeGolpe.Veredito r = v(muitos.toString());
+        assertEquals(DetectorDeGolpe.MAXIMO_LINKS, r.links());
+        assertEquals(r.motivos().size(), List.copyOf(new java.util.LinkedHashSet<>(r.motivos())).size(), "sem motivo repetido");
+        assertEquals(4, r.pontos(), "PIX (2) + encurtador (2), cada um uma vez só");
+    }
+
+    @Test
+    void textoGrandeEEstranho_naoTravaORegex() {
+        // ReDoS: textos feitos para o regex "voltar atrás" sem parar. Tem que responder rápido.
+        for (String ataque : List.of(
+                "a".repeat(4000) + "." + "-".repeat(4000) + "@".repeat(2000),
+                "a-".repeat(2000),
+                "a.".repeat(2000),
+                "http://" + "a@".repeat(2000),
+                "www." + "x.".repeat(2000) + "com")) {
+            assertTimeoutPreemptively(Duration.ofSeconds(2), () -> v(ataque));
+        }
+    }
+}

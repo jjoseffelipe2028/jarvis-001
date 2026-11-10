@@ -42,10 +42,11 @@
       <h3>🛡️ CYBER <em>ATIVO</em></h3>
       <ul>
         <li class="ok">✅ Pedidos assinados · OWASP · gitleaks</li>
+        <li class="ok">✅ Sentinela v1: portas + integridade + golpe</li>
         <li class="nx">▸ Scanner de phishing</li>
-        <li class="fu">○ Sentinela do PC · Laboratório em VM</li>
+        <li class="fu">○ Laboratório em VM</li>
       </ul>
-      <div class="barra"><i class="p55"></i></div>
+      <div class="barra"><i class="p70"></i></div>
     </article>
     <article class="mod" data-cor="ambar">
       <h3>🎮 JOGOS <em>NO AR</em></h3>
@@ -71,7 +72,27 @@
       <div class="botoes">
         <button id="bt-pendencias" type="button">📋 Pendências</button>
         <button id="bt-git" type="button">🌿 Git</button>
+        <button id="bt-daily" type="button">📝 Daily</button>
+        <button id="bt-portas" type="button">🛡️ Portas</button>
+        <button id="bt-travas" type="button">🔏 Travas</button>
+        <button id="bt-golpe" type="button">🎣 Golpe?</button>
         <button id="bt-nuvem" type="button">🌐 Pedir ao 001</button>
+      </div>
+      <div id="daily" class="nuvem" hidden>
+        <textarea id="daily-texto" maxlength="2000" rows="2" placeholder="O que entra no daily de hoje?"></textarea>
+        <div class="daily-linha"><span id="daily-conta" class="fu">0/2000</span> <button id="bt-daily-revisar" type="button">Revisar</button></div>
+        <div id="daily-cartao" class="cartao cartao-daily" hidden>
+          <div>📝 <b>Vai escrever no daily de hoje (Obsidian):</b></div>
+          <div id="daily-cartao-texto" class="cartao-texto"></div>
+          <div class="botoes">
+            <button id="bt-daily-confirmar" type="button" class="aceitar">Confirmar</button>
+            <button id="bt-daily-cancelar" type="button" class="recusar">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div id="golpe" class="nuvem" hidden>
+        <textarea id="golpe-texto" maxlength="4000" rows="3" placeholder="Cole a mensagem suspeita (WhatsApp, SMS, e-mail). O Jarvis só lê o texto: não abre nenhum link."></textarea>
+        <div class="daily-linha"><span id="golpe-conta" class="fu">0/4000</span> <button id="bt-golpe-analisar" type="button">Analisar</button></div>
       </div>
       <div id="nuvem" class="nuvem" hidden>
         <textarea id="nuvem-texto" maxlength="500" rows="2" placeholder="O que você quer pedir ao 001 (Claude)?"></textarea>
@@ -103,7 +124,7 @@
     <article class="mod" data-cor="roxo">
       <h3>💻 CÓDIGO <em>JAVA</em></h3>
       <ul>
-        <li class="ok">✅ API Spring Boot · 6 ações</li>
+        <li class="ok">✅ API Spring Boot · 9 ações</li>
         <li class="ok">✅ CI: testes, CodeQL, gitleaks</li>
         <li class="fu">○ Spring Security</li>
       </ul>
@@ -112,7 +133,7 @@
     <article class="mod" data-cor="ciano">
       <h3>🧠 MEMÓRIA <em>OBSIDIAN</em></h3>
       <ul>
-        <li class="ok">✅ Daily por voz · relatórios de vídeo</li>
+        <li class="ok">✅ Daily por voz e pela Central · relatórios de vídeo</li>
         <li class="nx">▸ Catálogo de afiliados</li>
         <li class="fu">○ Galáxia 3D do cofre</li>
       </ul>
@@ -139,7 +160,7 @@
 
 <footer class="rodape">
   <span class="ok">✅ pronto</span> <span class="nx">▸ próximo</span> <span class="fu">○ depois</span>
-  <span class="sep">·</span> Central v2 (Tickets 016, 017 e 018) · José Felipe
+  <span class="sep">·</span> Central v3 (Tickets 016 a 023) · José Felipe
 </footer>
 
 <script src="central.js"></script>

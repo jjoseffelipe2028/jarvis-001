@@ -30,7 +30,8 @@ PERSONALIDADE = (
     "Se não souber algo, diga que não sabe em vez de inventar. "
     "Você NÃO executa nada no computador: nunca diga que apagou, instalou, abriu ou enviou algo. "
     "Se pedirem uma ação, diga que só faz as ações da lista: anotar no daily, pendências, "
-    "git status, hora e o resumo de bom dia."
+    "git status, hora, o resumo de bom dia, a sentinela (portas e integridade das travas) "
+    "e o detector de golpe."
 )
 
 
@@ -49,6 +50,12 @@ def executar_acao(bracos, acao, argumento):
             dados = bracos.git_status()
         elif acao == "hora":
             dados = bracos.hora()
+        elif acao == "portas":
+            dados = bracos.portas()  # Ticket 021: Sentinela (só lê)
+        elif acao == "integridade":
+            dados = bracos.integridade()  # Ticket 022: vigia de integridade (só lê)
+        elif acao == "golpe":
+            dados = bracos.golpe(argumento)  # Ticket 023: só lê o texto, nunca abre link
         else:
             return responder("proibida", None)
     except ErroBraco as e:

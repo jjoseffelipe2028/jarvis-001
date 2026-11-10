@@ -125,6 +125,21 @@ class Bracos:
     def git_status(self):
         return self._pedir("GET", "/acoes/git-status")
 
+    def portas(self):
+        """Ticket 021: Sentinela, só lê quais portas estão abertas para a rede."""
+        return self._pedir("GET", "/acoes/sentinela/portas")
+
+    def integridade(self):
+        """Ticket 022: as travas do projeto mudaram desde que a API ligou? (só lê)"""
+        return self._pedir("GET", "/acoes/sentinela/integridade")
+
+    def golpe(self, texto):
+        """Ticket 023: essa mensagem tem cara de golpe? Manda só o TEXTO; o Java nunca abre o link."""
+        texto = (texto or "").strip()
+        if not texto:
+            raise ErroBraco("Cola a mensagem depois dos dois pontos. Ex.: isso é golpe: <mensagem>")
+        return self._pedir("POST", "/acoes/sentinela/golpe", {"texto": texto[:4000]})
+
     # ---------- o pedido em si ----------
 
     def _pedir(self, metodo, rota, corpo=None):
@@ -214,6 +229,11 @@ _MOTIVOS_503 = {
     "git demorou demais": "o git demorou demais",
     "repositorio indisponivel": "a pasta não é um repositório git",
     "saida do git grande demais": "a saída do git ficou grande demais",
+    "sentinela ocupada": "a sentinela já está vigiando, tenta de novo em 1 segundo",
+    "sentinela so no windows": "a sentinela só funciona no Windows",
+    "netstat indisponivel": "não achei o netstat do Windows",
+    "demorou demais": "o netstat demorou demais",
+    "projeto nao encontrado": "não achei a pasta do projeto para vigiar as travas",
     "muitos pedidos": "a API está ocupada agora, tenta de novo em 1 segundo",
     "tente de novo": "a API está ocupada agora, tenta de novo em 1 segundo",
 }

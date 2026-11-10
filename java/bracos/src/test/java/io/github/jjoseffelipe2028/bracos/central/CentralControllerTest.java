@@ -205,4 +205,24 @@ class CentralControllerTest {
         org.junit.jupiter.api.Assertions.assertEquals(0, CentralController.numero("9".repeat(40)));
         org.junit.jupiter.api.Assertions.assertEquals(42, CentralController.numero("42"));
     }
+
+    @Test
+    void sessaoComCorpoGigante_413_antesDeLerOJson() throws Exception {
+        // Ticket 019 (achado 2): a Central também tem o limite de 64 KB
+        String gigante = corpo("a".repeat(64 * 1024)); // = CorpoGuardadoFilter.LIMITE_CORPO
+        mockMvc.perform(post("/central/sessao")
+                        .header(CentralInterceptor.CABECALHO, "1")
+                        .contentType(MediaType.APPLICATION_JSON).content(gigante))
+                .andExpect(status().isPayloadTooLarge());
+    }
+
+    @Test
+    void respostaRecusada_tambemSaiComCabecalhosDeSeguranca() throws Exception {
+        // Ticket 019 (achado 1): até o 401 leva a trava contra iframe e o no-store
+        mockMvc.perform(get("/central/acoes/pendencias").header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("Content-Security-Policy", "frame-ancestors 'none'"))
+                .andExpect(header().string("Cache-Control", "no-store"));
+    }
 }

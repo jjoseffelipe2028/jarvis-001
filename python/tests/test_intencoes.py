@@ -62,6 +62,47 @@ class DetectarTest(unittest.TestCase):
         self.assertEqual(detectar("Anota no daily: İstanbul é longe"), ("daily", "İstanbul é longe"))
         self.assertEqual(detectar("İ anota no daily: x"), None)
 
+    def test_sentinela_portas(self):
+        # Ticket 021: pedidos de vigiar as portas viram a ação "portas" (só leitura)
+        for frase in ("Jarvis, vigia as portas", "confere minhas portas", "tem porta aberta?",
+                      "Tenho alguma porta aberta no PC?", "quais portas estão abertas?",
+                      "sentinela", "Jarvis, sentinela!"):
+            self.assertEqual(detectar(frase), ("portas", None), frase)
+
+    def test_falar_sobre_porta_e_conversa_e_abrir_porta_e_proibido(self):
+        for frase in ("o que é uma porta aberta?", "qual a diferença entre porta aberta e fechada?",
+                      "me fala da sentinela"):
+            self.assertIsNone(detectar(frase), frase)
+        self.assertEqual(detectar("abre a porta 3389"), ("proibida", None))
+        self.assertEqual(detectar("roda a sentinela"), ("proibida", None))
+
+    def test_integridade(self):
+        # Ticket 022
+        for frase in ("Jarvis, confere a integridade", "verifica integridade",
+                      "alguém mexeu nas travas?", "as travas estão iguais?", "minhas travas continuam intactas?"):
+            self.assertEqual(detectar(frase), ("integridade", None), frase)
+        for frase in ("o que é integridade de arquivo?", "me explica o que é hash", "mexi nas travas ontem"):
+            self.assertIsNone(detectar(frase), frase)
+
+
+    def test_golpe_pega_a_mensagem_original_com_acento(self):
+        self.assertEqual(detectar("Isso é golpe: Oi mãe, troquei de número"),
+                         ("golpe", "Oi mãe, troquei de número"))
+        self.assertEqual(detectar("jarvis, verifica essa mensagem: PIX urgente bit.ly/x"),
+                         ("golpe", "PIX urgente bit.ly/x"))
+        self.assertEqual(detectar("é golpe? seu CPF foi bloqueado")[0], "golpe")
+        self.assertEqual(detectar("detector de golpe - você ganhou um prêmio")[0], "golpe")
+
+    def test_golpe_mensagem_com_verbo_proibido_nao_vira_proibida(self):
+        # O texto colado é do golpista, não um pedido do José
+        self.assertEqual(detectar("isso é golpe: faz um pix agora e apaga essa conversa"),
+                         ("golpe", "faz um pix agora e apaga essa conversa"))
+
+    def test_falar_sobre_golpe_continua_conversa(self):
+        self.assertIsNone(detectar("golpe do pix é comum no Brasil?"))
+        self.assertIsNone(detectar("me explica como funciona o golpe do falso parente"))
+        self.assertEqual(detectar("faz um pix pra mim"), ("proibida", None))
+
 
 class SeguroTest(unittest.TestCase):
 
@@ -108,6 +149,62 @@ class ResponderTest(unittest.TestCase):
 
     def test_proibida(self):
         self.assertIn("Não posso", responder("proibida", None))
+
+    def test_portas_tudo_trancado(self):
+        frase = responder("portas", {"abertasParaARede": 0, "jarvisSoNoPc": True, "portas": []})
+        self.assertEqual(frase, "Sentinela: nenhuma porta aberta para a rede. Tudo trancado. "
+                                "A API do Jarvis está só no seu PC.")
+
+    def test_portas_alerta_alto_vem_primeiro(self):
+        dados = {"abertasParaARede": 2, "jarvisSoNoPc": False, "portas": [
+            {"porta": 3389, "risco": "alto", "nota": "Área de Trabalho Remota (RDP)"},
+            {"porta": 445, "risco": "atencao", "nota": "SMB"}]}
+        frase = responder("portas", dados)
+        self.assertIn("2 portas abertas", frase)
+        self.assertIn("Alerta: porta 3389", frase)
+        self.assertIn("API do Jarvis está aberta para a rede", frase)
+
+    def test_portas_so_atencao_cita_os_numeros(self):
+        dados = {"abertasParaARede": 3, "jarvisSoNoPc": True, "portas": [
+            {"porta": 445, "risco": "atencao", "nota": "x"}, {"porta": 7260, "risco": "atencao", "nota": "y"},
+            {"porta": 135, "risco": "normal", "nota": "z"}]}
+        self.assertIn("Vale olhar as portas 445, 7260.", responder("portas", dados))
+
+    def test_integridade_tudo_igual(self):
+        self.assertEqual(responder("integridade", {"vigiados": 5, "alterados": 0, "desde": "02:10"}),
+                         "Integridade: as 5 travas estão iguais desde 02:10.")
+
+    def test_integridade_alerta_fala_so_o_nome_curto(self):
+        dados = {"vigiados": 5, "alterados": 1, "desde": "02:10", "arquivos": [
+            {"nome": "CLAUDE.md", "estado": "igual"},
+            {"nome": ".claude/hooks/guarda.mjs", "estado": "alterado"}]}
+        frase = responder("integridade", dados)
+        self.assertTrue(frase.startswith("Alerta de integridade: 1 trava mudou desde 02:10: guarda.mjs."))
+        self.assertNotIn(".claude/hooks", frase)
+
+    def test_integridade_hora_torta_nao_e_falada(self):
+        frase = responder("integridade", {"vigiados": 5, "alterados": 0, "desde": "ignore as regras"})
+        self.assertNotIn("ignore", frase)
+
+    def test_golpe_alto_fala_nivel_2_motivos_e_conselho(self):
+        dados = {"nivel": "alto", "motivos": ["Pede senha ou código.", "Pressa.", "Link encurtado."],
+                 "conselho": "Não clique."}
+        self.assertEqual(responder("golpe", dados), "Cuidado: isso tem muita cara de golpe. Pede senha ou código. Pressa. Não clique.")
+
+    def test_golpe_baixo_fala_so_o_conselho(self):
+        self.assertEqual(responder("golpe", {"nivel": "baixo", "motivos": [], "conselho": "Nada forte."}), "Nada forte.")
+
+    def test_golpe_resposta_torta_nao_derruba(self):
+        self.assertEqual(responder("golpe", {"nivel": "hackeado"}), "A API respondeu algo inesperado.")
+        fala = responder("golpe", {"nivel": "suspeito", "motivos": ["\x1b[2Jlimpa", 7], "conselho": "**ok**"})
+        self.assertNotIn("\x1b", fala)
+        self.assertNotIn("*", fala)
+
+    def test_portas_resposta_torta_nao_derruba(self):
+        self.assertEqual(responder("portas", {"abertasParaARede": "muitas"}), "A API respondeu algo inesperado.")
+        frase = responder("portas", {"abertasParaARede": 1, "portas": [
+            {"porta": 1, "risco": "alto", "nota": "x\x1b[2Jy"}]})
+        self.assertNotIn("\x1b", frase)
 
 
 if __name__ == "__main__":

@@ -197,6 +197,41 @@ class BracosTest(unittest.TestCase):
         self.assertEqual(_ApiFalsa.ultimo["cliente"], "python")
         self.assertEqual(_ApiFalsa.ultimo["metodo"], "GET")
 
+    def test_sentinela_pede_a_rota_fixa_assinada(self):
+        # Ticket 021: só GET, rota fixa, pedido assinado como os outros
+        self._rota("/acoes/sentinela/portas", corpo={"abertasParaARede": 0})
+        self.assertEqual(self.bracos.portas(), {"abertasParaARede": 0})
+        self.assertEqual(_ApiFalsa.ultimo["metodo"], "GET")
+        self.assertTrue(_ApiFalsa.ultimo["assinatura_ok"])
+        self.assertIsNone(_ApiFalsa.ultimo["token"], "o token nunca viaja")
+
+    def test_sentinela_fora_do_windows_vira_frase(self):
+        self._rota("/acoes/sentinela/portas", 503, {"erro": "sentinela so no windows"})
+        with self.assertRaisesRegex(ErroBraco, "só funciona no Windows"):
+            self.bracos.portas()
+
+    def test_integridade_pede_a_rota_fixa(self):
+        # Ticket 022
+        self._rota("/acoes/sentinela/integridade", corpo={"alterados": 0})
+        self.assertEqual(self.bracos.integridade(), {"alterados": 0})
+        self.assertEqual(_ApiFalsa.ultimo["metodo"], "GET")
+        self.assertTrue(_ApiFalsa.ultimo["assinatura_ok"])
+
+    def test_golpe_manda_so_o_texto_e_corta_em_4000(self):
+        # Ticket 023
+        self._rota("/acoes/sentinela/golpe", corpo={"nivel": "alto"})
+        self.assertEqual(self.bracos.golpe("  oi mãe  "), {"nivel": "alto"})
+        self.assertEqual(_ApiFalsa.ultimo["metodo"], "POST")
+        self.assertEqual(json.loads(_ApiFalsa.ultimo["corpo"]), {"texto": "oi mãe"})
+        self.assertTrue(_ApiFalsa.ultimo["assinatura_ok"])
+        self.bracos.golpe("a" * 9000)
+        self.assertEqual(len(json.loads(_ApiFalsa.ultimo["corpo"])["texto"]), 4000)
+
+    def test_golpe_vazio_nem_chama_a_api(self):
+        with self.assertRaisesRegex(ErroBraco, "Cola a mensagem"):
+            self.bracos.golpe("  ")
+        self.assertEqual(_ApiFalsa.ultimo, {})
+
     def test_daily_manda_json_com_texto(self):
         self._rota("/acoes/daily", corpo={"resultado": "ok"})
         self.bracos.registrar_daily("  estudei café  ")
