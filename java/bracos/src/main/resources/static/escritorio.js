@@ -363,7 +363,7 @@
       { ic: "📝", nome: "Daily do dia", st: "breve", rodar: async () => emBreve(J, "O daily pela Central") },
       { ic: "🎬", nome: "Porteiro de vídeo", st: "breve", rodar: async () => emBreve(J, "O porteiro de vídeo pela Central") },
       { ic: "📊", nome: "Relatório de retenção", st: "breve", rodar: async () => emBreve(J, "O relatório de retenção pela Central") },
-      { ic: "🎙️", nome: "Narrar em voz alta", st: "breve", rodar: async () => emBreve(J, "A narração por voz") },
+      { ic: "🎙️", nome: "Narrar em voz alta", st: "ar", rodar: async () => { const b = document.getElementById("esc-voz"); if (b && !b.hidden) b.click(); } }, // Ticket 018: liga/desliga o 🔊
     ] },
     { id: "001", papel: "Mentor e engenheiro · planeja e constrói", onde: "🌐 nuvem · só com Aceitar", lista: [
       { ic: "🧭", nome: "Planejar ticket", st: "term", rodar: async () => prepararNuvem(A1, "001, planeja o próximo ticket do Jarvis: plano curto e espera meu OK.") },
@@ -433,6 +433,139 @@
       await voltarParaMesa(a);
     });
   }, 14000);
+
+  // ---------- Voz (Ticket 018): o Jarvis fala os eventos ao vivo ----------
+  // - Começa MUDO; liga só no clique (e não fica guardado: fechou a Central, volta mudo).
+  // - Só voz LOCAL pt-BR do Windows (localService === true). Voz "online/Natural" manda o
+  //   texto para a nuvem: é recusada. Sem voz local = não fala.
+  // - Só frases FIXAS deste arquivo, nunca texto vindo da API.
+  // - Anti-barulho: fila de no máximo 3, uma fala a cada 3 s, recusado 🚨 fura a fila.
+  const btVoz = document.getElementById("esc-voz");
+  const sintese = ("speechSynthesis" in window) ? window.speechSynthesis : null;
+  let vozLigada = false, vozLocal = null, vozOcupada = false, proximaFala = 0, filaVoz = [];
+
+  function vozPermitida(v) {
+    return !!v && v.localService === true && /^pt[-_]BR$/i.test(v.lang || "");
+  }
+  function mostrarVoz(texto) {
+    if (!btVoz) return;
+    btVoz.textContent = texto || (vozLigada ? "🔊 Voz" : "🔇 Voz");
+    btVoz.setAttribute("aria-pressed", String(vozLigada));
+  }
+  function falar(frase, urgente = false) {
+    if (!vozLigada || !sintese || typeof frase !== "string") return;
+    if (urgente) filaVoz.unshift(frase); else filaVoz.push(frase);
+    filaVoz = filaVoz.slice(0, 3);
+    tocarVoz();
+  }
+  function tocarVoz() {
+    if (vozOcupada || !vozLigada || filaVoz.length === 0) return;
+    vozOcupada = true;
+    setTimeout(() => {
+      const frase = filaVoz.shift();
+      if (!vozLigada || !frase || !vozPermitida(vozLocal)) { vozOcupada = false; return; }
+      let fim = false;
+      const terminar = () => { if (fim) return; fim = true; vozOcupada = false; tocarVoz(); };
+      proximaFala = performance.now() + 3000;
+      try {
+        const u = new SpeechSynthesisUtterance(frase.slice(0, 80));
+        u.voice = vozLocal; u.lang = vozLocal.lang; u.rate = 1.05;
+        u.onend = terminar; u.onerror = terminar;
+        setTimeout(terminar, 15000); // se o navegador não avisar o fim, a fila não trava
+        sintese.speak(u);
+      } catch {
+        terminar(); // um erro na fala nunca trava a fila
+      }
+    }, Math.max(0, proximaFala - performance.now()));
+  }
+  if (btVoz) {
+    if (!sintese) {
+      btVoz.hidden = true;
+    } else {
+      btVoz.addEventListener("click", () => {
+        if (vozLigada) {
+          vozLigada = false; filaVoz = []; sintese.cancel();
+          mostrarVoz(); narrar("🔇 Voz desligada.");
+          return;
+        }
+        vozLocal = sintese.getVoices().find(vozPermitida) || null;
+        if (!vozLocal) {
+          mostrarVoz("🔇 sem voz local");
+          narrar("Sem voz pt-BR local no PC. Voz online fica bloqueada (mandaria o texto pra nuvem).");
+          return;
+        }
+        vozLigada = true;
+        mostrarVoz(); narrar("🔊 Voz ligada: " + vozLocal.name + " (local, nada sai do PC).");
+        falar("Voz ligada.");
+      });
+      mostrarVoz();
+      sintese.getVoices(); // o navegador carrega a lista de vozes antes do 1º clique
+    }
+  }
+
+  // ---------- Ao vivo (Ticket 017): reage ao que os braços fazem de verdade ----------
+  // A API anota só nomes fixos (ação, resultado, cliente). Aqui tudo é conferido de novo
+  // contra listas fixas: o que não estiver nelas é ignorado.
+  const ACOES = {
+    "daily": { nome: "o daily", fala: "Daily salvo 📝", voz: "Daily salvo." },
+    "pendencias": { nome: "as pendências", fala: "Pendências lidas 📋", voz: "Pendências lidas." },
+    "git-status": { nome: "o Git", fala: "Git conferido 🌿", voz: "Git conferido." },
+    "video-avaliar": { nome: "a avaliação de vídeo", fala: "Vídeo avaliado 🎬", voz: "Vídeo avaliado." },
+    "video-relatorio": { nome: "o relatório de retenção", fala: "Relatório salvo 📊", voz: "Relatório salvo." },
+  };
+  const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
+  const elVivo = document.getElementById("esc-vivo");
+  let ultimoEvento = -1; // -1 = ainda não leu: a 1ª leitura só marca o ponto de partida
+
+  function sinal(ok) {
+    if (!elVivo) return;
+    elVivo.textContent = ok ? "📡 ao vivo" : "📡 sem sinal";
+    elVivo.className = ok ? "ok" : "nx";
+  }
+  function reagir(e) {
+    const acao = Object.hasOwn(ACOES, e.acao) ? ACOES[e.acao] : null;
+    if (!acao) return;
+    const origem = Object.hasOwn(ORIGEM, e.cliente) ? ORIGEM[e.cliente] : ORIGEM.desconhecido;
+    if (e.resultado === "ok") {
+      tarefa(J, async () => {
+        if (e.acao === "video-relatorio") {
+          dizer(J, "Guardando no servidor 🗄️", 3000); await irPara(J, 30, 92); await espera(1500); await voltarParaMesa(J);
+        }
+        dizer(J, acao.fala, 3500);
+      });
+      narrar("Jarvis fez " + acao.nome + " " + origem + ". ✔");
+      falar(acao.voz);
+    } else if (e.resultado === "recusado") {
+      dizer(J, "🚨 Pedido recusado!", 4000);
+      if (A1.sentado) dizer(A1, "👀", 2500);
+      narrar("🚨 O porteiro recusou um pedido para " + acao.nome + " (" + origem + ").");
+      falar("Atenção: pedido recusado.", true);
+    } else {
+      dizer(J, "⚠️ " + acao.nome + " falhou", 3500);
+      narrar("⚠️ Jarvis tentou " + acao.nome + " " + origem + " e não deu certo.");
+      falar("Falha em " + acao.nome + ".");
+    }
+  }
+  async function ouvir() {
+    try {
+      const r = await pedir("/central/acoes/eventos?depois=" + Math.max(ultimoEvento, 0));
+      const fim = Number.isSafeInteger(r && r.ultimo) ? r.ultimo : 0;
+      const lista = Array.isArray(r && r.eventos) ? r.eventos : [];
+      if (ultimoEvento >= 0 && fim >= ultimoEvento) {
+        // No máximo 5 por vez: se acumulou muito, mostra só os mais novos
+        for (const e of lista.slice(-5)) {
+          if (e && Number.isSafeInteger(e.seq) && e.seq > ultimoEvento) reagir(e);
+        }
+      }
+      ultimoEvento = fim; // se a API reiniciou (fim menor), recomeça sem reagir ao passado
+      sinal(true);
+      setTimeout(ouvir, 10000);
+    } catch {
+      sinal(false);
+      setTimeout(ouvir, 60000); // sem crachá ou API desligada: tenta de novo com calma
+    }
+  }
+  setTimeout(ouvir, 4000); // espera a Central trocar a chave pelo crachá
 
   narrar("Escritório abrindo...");
   requestAnimationFrame(quadro);

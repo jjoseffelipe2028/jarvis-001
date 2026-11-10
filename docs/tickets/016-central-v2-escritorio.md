@@ -39,7 +39,7 @@ Sem número inventado: quando a API falha, o boneco diz "⚠️ Não consegui" e
   - Pendências sem API → "Não consegui", sem dado falso.
   - Planejar ticket → cartão preenchido; Recusar → "nada saiu do PC".
 - Teste real (José, 20:40): ícone → "🔓 conectada" → escritório com os 3 agentes → Pendências (log: `pendencias ok total=25`) → Planejar ticket → Aceitar copiou e o José colou no Claude Code. Nada enviado sozinho.
-- Commit: _(preencher)_
+- Commit: `668754f`
 
 ## Fica para depois
 - Os bonecos reagirem aos **eventos reais** do log (Parte 3).

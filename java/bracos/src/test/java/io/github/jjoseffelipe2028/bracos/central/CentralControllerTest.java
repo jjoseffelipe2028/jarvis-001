@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 /** Central v1 de ponta a ponta: chave → crachá → botões. Com ataques. 🔒 */
 @WebMvcTest(CentralController.class)
-@Import({ChaveDaCentral.class, SessoesDaCentral.class, WebConfig.class, ErrosHandler.class})
+@Import({ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class, WebConfig.class, ErrosHandler.class})
 class CentralControllerTest {
 
     private static final Path ARQUIVO;
@@ -61,6 +61,9 @@ class CentralControllerTest {
 
     @MockitoBean
     private GitStatusService git;
+
+    @Autowired
+    private QuadroDeEventos quadro;
 
     private static String chaveAtual() throws IOException {
         return Files.readString(ARQUIVO);
@@ -175,5 +178,31 @@ class CentralControllerTest {
         mockMvc.perform(get("/central/acoes/git-status").header(CentralInterceptor.CABECALHO, "1").cookie(cracha))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.limpo").value(true));
+    }
+
+    @Test
+    void eventos_semCracha401_comCrachaDevolveSoOsNovos() throws Exception {
+        mockMvc.perform(get("/central/acoes/eventos").header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isUnauthorized());
+        Cookie cracha = entrar();
+        long antes = quadro.depois(0).ultimo();
+        quadro.registrar("daily", "ok", "python");
+
+        mockMvc.perform(get("/central/acoes/eventos").param("depois", String.valueOf(antes))
+                        .header(CentralInterceptor.CABECALHO, "1").cookie(cracha))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ultimo").value(antes + 1))
+                .andExpect(jsonPath("$.eventos.length()").value(1))
+                .andExpect(jsonPath("$.eventos[0].acao").value("daily"))
+                .andExpect(jsonPath("$.eventos[0].cliente").value("python"));
+    }
+
+    @Test
+    void eventos_numeroTorto_viraZero() {
+        org.junit.jupiter.api.Assertions.assertEquals(0, CentralController.numero(null));
+        org.junit.jupiter.api.Assertions.assertEquals(0, CentralController.numero("-5"));
+        org.junit.jupiter.api.Assertions.assertEquals(0, CentralController.numero("1e9"));
+        org.junit.jupiter.api.Assertions.assertEquals(0, CentralController.numero("9".repeat(40)));
+        org.junit.jupiter.api.Assertions.assertEquals(42, CentralController.numero("42"));
     }
 }

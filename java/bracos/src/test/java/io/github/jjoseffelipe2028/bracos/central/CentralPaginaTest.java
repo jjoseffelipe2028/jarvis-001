@@ -25,7 +25,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Central (Tickets 014, 015 e 016): a página abre, é 100% offline e tem as travas de segurança. 🔒
+ * Central (Tickets 014 a 018): a página abre, é 100% offline e tem as travas de segurança. 🔒
  */
 @WebMvcTest(AcoesController.class)
 @Import({WebConfig.class, ErrosHandler.class})
@@ -110,6 +110,18 @@ class CentralPaginaTest {
         }
         assertTrue(js.contains("pedir("), "as ações reais passam pelo pedir() da central.js (crachá)");
         assertTrue(js.contains("prepararPedido()"), "001/002 só preparam o pedido no cartão de aceite");
+        assertTrue(js.contains("/central/acoes/eventos"), "o escritório ouve o quadro de eventos (Ticket 017)");
+    }
+
+    @Test
+    void vozSoLocal_comecaMuda_eSoFrasesFixas() throws IOException {
+        String js = ler("escritorio.js");
+        assertTrue(js.contains("speechSynthesis"), "a voz usa a fala do próprio navegador (Ticket 018)");
+        assertTrue(js.contains("localService === true"), "só voz local: voz online manda o texto para a nuvem");
+        assertTrue(js.contains("let vozLigada = false"), "a voz começa desligada");
+        assertFalse(js.contains("falar(e."), "a voz nunca fala texto vindo da API");
+        String html = ler("index.html");
+        assertTrue(html.contains("id=\"esc-voz\"") && html.contains("aria-pressed=\"false\""), "botão de voz começa mudo");
     }
 
     @Test

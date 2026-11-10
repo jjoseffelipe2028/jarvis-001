@@ -15,6 +15,7 @@ import io.github.jjoseffelipe2028.bracos.acoes.video.AnalisadorDeRetencao;
 import io.github.jjoseffelipe2028.bracos.acoes.video.PortaoDoLaboratorio;
 import io.github.jjoseffelipe2028.bracos.acoes.video.RelatorioService;
 import io.github.jjoseffelipe2028.bracos.central.ChaveDaCentral;
+import io.github.jjoseffelipe2028.bracos.central.QuadroDeEventos;
 import io.github.jjoseffelipe2028.bracos.central.SessoesDaCentral;
 import io.github.jjoseffelipe2028.bracos.erros.ErrosHandler;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  */
 @WebMvcTest
 @Import({DailyService.class, PendenciasService.class, GitStatusService.class, PortaoDoLaboratorio.class,
-        AnalisadorDeRetencao.class, RelatorioService.class, ChaveDaCentral.class, SessoesDaCentral.class,
+        AnalisadorDeRetencao.class, RelatorioService.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class,
         WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste")
 class RotasPostContratoTest {

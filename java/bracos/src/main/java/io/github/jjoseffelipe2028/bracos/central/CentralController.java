@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * - POST /central/sessao: troca a chave de uso único por um crachá (cookie HttpOnly).
  * - GET  /central/acoes/pendencias e /central/acoes/git-status: as MESMAS ações dos braços,
  *   só de LEITURA. Nada que escreve ou executa entra na Central sem ticket próprio.
+ * - GET  /central/acoes/eventos (Ticket 017): o quadro de eventos, para o escritório reagir.
  */
 @RestController
 @RequestMapping("/central")
@@ -31,13 +33,15 @@ public class CentralController {
     private final SessoesDaCentral sessoes;
     private final PendenciasService pendencias;
     private final GitStatusService git;
+    private final QuadroDeEventos quadro;
 
     public CentralController(ChaveDaCentral chave, SessoesDaCentral sessoes,
-                             PendenciasService pendencias, GitStatusService git) {
+                             PendenciasService pendencias, GitStatusService git, QuadroDeEventos quadro) {
         this.chave = chave;
         this.sessoes = sessoes;
         this.pendencias = pendencias;
         this.git = git;
+        this.quadro = quadro;
     }
 
     /** Corpo: {"chave":"<64 hex>"}. Qualquer erro → 401 (sem dizer o motivo). */
@@ -76,5 +80,22 @@ public class CentralController {
         GitStatusService.Status s = git.consultar();
         log.info("cliente=central acao=git-status resultado=ok limpo={}", s.limpo());
         return s;
+    }
+
+    /**
+     * Eventos com número maior que {@code depois}. Valor torto vira 0 (lê tudo o que há).
+     * Sem log por pedido: a Central consulta a cada 10 s e o log de auditoria viraria só isso.
+     * O que entra no quadro já foi registrado no log pelo próprio braço.
+     */
+    @GetMapping("/acoes/eventos")
+    public QuadroDeEventos.Leitura eventos(@RequestParam(name = "depois", required = false) String depois) {
+        return quadro.depois(numero(depois));
+    }
+
+    static long numero(String texto) {
+        if (texto == null || !texto.matches("\\d{1,18}")) {
+            return 0;
+        }
+        return Long.parseLong(texto);
     }
 }
