@@ -1,5 +1,5 @@
 # 019 — Cabeçalhos de segurança + limite de corpo na Central
-**Status:** ✅ commit aprovado pelo José (10/11) · ⏳ teste real depois de reiniciar a API
+**Status:** ✅ commit aprovado pelo José (10/11) · ✅ teste real pelo José (10/11, 22:22): Central, Daily, Portas, Travas, Golpe? e as 4 frases no chat
 **OK do plano:** José, 10/11 de madrugada ("Sim, arrocha")
 **Criado:** 2026-11-10 pela 001 · Origem: [revisão de 10/11](../reviews/2026-11-10-central-e-video.md), achados 1 e 2
 

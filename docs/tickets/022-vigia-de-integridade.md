@@ -1,5 +1,5 @@
 # 022 — Sentinela v1: vigia de integridade (FIM) 🔏
-**Status:** ✅ commit aprovado pelo José (10/11) · ⏳ teste real depois de reiniciar a API
+**Status:** ✅ commit aprovado pelo José (10/11) · ✅ teste real pelo José (10/11, 22:22): Central, Daily, Portas, Travas, Golpe? e as 4 frases no chat
 **OK:** José, 10/11 de madrugada ("arrocha o máximo... termina hoje o Jarvis")
 **Criado:** 2026-11-10 pela 001 · Ideia de 03/11 ([[jarvis-ideias-futuras]]: "Vigia de Integridade")
 

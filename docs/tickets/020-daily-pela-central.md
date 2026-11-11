@@ -1,5 +1,5 @@
 # 020 — Skill "Daily do dia" pela Central
-**Status:** ✅ commit aprovado pelo José (10/11) · ⏳ teste real depois de reiniciar a API · **Depois do 019**
+**Status:** ✅ commit aprovado pelo José (10/11) · ✅ teste real pelo José (10/11, 22:22): Central, Daily, Portas, Travas, Golpe? e as 4 frases no chat · **Depois do 019**
 **OK do plano:** José, 10/11 de madrugada ("arrocha o máximo... termina hoje o Jarvis")
 **Criado:** 2026-11-10 pela 001 · Fase 5 · Tira o "em breve" da skill do Jarvis no escritório
 

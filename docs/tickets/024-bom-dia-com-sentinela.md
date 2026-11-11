@@ -1,5 +1,5 @@
 # 024 — "Bom dia, Jarvis" com a Sentinela 🌅🛡️
-**Status:** ✅ commit aprovado pelo José (10/11) · ⏳ teste real depois de reiniciar a API
+**Status:** ✅ commit aprovado pelo José (10/11) · ✅ teste real pelo José (10/11, 22:22): Central, Daily, Portas, Travas, Golpe? e as 4 frases no chat
 **OK:** José, 10/11 de madrugada ("pode arrochar mais 2 h")
 **Criado:** 2026-11-10 pela 001 · Continua o Ticket 009 (bom dia) e os Tickets 021/022 (Sentinela)
 
