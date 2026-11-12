@@ -66,7 +66,7 @@ class BomDiaTest(unittest.TestCase):
         b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
                          portas={"alertas": 0, "jarvisSoNoPc": True}, integ={"alterados": 0})
         frase = bom_dia(b)
-        self.assertIn("Sentinela: portas sem alerta e travas iguais. E a Cyber?", frase)
+        self.assertIn("Sentinela: portas sem alerta e travas iguais. Cyber sem pendência", frase)
 
     def test_sentinela_em_alerta_vem_logo_depois_do_bom_dia(self):
         b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
@@ -133,6 +133,36 @@ class BomDiaTest(unittest.TestCase):
         frase = bom_dia(b)
         self.assertIn("A primeira: Mostrar o protótipo ao irmão.", frase)
         self.assertNotIn("..", frase)
+
+    # --- Melhoria do teste real (12/11): a cobrança da Cyber lê o contexto ---
+
+    def test_cyber_primeira_pendencia_nao_repete(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, git=None,
+                         pend={"total": 2, "pendencias": [{"texto": "Cyber: aula 03"}, {"texto": "Java"}]})
+        frase = bom_dia(b)
+        self.assertTrue(frase.endswith("Comece pela Cyber."), frase)
+        self.assertEqual(frase.count("aula 03"), 1)
+
+    def test_cyber_no_meio_da_lista_e_falada(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, git=None,
+                         pend={"total": 2, "pendencias": [{"texto": "Java"}, {"texto": "🔒 **CYBER** repescagem."}]})
+        self.assertIn("Cyber em aberto: 🔒 CYBER repescagem. Faça hoje.", bom_dia(b))
+
+    def test_sem_pendencia_de_cyber_nao_inventa_atraso(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, git=None,
+                         pend={"total": 1, "pendencias": [{"texto": "Java"}]})
+        frase = bom_dia(b)
+        self.assertIn("Cyber sem pendência aberta.", frase)
+        self.assertNotIn("30 minutos", frase)
+
+    def test_pendencias_fora_do_ar_so_pergunta(self):
+        frase = bom_dia(BracosFalsos(hora={"hora": "08:00"}, pend=ErroBraco("x"), git=None))
+        self.assertTrue(frase.endswith("E a Cyber? Confira se fez a sua hora hoje."), frase)
+
+    def test_pendencia_torta_nao_derruba_a_cobranca(self):
+        frase = bom_dia(BracosFalsos(hora={"hora": "08:00"}, git=None,
+                                     pend={"total": 1, "pendencias": ["texto solto"]}))
+        self.assertIn("Cyber", frase)
 
     def test_cumprimento_pela_hora(self):
         self.assertEqual(_cumprimento("05:00"), "Bom dia")

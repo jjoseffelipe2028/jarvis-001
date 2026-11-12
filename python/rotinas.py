@@ -5,6 +5,7 @@ Jarvis 001 — Rotinas 🌅 (Ticket 009)
 hora (cumprimento certo), pendências (quantas + a primeira) e git-status (algo sem commit?).
 Ticket 024: + a Sentinela (portas e travas) numa frase só. Com alerta, ela vem LOGO depois do "bom dia".
 No fim, a cobrança da Cyber (regra do projeto: a Cyber nunca fica 2 dias parada).
+Melhoria do teste real (12/11): a cobrança lê as pendências antes de falar (não é mais frase fixa).
 
 Cada braço pode falhar sozinho sem derrubar o resumo: o que der certo é falado.
 Só LÊ: nenhuma rotina escreve nada.
@@ -93,8 +94,29 @@ def _bom_dia(bracos):
     if sentinela is not None and not alerta:
         partes.append(sentinela)
 
-    partes.append("E a Cyber? Reserve 30 minutos para ela hoje.")
+    partes.append(_cobranca_cyber(pend))
     return seguro(" ".join(partes))
+
+
+def _cobranca_cyber(pend):
+    """Cobra a Cyber olhando as pendências abertas ("- [ ]" dos últimos 7 dias), não com frase fixa.
+    - tem pendência de Cyber e é a primeira (já foi falada) → só manda começar por ela;
+    - tem pendência de Cyber → fala qual é;
+    - não tem → lembra da hora do dia, sem inventar atraso;
+    - não deu para ler → pergunta, sem afirmar nada."""
+    try:
+        if pend is None:
+            return "E a Cyber? Confira se fez a sua hora hoje."
+        itens = pend.get("pendencias") or []
+        for posicao, item in enumerate(itens):
+            texto = _limpar_para_falar(str(item.get("texto", ""))).rstrip(" .!?…")
+            if "cyber" in texto.casefold():
+                if posicao == 0:
+                    return "Comece pela Cyber."
+                return f"Cyber em aberto: {texto[:120]}. Faça hoje."
+        return "Cyber sem pendência aberta. Mantenha a sua hora hoje."
+    except (TypeError, AttributeError):
+        return "E a Cyber? Confira se fez a sua hora hoje."
 
 
 def _sentinela(portas, integ):

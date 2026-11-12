@@ -236,6 +236,85 @@ class DailyServiceTest {
         assertFalse(linhas.stream().skip(1).anyMatch(l -> l.startsWith("# ")), "título não duplicou");
     }
 
+    // --- Melhoria do teste real (12/11): a linha entra em "## O que fiz" ---
+
+    @Test
+    void linhaEntraNoFimDoOQueFiz_eNaoNoFimDaNota() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"),
+                "# 08/11\n\n## Plano\n- [ ] Cyber\n\n## O que fiz\n- estudei Git\n  - detalhe\n\n## Onde parei\n- Java\n");
+
+        service().registrar("linha nova");
+
+        assertEquals("# 08/11\n\n## Plano\n- [ ] Cyber\n\n## O que fiz\n- estudei Git\n  - detalhe\n"
+                + "- 15:42 linha nova\n\n## Onde parei\n- Java\n", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void duasLinhasSeguidasFicamEmOrdem() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"), "## O que fiz\n-\n\n## Onde parei\n");
+
+        service().registrar("primeira");
+        service().registrar("segunda");
+
+        assertEquals("## O que fiz\n-\n- 15:42 primeira\n- 15:42 segunda\n\n## Onde parei\n",
+                ler("2026-11-08.md"));
+    }
+
+    @Test
+    void oQueFizVazioRecebeALinhaLogoAbaixoDoTitulo() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"), "## O que fiz\n\n## Onde parei\n");
+
+        service().registrar("oi");
+
+        assertEquals("## O que fiz\n- 15:42 oi\n\n## Onde parei\n", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void oQueFizNoFimDaNota_semEnter() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"), "# x\n\n## O que fiz\n- antigo");
+
+        service().registrar("novo");
+
+        assertEquals("# x\n\n## O que fiz\n- antigo\n- 15:42 novo", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void subtituloDeNivel3FicaDentroDaSecao() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"),
+                "## O que fiz\n- a\n### Madrugada\n- b\n## Onde parei\n");
+
+        service().registrar("c");
+
+        assertEquals("## O que fiz\n- a\n### Madrugada\n- b\n- 15:42 c\n## Onde parei\n", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void notaComCrlfContinuaCrlf() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"), "## O que fiz\r\n- a\r\n\r\n## Onde parei\r\n");
+
+        service().registrar("b");
+
+        assertEquals("## O que fiz\r\n- a\r\n- 15:42 b\r\n\r\n## Onde parei\r\n", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void acentoAntesDaSecaoNaoDesalinhaOsBytes() throws Exception {
+        Files.writeString(pasta.resolve("2026-11-08.md"), "# ação ☕ 💪\n## O que fiz\n- pão\n## Fim\n");
+
+        service().registrar("café");
+
+        assertEquals("# ação ☕ 💪\n## O que fiz\n- pão\n- 15:42 café\n## Fim\n", ler("2026-11-08.md"));
+    }
+
+    @Test
+    void textoDoUsuarioNaoCriaSecaoFalsa() throws Exception {
+        // "## O que fiz" digitado pelo usuário é desarmado na nota: não vira título
+        service().registrar("## O que fiz");
+        service().registrar("segunda");
+
+        assertTrue(ler("2026-11-08.md").endsWith("- 15:42 segunda\n"), "sem seção de verdade, continua no fim");
+    }
+
     @Test
     void relogioDeVerdadeUsaFusoDeBrasilia() {
         // 02:30 UTC de 09/11 ainda é 08/11 em Brasília (UTC-3)

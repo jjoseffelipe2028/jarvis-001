@@ -15,8 +15,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.github.jjoseffelipe2028.bracos.acoes.PastaSegura;
 import io.github.jjoseffelipe2028.bracos.acoes.TextoSeguro;
@@ -32,7 +35,8 @@ import org.springframework.stereotype.Service;
  * - O nome do arquivo é gerado aqui (AAAA-MM-DD.md, data de Brasília), nunca do pedido.
  * - O texto é "desarmado": sem quebra de linha, sem caractere invisível e sem marcação
  *   Markdown/HTML ativa (imagem, link, código, Dataview, Templater).
- * - Só acrescenta no fim; nunca apaga nem sobrescreve. Nota acima de 1 MB → recusa.
+ * - Só acrescenta: no fim da seção "## O que fiz" (se existir) ou no fim da nota.
+ *   Nunca apaga nada: o arquivo só cresce. Nota acima de 1 MB → recusa.
  * - Uma trava (lock) impede que duas escritas ao mesmo tempo misturem as linhas.
  */
 @Service
@@ -100,11 +104,27 @@ public class DailyService {
                     if (tamanho >= LIMITE_NOTA_BYTES) {
                         throw new AcaoIndisponivelException("daily cheio");
                     }
+                    // Melhoria do teste real (12/11): a linha vai no fim da seção "## O que fiz"
+                    byte[] atual = lerTudo(canal, tamanho);
+                    int posicao = posicaoNoOQueFiz(atual);
+                    if (posicao >= 0) {
+                        String quebra = new String(atual, StandardCharsets.UTF_8).contains("\r\n") ? "\r\n" : "\n";
+                        byte[] novaLinha = (quebra + linha.stripTrailing()).getBytes(StandardCharsets.UTF_8);
+                        // Reescreve só daqui para a frente: a linha nova + o resto que já existia.
+                        // O arquivo só cresce; nenhum byte antigo some.
+                        ByteBuffer bytes = ByteBuffer.allocate(novaLinha.length + atual.length - posicao);
+                        bytes.put(novaLinha).put(atual, posicao, atual.length - posicao).flip();
+                        canal.position(posicao);
+                        while (bytes.hasRemaining()) {
+                            canal.write(bytes);
+                        }
+                        return nomeArquivo;
+                    }
                     if (!terminaComQuebraDeLinha(canal, tamanho)) {
                         // Se a nota não terminar com "enter", a linha nova não pode grudar na última
                         saida.append('\n');
                     }
-                    canal.position(tamanho); // sempre no fim: nunca sobrescreve
+                    canal.position(tamanho); // sem a seção: no fim, como antes
                 }
                 saida.append(linha);
                 ByteBuffer bytes = ByteBuffer.wrap(saida.toString().getBytes(StandardCharsets.UTF_8));
@@ -137,6 +157,51 @@ public class DailyService {
     /** Pasta vazia ou que não existe → 503 (falha fechada: na dúvida, nega). */
     private Path pastaPermitida() {
         return PastaSegura.base(pastaConfigurada);
+    }
+
+    private static final Pattern SECAO_O_QUE_FIZ = Pattern.compile("(?m)^##[ \\t]+O que fiz[ \\t]*\\r?$");
+    // Próximo título "# " ou "## ". Os "### Madrugada" ficam DENTRO da seção.
+    private static final Pattern PROXIMO_TITULO = Pattern.compile("(?m)^#{1,2}[ \\t]");
+
+    /**
+     * Byte onde a linha nova entra: logo depois da última linha com texto da seção "## O que fiz".
+     * Sem a seção, ou com texto que não é UTF-8 limpo → -1 (grava no fim, como antes).
+     */
+    static int posicaoNoOQueFiz(byte[] bytes) {
+        String texto = new String(bytes, StandardCharsets.UTF_8);
+        if (!Arrays.equals(texto.getBytes(StandardCharsets.UTF_8), bytes)) {
+            return -1; // não é UTF-8 limpo: contar a posição poderia cortar uma letra ao meio
+        }
+        Matcher secao = SECAO_O_QUE_FIZ.matcher(texto);
+        if (!secao.find()) {
+            return -1;
+        }
+        int inicio = secao.end();
+        if (inicio > 0 && texto.charAt(inicio - 1) == '\r') {
+            inicio--;
+        }
+        Matcher proximo = PROXIMO_TITULO.matcher(texto);
+        int fim = proximo.find(secao.end()) ? proximo.start() : texto.length();
+        int depoisDoUltimoTexto = inicio;
+        int cursor = secao.end();
+        while (cursor < fim) {
+            int quebra = texto.indexOf('\n', cursor);
+            int fimLinha = (quebra < 0 || quebra >= fim) ? fim : quebra;
+            if (!texto.substring(cursor, fimLinha).isBlank()) {
+                depoisDoUltimoTexto = (fimLinha > cursor && texto.charAt(fimLinha - 1) == '\r') ? fimLinha - 1 : fimLinha;
+            }
+            cursor = fimLinha + 1;
+        }
+        return texto.substring(0, depoisDoUltimoTexto).getBytes(StandardCharsets.UTF_8).length;
+    }
+
+    private static byte[] lerTudo(SeekableByteChannel canal, long tamanho) throws IOException {
+        ByteBuffer tudo = ByteBuffer.allocate((int) tamanho);
+        canal.position(0);
+        while (tudo.hasRemaining() && canal.read(tudo) > 0) {
+            // lê até o fim
+        }
+        return tudo.array();
     }
 
     private static boolean terminaComQuebraDeLinha(SeekableByteChannel canal, long tamanho) throws IOException {

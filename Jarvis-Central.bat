@@ -9,8 +9,14 @@ set "EDGE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
 if not exist "%EDGE%" set "EDGE=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
 set "BASH=%ProgramFiles%\Git\bin\bash.exe"
 
-REM 1) A API ja esta ligada? Entao so abre a Central.
-curl.exe -s -f -o nul --max-time 2 "%URL%acoes/hora" && goto abrir
+REM 1) A API ja esta ligada? Se estiver em dia, so abre a Central.
+REM    Se for VELHA (ligada antes da ultima mudanca no Java), desliga e liga de novo.
+curl.exe -s -f -o nul --max-time 2 "%URL%acoes/hora" || goto ligar
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0java\bracos\api-velha.ps1"
+if errorlevel 2 goto ligar
+goto abrir
+
+:ligar
 
 REM 2) Nao esta: liga a API numa janela minimizada ("Jarvis API").
 if not exist "%BASH%" (
