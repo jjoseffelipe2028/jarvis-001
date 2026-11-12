@@ -272,15 +272,17 @@ def gerar_srt(falas, duracao):
     return "\n".join(blocos)
 
 
-def transcritor_whisper():
-    """Liga o Whisper uma vez só (demora) e devolve a função que transcreve um .wav."""
+def transcritor_whisper(dica=None):
+    """Liga o Whisper uma vez só (demora) e devolve a função que transcreve um .wav.
+    `dica` = palavras que ele deve esperar (padrão: GTA)."""
+    dica = DICA_GTA if dica is None else dica
     from faster_whisper import WhisperModel
     modelo = WhisperModel("small", device="cpu", compute_type="int8")
 
     def transcrever(wav):
         # Entrega o áudio já lido (igual ao ouvido.py): o faster-whisper 1.2.1 não abre arquivo com o PyAV 19
         segmentos, _ = modelo.transcribe(ler_wav(wav), language="pt", vad_filter=True,
-                                         initial_prompt=DICA_GTA)
+                                         initial_prompt=dica)
         return [(s.start, s.end, s.text.strip()) for s in segmentos]
     return transcrever
 
