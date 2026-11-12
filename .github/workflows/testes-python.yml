@@ -1,5 +1,6 @@
 # Robô que roda os testes do lado Python (cérebro ↔ braços) a cada push.
-# Só biblioteca padrão: não instala nada (os testes não precisam de Ollama, microfone nem voz).
+# Instala só o numpy e o PyAV (robô de cortes, Ticket 025), nas MESMAS versões do requirements.txt.
+# Os testes não precisam de Ollama, microfone, voz nem Whisper.
 name: Testes Python (cerebro)
 
 on:
@@ -28,6 +29,9 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.13'
+
+      - name: Instalar numpy e PyAV (versões fixas, do PyPI oficial)
+        run: python -m pip install --only-binary=:all: numpy==2.5.4 av==19.0.2
 
       - name: Rodar os testes
         run: python -m unittest discover -s tests -t . -v
