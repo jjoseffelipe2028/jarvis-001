@@ -195,6 +195,45 @@ def comando_corte(ffmpeg, entrada, inicio, duracao, saida):
             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f"file:{saida}"]
 
 
+# ---------- V6: gancho na tela (Ticket 026) ----------
+
+SEGUNDOS_GANCHO = 3
+
+
+def gerar_ass_gancho(texto):
+    """Texto grande no meio da tela nos 3 primeiros segundos. Desarmado como a legenda."""
+    estilo = ("Style: Gancho,Arial,96,&H0000FFFF,&H000000FF,&H00000000,&H96000000,"
+              "-1,0,0,0,100,100,0,0,1,8,3,5,60,60,0,1")
+    cabecalho = _CABECALHO_ASS.replace("\n\n[Events]", f"\n{estilo}\n\n[Events]")
+    # A fonte da tela não tem emoji (sai um desenho estranho): na TELA ele sai; na legenda do post fica
+    import unicodedata
+    texto = "".join(c for c in str(texto) if unicodedata.category(c) not in ("So", "Cs", "Mn")
+                    or c in "̧̀́̂̃")
+    return (cabecalho.rstrip("\n") + "\n" +
+            f"Dialogue: 0,{_tempo_ass(0)},{_tempo_ass(SEGUNDOS_GANCHO)},Gancho,,0,0,0,,"
+            f"{desarmar_ass(texto)}\n")
+
+
+def comando_gancho(ffmpeg, corte, saida):
+    """Regrava o corte com o gancho por cima. O som é copiado sem mexer."""
+    return [ffmpeg, *_BASE, "-i", f"file:{corte}", "-vf", "subtitles=gancho.ass",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+            "-c:a", "copy", "-movflags", "+faststart", f"file:{saida}"]
+
+
+def gravar_gancho(ffmpeg, corte, texto, executar=subprocess.run):
+    """Cria <corte>-gancho.mp4 ao lado do corte. Nunca sobrescreve (o FFmpeg usa -n)."""
+    corte = Path(corte)
+    saida = corte.with_name(f"{corte.stem}-gancho.mp4")
+    if saida.exists():
+        raise ErroCorte("Esse corte já tem a versão com gancho.")
+    robo = Cortador(ffmpeg, None, executar=executar)
+    with tempfile.TemporaryDirectory(prefix="jarvis-gancho-") as tmp:
+        Path(tmp, "gancho.ass").write_text(gerar_ass_gancho(texto), encoding="utf-8")
+        robo._rodar(comando_gancho(ffmpeg, corte, saida), tmp)
+    return saida
+
+
 def ler_wav(caminho):
     """Lê o .wav que o FFmpeg gerou (mono, 16 kHz, 16 bits) → números de -1 a 1 para o Whisper."""
     import wave

@@ -1,5 +1,16 @@
 # 026 — Vídeos V6: título, gancho e legenda do post com a Gemma
-**Status:** 📝 RASCUNHO do plano (001, 11/11) · ⏳ espera o OK do José · Rota: sáb 14 e dom 15
+**Status:** ✅ construído (12/11, 2 dias antes da rota) · OK do José ("Bora, V6") com os padrões da 001: **só português** e **gancho na tela: sim** · ⏳ commit com o OK
+
+## Como usar
+- `python cortes.py textos <corte.mp4> --arroba @amigo` → nota no cofre com 3 títulos, gancho, legenda (crédito pelo código) e 5 hashtags.
+- `python cortes.py gancho <corte.mp4> [--texto "MEU GANCHO"]` → `<corte>-gancho.mp4`, com o gancho no meio da tela nos 3 primeiros segundos (o corte original fica igual).
+
+## Evidências (12/11)
+- Python: **128 testes OK** (+12: validação, link, @ de outra pessoa, palavrão, JSON torto, nova tentativa, prompt injection na fala, emoji fora da tela).
+- **Gemma real** no corte do ensaio ("pulou de moto em cima do helicóptero"): 3 títulos, gancho "Pulo de moto no helicóptero! 🤯", legenda com "🎮 Live de @amigo_gta" e 5 hashtags, em ~70 s (1ª carga do modelo).
+- Gancho gravado: 1080x1920, 25 s, som copiado. Emoji saía como um desenho estranho (a fonte não tem) → agora sai **só da tela**; o acento fica ("A POLÍCIA CHEGOU").
+- Ataques barrados: gancho com link, gancho repetido no mesmo corte, @ com `;`.
+- O V5 agora grava o `.srt` (o V6 lê dele). Corte sem fala (tiroteio) → aviso para escrever os textos à mão.
 **Módulo de Vídeos, fase V6**
 
 ## Ideia

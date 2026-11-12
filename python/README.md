@@ -6,7 +6,7 @@ Tudo roda **local**: nenhuma conversa ou áudio sai do PC. 🔒
 |---|---|---|
 | `chat.py` | Cérebro: conversa com o Gemma (Ollama), com personalidade e histórico. **Digite, ou Enter vazio para falar.** Só conversa, não executa nada. | ✅ |
 | `ouvido.py` | Ouvidos: grava o microfone e transforma em texto com o faster-whisper (offline). Teste sozinho: `python ouvido.py`. | ✅ |
-| `cortes.py` | 🎬 Robô de cortes (Ticket 025): `python cortes.py cacar live.mp4` acha os momentos fortes; `python cortes.py cortar live.mp4 1 3 --arroba @amigo` corta em pé (9:16) com legenda e o @. Usa `cacador.py` + `cortador.py`. Precisa do FFmpeg para cortar. Conferir tudo: `python cortes.py autoteste`. | 🟡 |
+| `cortes.py` | 🎬 Robô de cortes (Ticket 025): `python cortes.py cacar live.mp4` acha os momentos fortes; `python cortes.py cortar live.mp4 1 3 --arroba @amigo` corta em pé (9:16) com legenda e o @. Usa `cacador.py` + `cortador.py`. Precisa do FFmpeg para cortar. Conferir tudo: `python cortes.py autoteste`. **V6** (`textos.py`): `python cortes.py textos <corte> --arroba @amigo` (a Gemma sugere título, gancho, legenda e hashtags) e `python cortes.py gancho <corte>` (gancho na tela). | ✅ |
 | `requirements.txt` | Lista de bibliotecas (`pip install -r requirements.txt`). | ✅ |
 
 ## Rodar

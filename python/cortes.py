@@ -7,6 +7,10 @@ Jarvis 001 — Comando do robô de cortes 🎬 (Ticket 025, V5)
       → corta os momentos 3, 7 e 12 da última caçada
   python cortes.py cortar live.mp4 --trecho 1:02:10-1:02:40 --arroba @amigo
       → corte manual
+  python cortes.py textos 2026-11-12-...-corte-01.mp4 --arroba @amigo
+      → V6: a Gemma sugere 3 títulos, gancho, legenda e hashtags (nota no cofre)
+  python cortes.py gancho 2026-11-12-...-corte-01.mp4 [--texto "MEU GANCHO"]
+      → V6: vídeo novo com o gancho na tela nos 3 primeiros segundos
   python cortes.py autoteste
       → confere o robô inteiro numa pasta temporária (não precisa do .env)
 
@@ -108,12 +112,59 @@ def cortar(nome_video, numeros, manuais, arroba):
     print("⚠️ Antes de postar: confira se tem música da rádio do GTA no corte.")
 
 
+def _textos_json(corte):
+    return corte.with_name(f"{corte.stem}.textos.json")
+
+
+def textos(nome_corte, arroba):
+    """V6: a Gemma sugere título, gancho, legenda e hashtags a partir do .srt do corte."""
+    import textos as t
+    if not cortador.ARROBA.fullmatch(arroba or ""):
+        raise ErroCorte("O @ do amigo é obrigatório e só aceita letras, números, _ e ponto.")
+    _, saida, notas = _pastas()
+    corte = cortador.resolver_entrada(saida, nome_corte)
+    srt = corte.with_suffix(".srt")
+    if not srt.is_file():
+        raise ErroCorte("Esse corte não tem legenda (.srt). Corte de novo com a versão atual.")
+    print("✍️ Pedindo os textos para a Gemma (local)...")
+    try:
+        s = t.sugerir(srt.read_text(encoding="utf-8"), arroba)
+    except t.ErroTextos as e:
+        raise ErroCorte(str(e)) from e
+    _textos_json(corte).write_text(json.dumps(s, ensure_ascii=False), encoding="utf-8")
+    nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-textos.md"
+    with open(nota, "x", encoding="utf-8") as f:
+        f.write(t.nota_markdown(corte.name, s))
+    print(f"✅ Nota no cofre: {nota.name}")
+    for i, titulo in enumerate(s["titulos"], start=1):
+        print(f"   {i}. {titulo}")
+    print(f"   Gancho: {s['gancho']}")
+
+
+def gancho(nome_corte, texto=None):
+    """V6: grava o gancho nos 3 primeiros segundos, num vídeo NOVO (o corte fica igual)."""
+    import textos as t
+    _, saida, _ = _pastas()
+    corte = cortador.resolver_entrada(saida, nome_corte)
+    if texto is None:
+        arquivo = _textos_json(corte)
+        if not arquivo.is_file():
+            raise ErroCorte("Rode antes: python cortes.py textos <corte> --arroba @amigo (ou use --texto).")
+        texto = json.loads(arquivo.read_text(encoding="utf-8"))["gancho"]
+    try:
+        texto = t._limpo(texto, 40, "gancho")
+    except t.ErroTextos as e:
+        raise ErroCorte(str(e)) from e
+    novo = cortador.gravar_gancho(cortador.achar_ffmpeg(), corte, texto)
+    print(f"✅ {novo.name} (gancho: {texto})")
+
+
 def main(argv=None):
     # Terminal do Windows nem sempre é UTF-8: emoji e acento não podem derrubar o robô
     for fluxo in (sys.stdout, sys.stderr):
         if hasattr(fluxo, "reconfigure"):
             fluxo.reconfigure(encoding="utf-8", errors="replace")
-    p =argparse.ArgumentParser(prog="cortes.py", description="Robô de cortes do Jarvis (Ticket 025)")
+    p = argparse.ArgumentParser(prog="cortes.py", description="Robô de cortes do Jarvis (Ticket 025)")
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("cacar", help="acha os momentos fortes")
     c.add_argument("video")
@@ -123,6 +174,12 @@ def main(argv=None):
     k.add_argument("--trecho", action="append", help="corte manual: 1:02:10-1:02:40")
     k.add_argument("--arroba", required=True, help="@ do amigo (crédito em todo corte)")
     sub.add_parser("autoteste", help="confere o robô inteiro numa pasta temporária (sem .env)")
+    x = sub.add_parser("textos", help="V6: a Gemma sugere título, gancho, legenda e hashtags")
+    x.add_argument("corte", help="nome do corte na pasta de saída")
+    x.add_argument("--arroba", required=True)
+    g = sub.add_parser("gancho", help="V6: grava o gancho no 1º segundo (vídeo novo)")
+    g.add_argument("corte")
+    g.add_argument("--texto", help="gancho seu, em vez do da Gemma (até 40 letras)")
     a = p.parse_args(argv)
     try:
         if a.cmd == "autoteste":
@@ -130,6 +187,10 @@ def main(argv=None):
             return 0 if autoteste_cortes.rodar() else 1
         if a.cmd == "cacar":
             cacar(a.video)
+        elif a.cmd == "textos":
+            textos(a.corte, a.arroba)
+        elif a.cmd == "gancho":
+            gancho(a.corte, a.texto)
         else:
             cortar(a.video, a.numeros, a.trecho, a.arroba)
     except (ErroCorte, ErroCacador, FileExistsError) as e:
