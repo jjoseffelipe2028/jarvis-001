@@ -11,6 +11,9 @@ Jarvis 001 — Comando do robô de cortes 🎬 (Ticket 025, V5)
       → V6: a Gemma sugere 3 títulos, gancho, legenda e hashtags (nota no cofre)
   python cortes.py gancho 2026-11-12-...-corte-01.mp4 [--texto "MEU GANCHO"]
       → V6: vídeo novo com o gancho na tela nos 3 primeiros segundos
+  python cortes.py pacote live.mp4 --arroba @amigo [--top 8]
+      → Ticket 028: caça (se ainda não caçou), corta os mais fortes, pede os textos,
+        grava o gancho e monta o PAINEL no cofre para você aprovar um por um
   python cortes.py autoteste
       → confere o robô inteiro numa pasta temporária (não precisa do .env)
 
@@ -59,12 +62,48 @@ def cacar(nome_video):
     nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-momentos.md"
     with open(nota, "x", encoding="utf-8") as f:  # "x" = só cria; nunca sobrescreve
         f.write(cacador.nota_markdown(video.name, momentos, len(energias)))
+    lista = [m.__dict__ for m in momentos]
     _arquivo_momentos(saida, video.name).write_text(json.dumps({
-        "video": video.name, "duracao": len(energias),
-        "momentos": [m.__dict__ for m in momentos]}), encoding="utf-8")
+        "video": video.name, "duracao": len(energias), "momentos": lista}), encoding="utf-8")
     print(f"✅ {len(momentos)} momento(s). Nota no cofre: {nota.name}")
     for m in momentos[:10]:
         print(f"   {m.numero:>2}. {hms(m.inicio)} → {hms(m.fim)}  (+{m.forca} dB)")
+    return lista
+
+
+def pacote(nome_video, arroba, top):
+    """Ticket 028: a fila inteira num comando só. O painel vai para o cofre."""
+    import pacote as p
+    import textos as t
+    entrada, saida, notas = _pastas()
+    video = cortador.resolver_entrada(entrada, nome_video)
+    if not cortador.ARROBA.fullmatch(arroba or ""):
+        raise ErroCorte("O @ do amigo é obrigatório e só aceita letras, números, _ e ponto.")
+    duracao = cortador.duracao_video(video)
+    arquivo = _arquivo_momentos(saida, video.name)
+    if arquivo.is_file():
+        print("🔎 Usando a caçada que já existe desse vídeo.")
+        try:
+            momentos = json.loads(arquivo.read_text(encoding="utf-8"))["momentos"]
+        except (ValueError, KeyError, TypeError) as e:
+            raise ErroCorte("A lista da caçada está estragada. Rode: python cortes.py cacar <video>") from e
+    else:
+        momentos = cacar(nome_video)
+    ffmpeg = cortador.achar_ffmpeg()
+    print("👂 Ligando o Whisper para as legendas...")
+    robo = cortador.Cortador(ffmpeg, cortador.transcritor_whisper())
+    itens = p.montar(video, duracao, momentos, arroba, saida, robo, t.sugerir,
+                     lambda corte, texto: cortador.gravar_gancho(ffmpeg, corte, texto),
+                     top=top, avisar=lambda m: print(m, flush=True))
+    nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-pacote.md"
+    with open(nota, "x", encoding="utf-8") as f:
+        f.write(p.painel_markdown(video.name, arroba, itens))
+    prontos = sum(1 for i in itens if i.corte)
+    print(f"📦 {prontos} de {len(itens)} cortes prontos. Painel no cofre: {nota.name}")
+    for i in itens:
+        if i.aviso:
+            print(f"   ⚠️ Momento {i.numero}: {i.aviso}")
+    print("⚠️ Nada foi postado. Abra o painel e aprove um por um.")
 
 
 def _trechos(saida, video, numeros, manuais):
@@ -174,6 +213,10 @@ def main(argv=None):
     k.add_argument("--trecho", action="append", help="corte manual: 1:02:10-1:02:40")
     k.add_argument("--arroba", required=True, help="@ do amigo (crédito em todo corte)")
     sub.add_parser("autoteste", help="confere o robô inteiro numa pasta temporária (sem .env)")
+    pc = sub.add_parser("pacote", help="Ticket 028: caça, corta, textos, gancho e painel no cofre")
+    pc.add_argument("video")
+    pc.add_argument("--arroba", required=True, help="@ do amigo (crédito em todo corte)")
+    pc.add_argument("--top", type=int, default=8, help="quantos momentos cortar (1 a 20; padrão 8)")
     x = sub.add_parser("textos", help="V6: a Gemma sugere título, gancho, legenda e hashtags")
     x.add_argument("corte", help="nome do corte na pasta de saída")
     x.add_argument("--arroba", required=True)
@@ -191,6 +234,8 @@ def main(argv=None):
             textos(a.corte, a.arroba)
         elif a.cmd == "gancho":
             gancho(a.corte, a.texto)
+        elif a.cmd == "pacote":
+            pacote(a.video, a.arroba, a.top)
         else:
             cortar(a.video, a.numeros, a.trecho, a.arroba)
     except (ErroCorte, ErroCacador, FileExistsError) as e:
