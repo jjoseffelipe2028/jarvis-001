@@ -186,6 +186,23 @@ class BomDiaTest(unittest.TestCase):
                                      pend={"total": 1, "pendencias": ["texto solto"]}))
         self.assertIn("Cyber", frase)
 
+    # --- Ticket 038: frases locais (duelo e backup) ---
+
+    def test_extras_entram_antes_da_cyber(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True})
+        frase = bom_dia(b, lambda: ["Último duelo: a defesa pegou 13 de 13.", "Backup 3-2-1: 2 de 3. Falta: Offline."])
+        self.assertIn("Último duelo: a defesa pegou 13 de 13. Backup 3-2-1: 2 de 3. Falta: Offline. Cyber sem", frase)
+
+    def test_extras_quebrados_ou_tortos_nao_derrubam(self):
+        b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True})
+        sem = bom_dia(b)
+
+        def explode():
+            raise RuntimeError("deu ruim")
+        for extras in (explode, lambda: None, lambda: [None, 5, "", "  "], lambda: "texto solto"):
+            self.assertEqual(bom_dia(b, extras), sem)
+        self.assertNotIn("\x1b", bom_dia(b, lambda: ["a\x1b[2Jb"]))
+
     def test_cumprimento_pela_hora(self):
         self.assertEqual(_cumprimento("05:00"), "Bom dia")
         self.assertEqual(_cumprimento("11:59"), "Bom dia")

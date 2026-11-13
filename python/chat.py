@@ -40,7 +40,8 @@ def executar_acao(bracos, acao, argumento):
     if acao == "proibida":
         return responder("proibida", None)
     if acao == "bom_dia":
-        return bom_dia(bracos)  # junta hora + pendências + git (Ticket 009)
+        import resumo_local  # Ticket 038: placar do último duelo e nota do backup (só leitura)
+        return bom_dia(bracos, resumo_local.frases_locais)  # hora + pendências + git (Ticket 009)
     try:
         if acao == "daily":
             dados = bracos.registrar_daily(argumento)

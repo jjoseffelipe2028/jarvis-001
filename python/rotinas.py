@@ -40,16 +40,30 @@ def _tentar(funcao):
         return None
 
 
-def bom_dia(bracos):
-    """Monta o resumo do dia. Devolve uma frase curta e segura para falar."""
+def bom_dia(bracos, extras=None):
+    """Monta o resumo do dia. Devolve uma frase curta e segura para falar.
+    Ticket 038: `extras` é uma função que devolve frases locais (duelo, backup). Sem ela, nada muda."""
     try:
-        return _bom_dia(bracos)
+        return _bom_dia(bracos, extras)
     except ErroBraco as e:
         # Alarme: o José precisa ouvir isso, não um "não consegui ler"
         return seguro(f"Atenção, José: {e}")
 
 
-def _bom_dia(bracos):
+def _frases_extras(extras):
+    """Frases locais (Ticket 038). Qualquer erro vira lista vazia: o bom dia não cai por causa de um extra."""
+    if extras is None:
+        return []
+    try:
+        frases = extras()
+        if not isinstance(frases, (list, tuple)):
+            return []  # texto solto seria lido letra por letra
+        return [f for f in frases if isinstance(f, str) and f.strip()][:4]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _bom_dia(bracos, extras=None):
     hora = _tentar(bracos.hora)
     pend = _tentar(bracos.pendencias)
     git = _tentar(bracos.git_status)
@@ -94,6 +108,7 @@ def _bom_dia(bracos):
     if sentinela is not None and not alerta:
         partes.append(sentinela)
 
+    partes.extend(_frases_extras(extras))
     partes.append(_cobranca_cyber(pend))
     return seguro(" ".join(partes))
 
