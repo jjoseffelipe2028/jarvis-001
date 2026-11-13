@@ -33,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @TestPropertySource(properties = "jarvis.token=token-de-teste") // valor FICTÍCIO
 class CentralPaginaTest {
 
-    private static final String[] ARQUIVOS = {"index.html", "central.css", "central.js", "escritorio.js"};
+    private static final String[] ARQUIVOS = {"index.html", "central.css", "central.js", "escritorio.js", "paginas.js"};
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,7 +51,7 @@ class CentralPaginaTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/index.html", "/central.css", "/central.js", "/escritorio.js"})
+    @ValueSource(strings = {"/index.html", "/central.css", "/central.js", "/escritorio.js", "/paginas.js"})
     void arquivosSaoServidosSemToken(String rota) throws Exception {
         mockMvc.perform(get(rota)).andExpect(status().isOk());
     }
@@ -82,7 +82,7 @@ class CentralPaginaTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"central.js", "escritorio.js"})
+    @ValueSource(strings = {"central.js", "escritorio.js", "paginas.js"})
     void jsNaoTransformaRespostaEmCodigo(String arquivo) throws IOException {
         String js = ler(arquivo);
         for (String proibido : new String[] {"innerHTML", "outerHTML", "insertAdjacentHTML", "eval(", "new Function", "document.write"}) {
@@ -100,6 +100,22 @@ class CentralPaginaTest {
         assertTrue(js.contains("history.replaceState"), "a chave de uso único some do endereço");
         assertFalse(js.contains("localStorage") || js.contains("sessionStorage"), "nada guardado no navegador");
         assertTrue(js.contains("credentials: \"omit\""), "fetch sem cookies");
+    }
+
+    @Test
+    void paginasNovas_soUsamOCrachaDaCentral_eNadaFicaGuardado() throws IOException {
+        // Ticket 039: chat e páginas por área
+        String js = ler("paginas.js");
+        for (String proibido : new String[] {"fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon",
+                "X-Jarvis-Token", "document.cookie", "localStorage", "sessionStorage", "method: \"POST\""}) {
+            assertFalse(js.contains(proibido), "paginas.js usa " + proibido);
+        }
+        assertTrue(js.contains("enviar(\"/central/acoes/chat\""), "o chat passa pelo enviar() da central.js (crachá + Origin)");
+        assertTrue(js.contains("pedir(rota)"), "as consultas passam pelo pedir() da central.js");
+        String html = ler("index.html");
+        assertTrue(html.contains("id=\"pg-cyber\" class=\"pagina\" hidden"), "as páginas novas começam escondidas");
+        assertTrue(html.contains("id=\"chat-texto\" maxlength=\"1000\""), "mesmo limite da API (ChatRequest)");
+        assertTrue(html.contains("id=\"cy-texto\" maxlength=\"4000\""), "mesmo limite da API (GolpeRequest)");
     }
 
     @Test

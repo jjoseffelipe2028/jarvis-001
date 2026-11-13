@@ -133,3 +133,24 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 .esc-narra ul { list-style: none; margin-top: 8px; display: grid; gap: 5px; font: 13px Consolas, monospace; letter-spacing: 0; }
 .esc-narra li { opacity: .5; } .esc-narra li:first-child { opacity: 1; color: #4dfff0; }
 @media (max-width: 1000px) { .escritorio { padding: 0 16px; } }
+
+/* Central v4 (Ticket 039): menu de páginas, conversa e páginas por área */
+.menu { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 32px 0; position: relative; }
+.menu button[aria-current="page"] { background: #155e75; border-color: var(--ciano); box-shadow: 0 0 10px #22d3ee55; }
+.clicavel { cursor: pointer; } .clicavel:hover { text-shadow: 0 0 10px currentColor; }
+.chat { margin-bottom: 4px; }
+.chat-falas { list-style: none; max-height: 220px; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
+.chat-falas li { padding: 4px 0; border-bottom: 1px dashed #1e293b; white-space: pre-wrap; word-break: break-word; }
+.chat-eu { color: #e9d5ff; } .chat-ia { color: var(--texto); }
+#chat-texto { width: 100%; border-color: #22d3ee77; }
+.pagina { padding: 18px 32px; position: relative; }
+.pagina h2 { letter-spacing: 3px; text-shadow: 0 0 12px var(--ciano); margin-bottom: 4px; }
+.pagina-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; margin-top: 14px; align-items: start; }
+.pagina .comando { max-width: none; }
+.pagina code { background: #030712; border-radius: 4px; padding: 1px 5px; font-size: 13px; word-break: break-all; }
+.espaco { margin-top: 14px; }
+.linha-campos { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.linha-campos input { flex: 1; min-width: 180px; font: inherit; font-size: 14px; color: var(--texto); background: #030712; border: 1px solid #fbbf2477; border-radius: 8px; padding: 6px 8px; }
+#cy-texto { width: 100%; border-color: #fbbf2477; }
+.saida-grande { max-height: 340px; }
+@media (max-width: 1000px) { .menu, .pagina { padding-left: 16px; padding-right: 16px; } }

@@ -33,7 +33,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** Ticket 021: a Sentinela pelo botão da Central, atrás do crachá. 🛡️ */
 @WebMvcTest({CentralSentinelaController.class, CentralController.class})
-@Import({ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class, DetectorDeGolpe.class, WebConfig.class,
+@Import({ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class, DetectorDeGolpe.class,
+        io.github.jjoseffelipe2028.bracos.acoes.sentinela.VerificadorDePropostas.class, WebConfig.class,
         ErrosHandler.class})
 class CentralSentinelaControllerTest {
 
@@ -130,6 +131,32 @@ class CentralSentinelaControllerTest {
         mockMvc.perform(post("/central/acoes/sentinela/golpe").cookie(cracha).header(CentralInterceptor.CABECALHO, "1")
                         .header("Origin", "https://site-malicioso.example").contentType(MediaType.APPLICATION_JSON).content(GOLPE))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- Ticket 039: página Cyber ---
+
+    @Test
+    void proposta_eIsca_pelaCentral_comCracha() throws Exception {
+        Cookie cracha = entrar();
+        mockMvc.perform(post("/central/acoes/sentinela/proposta").cookie(cracha).header(CentralInterceptor.CABECALHO, "1")
+                        .header("Origin", ORIGEM).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto\":\"Baixe o media kit e abra o Contrato.scr\",\"remetente\":\"marca.x@gmail.com\",\"marca\":\"MarcaX\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nivel").value("alto"))
+                .andExpect(jsonPath("$.passos.length()").value(5));
+        mockMvc.perform(get("/central/acoes/sentinela/isca").cookie(cracha).header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ligada").value(false))
+                .andExpect(jsonPath("$.arquivo").value("sem"));
+    }
+
+    @Test
+    void proposta_eIsca_semCracha_401() throws Exception {
+        mockMvc.perform(post("/central/acoes/sentinela/proposta").header(CentralInterceptor.CABECALHO, "1")
+                        .header("Origin", ORIGEM).contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"oi\"}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/central/acoes/sentinela/isca").header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
