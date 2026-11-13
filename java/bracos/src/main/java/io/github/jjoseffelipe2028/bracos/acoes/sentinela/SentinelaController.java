@@ -1,6 +1,8 @@
 package io.github.jjoseffelipe2028.bracos.acoes.sentinela;
 
 import io.github.jjoseffelipe2028.bracos.auditoria.Cliente;
+import io.github.jjoseffelipe2028.bracos.seguranca.Isca;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET /acoes/sentinela/integridade → alguém mexeu nas travas do projeto? (Ticket 022). 🔏
  * POST /acoes/sentinela/golpe → essa mensagem tem cara de golpe? (Ticket 023). 🎣
  * POST /acoes/sentinela/proposta → essa proposta de marca é de verdade? (Ticket 030). 🤝
+ * GET /acoes/sentinela/isca → alguém tocou na isca? (Ticket 034). 🪤
  * Nada é alterado no PC. O token (pedido assinado) já foi conferido antes de chegar aqui.
  */
 @RestController
@@ -28,13 +31,25 @@ public class SentinelaController {
     private final IntegridadeService integridade;
     private final DetectorDeGolpe detector;
     private final VerificadorDePropostas verificador;
+    private final ObjectProvider<Isca> isca;
 
     public SentinelaController(PortasService portas, IntegridadeService integridade, DetectorDeGolpe detector,
-            VerificadorDePropostas verificador) {
+            VerificadorDePropostas verificador, ObjectProvider<Isca> isca) {
         this.portas = portas;
         this.integridade = integridade;
         this.detector = detector;
         this.verificador = verificador;
+        this.isca = isca;
+    }
+
+    /** Ticket 034: quantas vezes a isca foi tocada e se o arquivo-isca mudou. Sem isca → "desligada". */
+    @GetMapping("/isca")
+    public Isca.Estado isca(@RequestHeader(value = Cliente.CABECALHO, required = false) String clienteBruto) {
+        Isca armadilha = isca.getIfAvailable();
+        Isca.Estado e = armadilha == null ? new Isca.Estado(false, 0, "", "sem") : armadilha.estado();
+        log.info("cliente={} acao=isca resultado=ok ligada={} toques={} arquivo={}",
+                Cliente.de(clienteBruto), e.ligada(), e.toques(), e.arquivo());
+        return e;
     }
 
     /** Ticket 030: nem o texto, nem o remetente, nem a marca vão para o log. Nenhum link é aberto. */

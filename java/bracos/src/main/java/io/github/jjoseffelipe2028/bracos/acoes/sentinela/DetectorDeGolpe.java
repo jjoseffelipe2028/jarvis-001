@@ -78,10 +78,16 @@ public class DetectorDeGolpe {
     // Link: com http(s)://, com www., ou "algo.com.br/..." solto no texto.
     // Ticket 029: sem grupo repetido "(\.nome)*". No Java, grupo repetido usa a pilha a cada volta, e um texto
     // de 4000 letras tipo "a.a.a.a..." estourava a pilha (erro 500). Uma classe de letras só não tem esse risco.
+    // Ticket 035 (achado do duelo): mesmo sem estourar a pilha, o regex antigo "voltava atrás" milhares de vezes
+    // e levava 2,6 s num texto de 4000 letras. Agora o regex só separa os PEDAÇOS do texto em uma passada
+    // ("++" e "*+" = não volta atrás), e quem decide se o pedaço é link é o código (ehLinkSolto), sem regex.
     private static final Pattern LINK = Pattern.compile(
-            "(?:https?://|www\\.)[^\\s<>\"']+"
-                    + "|\\b[a-z0-9-][a-z0-9.-]*\\.(?:com|net|org|br|xyz|top|click|icu|live|buzz|info|site|online"
-                    + "|me|io|ly|gl|co|at|is|gd|cc|ai|sbs|cfd|rest|monster|shop|tv|app|gg|ru|nz)\\b(?:/[^\\s<>\"']*)?");
+            "(?:https?://|www\\.)[^\\s<>\"']++"
+                    + "|[a-z0-9][a-z0-9.-]*+(?:/[^\\s<>\"']*+)?");
+    /** Finais de endereço aceitos para link SEM http/www (ex.: "bit.ly/x", "site.com.br"). */
+    private static final Set<String> FINAIS_DE_LINK = Set.of("com", "net", "org", "br", "xyz", "top", "click", "icu",
+            "live", "buzz", "info", "site", "online", "me", "io", "ly", "gl", "co", "at", "is", "gd", "cc", "ai",
+            "sbs", "cfd", "rest", "monster", "shop", "tv", "app", "gg", "ru", "nz");
     private static final Pattern IP = Pattern.compile("^\\d{1,3}(?:\\.\\d{1,3}){3}$");
 
     private static final Set<String> ENCURTADORES = Set.of("bit.ly", "tinyurl.com", "cutt.ly", "t.co", "is.gd",
@@ -131,14 +137,40 @@ public class DetectorDeGolpe {
 
         int links = 0;
         Matcher m = LINK.matcher(normal);
-        while (m.find() && links < MAXIMO_LINKS) {
+        while (links < MAXIMO_LINKS && m.find()) {
+            String pedaco = semPontuacaoNoFim(m.group()); // "site.com.br." no fim da frase → "site.com.br"
+            boolean comPrefixo = pedaco.startsWith("http://") || pedaco.startsWith("https://") || pedaco.startsWith("www.");
+            if (!comPrefixo && !ehLinkSolto(pedaco)) {
+                continue; // palavra comum, não é link
+            }
             links++;
-            pontos += analisarLink(m.group(), motivos);
+            pontos += analisarLink(pedaco, motivos);
         }
 
         // 4 pontos = 2 sinais fortes juntos (ex.: pressa + PIX, prêmio + link encurtado): o desenho clássico do golpe
         String nivel = pontos >= 4 ? ALTO : pontos >= 2 ? SUSPEITO : BAIXO;
         return new Veredito(nivel, pontos, links, List.copyOf(motivos), conselho(nivel));
+    }
+
+    static String semPontuacaoNoFim(String pedaco) {
+        int fim = pedaco.length();
+        while (fim > 0 && ".,;:!?)-".indexOf(pedaco.charAt(fim - 1)) >= 0) {
+            fim--;
+        }
+        return pedaco.substring(0, fim);
+    }
+
+    /** "bit.ly/x" e "site.com.br." são links; "app.", "fim.depois" e "a.a.a.a" não. Sem regex: uma passada só. */
+    static boolean ehLinkSolto(String pedaco) {
+        int barra = pedaco.indexOf('/');
+        String host = barra < 0 ? pedaco : pedaco.substring(0, barra);
+        int fim = host.length();
+        while (fim > 0 && (host.charAt(fim - 1) == '.' || host.charAt(fim - 1) == '-')) {
+            fim--; // ponto final da frase não faz parte do endereço
+        }
+        host = host.substring(0, fim);
+        int ponto = host.lastIndexOf('.');
+        return ponto > 0 && FINAIS_DE_LINK.contains(host.substring(ponto + 1));
     }
 
     /** Pontos de UM link. Cada tipo de problema só entra uma vez nos motivos (e nos pontos). */

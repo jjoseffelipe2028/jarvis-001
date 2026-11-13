@@ -27,6 +27,7 @@ public class EventosInterceptor implements HandlerInterceptor {
             Map.entry("GET /acoes/sentinela/integridade", "integridade"), // Ticket 022: vigia de integridade
             Map.entry("POST /acoes/sentinela/golpe", "golpe"), // Ticket 023: detector de golpe
             Map.entry("POST /acoes/sentinela/proposta", "proposta"), // Ticket 030: verificador de propostas
+            Map.entry("GET /acoes/sentinela/isca", "isca"), // Ticket 034: a isca foi tocada?
             Map.entry("POST /central/acoes/sentinela/golpe", "golpe"));
 
     private final QuadroDeEventos quadro;

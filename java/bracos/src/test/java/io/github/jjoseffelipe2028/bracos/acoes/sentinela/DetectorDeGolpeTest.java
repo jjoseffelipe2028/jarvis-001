@@ -144,6 +144,40 @@ class DetectorDeGolpeTest {
         }
     }
 
+    // --- Ticket 035 (achado do duelo): ler os links em uma passada só ---
+
+    @Test
+    void textoNoLimite_respondeRapido_mesmoFeitoParaAtrasar() {
+        v("aquecimento do regex: bit.ly/x e https://a.com"); // a 1ª chamada compila tudo
+        for (String ataque : List.of("a.".repeat(2000), "a-".repeat(2000), ".zip".repeat(1000),
+                "a.com.".repeat(660), "x/".repeat(2000), "www." + "x.".repeat(1998))) {
+            assertTimeoutPreemptively(Duration.ofMillis(500), () -> v(ataque), "demorou: " + ataque.substring(0, 12));
+        }
+    }
+
+    @Test
+    void linkSolto_ePalavraComum() {
+        assertTrue(DetectorDeGolpe.ehLinkSolto("bit.ly/premio"));
+        assertTrue(DetectorDeGolpe.ehLinkSolto("correios-entrega.online/pagar"));
+        assertTrue(DetectorDeGolpe.ehLinkSolto("site.com.br"));
+        assertFalse(DetectorDeGolpe.ehLinkSolto("app"), "palavra sem ponto");
+        assertFalse(DetectorDeGolpe.ehLinkSolto("fim.depois"), "final que não é de endereço");
+        assertFalse(DetectorDeGolpe.ehLinkSolto("contrato.scr"));
+        assertFalse(DetectorDeGolpe.ehLinkSolto(".com"));
+        assertEquals("site.com.br", DetectorDeGolpe.semPontuacaoNoFim("site.com.br.)"));
+    }
+
+    @Test
+    void pontoFinalDaFrase_naoViraImitacao_eOLinkContinuaContando() {
+        DetectorDeGolpe.Veredito oficial = v("A fatura está em nubank.com.br.");
+        assertEquals(1, oficial.links());
+        assertFalse(temMotivo(oficial, "imita"), "nubank.com.br com ponto final continua sendo o site oficial");
+        DetectorDeGolpe.Veredito falso = v("Regularize em nubank-seguranca.xyz. Hoje!");
+        assertEquals(1, falso.links());
+        assertTrue(temMotivo(falso, "imita"));
+        assertEquals(0, v("Seu boleto vence dia 15, pague pelo app. Obrigado.").links());
+    }
+
     @Test
     void respostaNuncaDevolveOTextoColado() {
         DetectorDeGolpe.Veredito r = v("<script>alert(1)</script> PIX urgente bit.ly/xss");

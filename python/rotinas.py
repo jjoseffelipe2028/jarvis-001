@@ -53,7 +53,7 @@ def _bom_dia(bracos):
     hora = _tentar(bracos.hora)
     pend = _tentar(bracos.pendencias)
     git = _tentar(bracos.git_status)
-    sentinela = _sentinela(_tentar(bracos.portas), _tentar(bracos.integridade))
+    sentinela = _sentinela(_tentar(bracos.portas), _tentar(bracos.integridade), _tentar(bracos.isca))
 
     partes = []
     if hora:
@@ -119,9 +119,19 @@ def _cobranca_cyber(pend):
         return "E a Cyber? Confira se fez a sua hora hoje."
 
 
-def _sentinela(portas, integ):
-    """Ticket 024: a Sentinela numa frase só (ou None se os dois braços falharam). Só lê; quem age é o José."""
+def _sentinela(portas, integ, isca=None):
+    """Ticket 024: a Sentinela numa frase só (ou None se os braços falharam). Só lê; quem age é o José.
+    Ticket 034: a isca (honeytoken) tocada é o alerta MAIS grave e vem na frente."""
     alertas, tranquilo = [], []
+    if isca is not None:
+        try:
+            toques = int(isca.get("toques", 0))
+            if toques > 0:
+                alertas.append(f"a isca foi tocada {toques} vez{'es' if toques != 1 else ''}: alguém usou o token falso")
+            if isca.get("arquivo") in ("mexido", "sumiu"):
+                alertas.append("o arquivo-isca foi mexido")
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            pass
     if portas is not None:
         try:
             n = int(portas.get("alertas", 0))

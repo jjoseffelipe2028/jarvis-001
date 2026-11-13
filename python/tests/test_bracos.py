@@ -239,6 +239,13 @@ class BracosTest(unittest.TestCase):
         self.assertEqual(list(corpo), ["texto"])
         self.assertEqual(len(corpo["texto"]), 4000)
 
+    def test_isca_pede_a_rota_fixa(self):
+        # Ticket 034
+        self._rota("/acoes/sentinela/isca", corpo={"ligada": True, "toques": 0})
+        self.assertEqual(self.bracos.isca(), {"ligada": True, "toques": 0})
+        self.assertEqual(_ApiFalsa.ultimo["metodo"], "GET")
+        self.assertTrue(_ApiFalsa.ultimo["assinatura_ok"])
+
     def test_proposta_vazia_nem_chama_a_api(self):
         with self.assertRaisesRegex(ErroBraco, "Cola o texto"):
             self.bracos.proposta("  ")

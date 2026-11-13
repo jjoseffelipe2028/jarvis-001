@@ -10,8 +10,9 @@ from rotinas import _cumprimento, bom_dia
 class BracosFalsos:
     """Imita o Bracos. Cada braço pode devolver dados ou falhar."""
 
-    def __init__(self, hora=None, pend=None, git=None, portas=None, integ=None):
-        self._r = {"hora": hora, "pendencias": pend, "git_status": git, "portas": portas, "integridade": integ}
+    def __init__(self, hora=None, pend=None, git=None, portas=None, integ=None, isca=None):
+        self._r = {"hora": hora, "pendencias": pend, "git_status": git, "portas": portas, "integridade": integ,
+                   "isca": isca}
         self.chamados = []
 
     def _resp(self, nome):
@@ -36,6 +37,9 @@ class BracosFalsos:
     def integridade(self):
         return self._resp("integridade")
 
+    def isca(self):
+        return self._resp("isca")
+
     def golpe(self, texto):
         raise AssertionError("o bom dia não analisa mensagem")
 
@@ -59,7 +63,7 @@ class BomDiaTest(unittest.TestCase):
     def test_so_le_nunca_escreve(self):
         b = BracosFalsos(hora={"hora": "09:00"}, pend={"total": 0}, git={"limpo": True})
         bom_dia(b)
-        self.assertEqual(sorted(b.chamados), ["git_status", "hora", "integridade", "pendencias", "portas"])
+        self.assertEqual(sorted(b.chamados), ["git_status", "hora", "integridade", "isca", "pendencias", "portas"])
 
     def test_sentinela_tranquila_vem_antes_da_cyber(self):
         # Ticket 024
@@ -75,6 +79,24 @@ class BomDiaTest(unittest.TestCase):
         self.assertTrue(frase.startswith(
             "Bom dia, José! São 08:00. Sentinela em alerta: a API do Jarvis está aberta para a rede; "
             "1 alerta nas portas; 1 trava mudou. Peça os detalhes antes de tudo."), frase)
+
+    def test_isca_tocada_e_o_primeiro_alerta(self):
+        # Ticket 034
+        b = BracosFalsos(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                         portas={"alertas": 1, "jarvisSoNoPc": True}, integ={"alterados": 0},
+                         isca={"ligada": True, "toques": 2, "ultimoToque": "12/11 20:30", "arquivo": "mexido"})
+        frase = bom_dia(b)
+        self.assertTrue(frase.startswith(
+            "Bom dia, José! São 08:00. Sentinela em alerta: a isca foi tocada 2 vezes: alguém usou o token falso; "
+            "o arquivo-isca foi mexido; 1 alerta nas portas."), frase)
+
+    def test_isca_quieta_desligada_ou_torta_nao_muda_nada(self):
+        base = dict(hora={"hora": "08:00"}, pend={"total": 0}, git={"limpo": True},
+                    portas={"alertas": 0, "jarvisSoNoPc": True}, integ={"alterados": 0})
+        esperado = "Sentinela: portas sem alerta e travas iguais."
+        for isca in (None, {"ligada": False, "toques": 0, "arquivo": "sem"},
+                     {"ligada": True, "toques": 0, "arquivo": "igual"}, {"toques": "muitos"}, ErroBraco("x")):
+            self.assertIn(esperado, bom_dia(BracosFalsos(isca=isca, **base)), repr(isca))
 
     def test_sentinela_fora_do_ar_ou_torta_nao_derruba(self):
         fora = ErroBraco("sentinela so no windows")

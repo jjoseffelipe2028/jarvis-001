@@ -12,6 +12,7 @@ Tudo roda **local**: nenhuma conversa ou áudio sai do PC. 🔒
 | `incidentes.py` | 🗂️ Caderno de Incidentes (Ticket 031): `python incidentes.py` faz a ronda da Sentinela e cria uma nota por alerta, com perguntas de SOC e gabarito dobrado. `python incidentes.py novo "título"` anota um caso seu. | ✅ |
 | `backup321.py` | 💾 Guarda do Backup 3-2-1 (Ticket 032): `python backup321.py` confere nuvem, GitHub e cópia offline. Só lê. | ✅ |
 | `conferir.py` | 🧰 Conferidor da instalação (Ticket 033): `python python/conferir.py` diz o que falta para o Jarvis rodar. Só biblioteca padrão. | ✅ |
+| `duelo.py` | ⚔️ Duelo Hacker × Sentinela (Ticket 035): `python duelo.py` liga uma cópia de teste da API (porta 8091, token falso, pastas temporárias), dispara 13 ataques e mostra o placar com as técnicas do MITRE. | ✅ |
 | `requirements.txt` | Lista de bibliotecas (`pip install -r requirements.txt`). | ✅ |
 
 ## Rodar

@@ -22,7 +22,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 CHAVES_OBRIGATORIAS = ("JARVIS_TOKEN", "JARVIS_PASTA_DAILY", "JARVIS_PASTA_GIT")
 CHAVES_OPCIONAIS = ("JARVIS_PASTA_DECISOES", "JARVIS_CORTES_ENTRADA", "JARVIS_CORTES_SAIDA",
-                    "JARVIS_PASTA_INCIDENTES", "JARVIS_BACKUP_OFFLINE")
+                    "JARVIS_PASTA_INCIDENTES", "JARVIS_BACKUP_OFFLINE", "JARVIS_ISCA_TOKEN", "JARVIS_ISCA_ARQUIVO")
 OLLAMA = "http://127.0.0.1:11434/api/tags"
 MODELO = "gemma"
 
@@ -106,7 +106,7 @@ def conferir_env(raiz=RAIZ):
         linhas.append((OK, ".env: as chaves principais estão preenchidas."))
     opcionais = [c for c in CHAVES_OPCIONAIS if c not in nomes]
     if opcionais:
-        linhas.append((AVISO, ".env (opcional, só para vídeos, incidentes e backup): " + ", ".join(opcionais) + "."))
+        linhas.append((AVISO, ".env (opcional: vídeos, incidentes, backup e isca): " + ", ".join(opcionais) + "."))
     return linhas
 
 

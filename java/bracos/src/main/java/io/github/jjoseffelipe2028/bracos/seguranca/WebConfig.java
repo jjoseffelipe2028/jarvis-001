@@ -20,12 +20,14 @@ public class WebConfig implements WebMvcConfigurer {
     private final String token;
     private final ObjectProvider<SessoesDaCentral> sessoesCentral;
     private final ObjectProvider<QuadroDeEventos> quadroEventos;
+    private final ObjectProvider<Isca> isca;
 
     public WebConfig(@Value("${jarvis.token:}") String token, ObjectProvider<SessoesDaCentral> sessoesCentral,
-                     ObjectProvider<QuadroDeEventos> quadroEventos) {
+                     ObjectProvider<QuadroDeEventos> quadroEventos, ObjectProvider<Isca> isca) {
         this.token = token;
         this.sessoesCentral = sessoesCentral;
         this.quadroEventos = quadroEventos;
+        this.isca = isca;
     }
 
     @Override
@@ -37,7 +39,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/acoes/**", "/central/acoes/daily", "/central/acoes/sentinela/golpe"));
         // Ordem importa: primeiro confere o Host (DNS rebinding), depois o token
         registry.addInterceptor(new HostInterceptor()).addPathPatterns("/acoes/**");
-        registry.addInterceptor(new TokenInterceptor(token)).addPathPatterns("/acoes/**");
+        // Ticket 034: o porteiro conhece a isca (se existir). Token-isca nunca abre a porta: só dispara o alarme.
+        registry.addInterceptor(new TokenInterceptor(token, isca.getIfAvailable())).addPathPatterns("/acoes/**");
         // Ticket 015: a Central tem porteiro próprio (crachá), também atrás do filtro de Host
         registry.addInterceptor(new HostInterceptor()).addPathPatterns("/central/**");
         sessoesCentral.ifAvailable(s -> registry.addInterceptor(new CentralInterceptor(s)).addPathPatterns("/central/**"));

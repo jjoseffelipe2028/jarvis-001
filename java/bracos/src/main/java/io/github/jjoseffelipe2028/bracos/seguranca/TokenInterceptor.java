@@ -33,15 +33,26 @@ public class TokenInterceptor implements HandlerInterceptor {
 
     private final byte[] hashEsperado; // null = token não configurado
     private final Assinatura assinatura; // null = token não configurado
+    private final Isca isca; // Ticket 034: null = sem isca
 
     public TokenInterceptor(String tokenConfigurado) {
-        this(tokenConfigurado, java.time.Clock.systemUTC());
+        this(tokenConfigurado, java.time.Clock.systemUTC(), null);
+    }
+
+    /** Ticket 034: com a isca (honeytoken). Ela só é olhada DEPOIS de o porteiro recusar o pedido. */
+    public TokenInterceptor(String tokenConfigurado, Isca isca) {
+        this(tokenConfigurado, java.time.Clock.systemUTC(), isca);
     }
 
     TokenInterceptor(String tokenConfigurado, java.time.Clock relogio) {
+        this(tokenConfigurado, relogio, null);
+    }
+
+    TokenInterceptor(String tokenConfigurado, java.time.Clock relogio, Isca isca) {
         boolean semToken = tokenConfigurado == null || tokenConfigurado.isBlank();
         this.hashEsperado = semToken ? null : sha256(tokenConfigurado);
         this.assinatura = semToken ? null : new Assinatura(tokenConfigurado, relogio);
+        this.isca = isca;
     }
 
     @Override
@@ -77,6 +88,13 @@ public class TokenInterceptor implements HandlerInterceptor {
             if (r == Assinatura.Resultado.OK) {
                 return true;
             }
+            // Ticket 034: a assinatura não bate com o token de verdade. Bate com o token-ISCA? Então é alarme.
+            if (corpo != null && isca != null && isca.assinouComAIsca(request.getMethod(), rota,
+                    request.getHeader(Assinatura.CAB_HORA), request.getHeader(Assinatura.CAB_NONCE),
+                    corpo, request.getHeader(Assinatura.CAB_ASSINATURA))) {
+                alarmeDaIsca(cliente, request, response);
+                return false;
+            }
             // Motivo = nome fixo do enum (não vem de fora)
             log.warn("cliente={} acao={} resultado=negado motivo=assinatura_{}",
                     cliente, LogSeguro.limpar(request.getRequestURI()), r.name().toLowerCase(java.util.Locale.ROOT));
@@ -93,6 +111,10 @@ public class TokenInterceptor implements HandlerInterceptor {
         }
         // Compara os hashes SHA-256 em tempo constante (esconde também o tamanho do token)
         boolean ok = recebido != null && MessageDigest.isEqual(hashEsperado, sha256(recebido));
+        if (!ok && isca != null && isca.ehOTokenIsca(recebido)) {
+            alarmeDaIsca(cliente, request, response); // Ticket 034
+            return false;
+        }
         if (!ok) {
             log.warn("cliente={} acao={} resultado=negado motivo=token_invalido",
                     cliente, LogSeguro.limpar(request.getRequestURI()));
@@ -100,6 +122,15 @@ public class TokenInterceptor implements HandlerInterceptor {
             return false;
         }
         return true;
+    }
+
+    /** 🪤 Alguém usou o token-isca. Conta, grita no log e responde o MESMO 401 de sempre (não entrega a armadilha). */
+    private void alarmeDaIsca(String cliente, HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        isca.tocar();
+        log.error("cliente={} acao={} resultado=negado motivo=ISCA_TOCADA alarme=alguem_usou_o_token_isca",
+                cliente, LogSeguro.limpar(request.getRequestURI()));
+        responder(response, 401, "nao autorizado");
     }
 
     private static byte[] sha256(String texto) {

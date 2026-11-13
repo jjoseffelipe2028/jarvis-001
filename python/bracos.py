@@ -133,6 +133,10 @@ class Bracos:
         """Ticket 022: as travas do projeto mudaram desde que a API ligou? (só lê)"""
         return self._pedir("GET", "/acoes/sentinela/integridade")
 
+    def isca(self):
+        """Ticket 034: alguém tocou na isca (honeytoken)? Só lê o contador."""
+        return self._pedir("GET", "/acoes/sentinela/isca")
+
     def golpe(self, texto):
         """Ticket 023: essa mensagem tem cara de golpe? Manda só o TEXTO; o Java nunca abre o link."""
         texto = (texto or "").strip()
