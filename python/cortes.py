@@ -104,6 +104,7 @@ def pacote(nome_video, arroba, top):
         if i.aviso:
             print(f"   ⚠️ Momento {i.numero}: {i.aviso}")
     print("⚠️ Nada foi postado. Abra o painel e aprove um por um.")
+    return itens  # Ticket 045: o super produtor continua daqui (ex.: legenda traduzida)
 
 
 def _trechos(saida, video, numeros, manuais):
