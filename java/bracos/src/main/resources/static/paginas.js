@@ -142,6 +142,47 @@
     return li;
   }
 
+  // Ticket 046: o chat também pede ações. A API só devolve o NOME (regras fixas, sem IA);
+  // aqui o nome vira uma das rotas que já existem, por esta tabela fechada. Nome fora da tabela = nada acontece.
+  const ACOES_DO_CHAT = {
+    pendencias: ["/central/acoes/pendencias", formatarPendencias],
+    git_status: ["/central/acoes/git-status", formatarGit],
+    portas: ["/central/acoes/sentinela/portas", formatarPortas],
+    integridade: ["/central/acoes/sentinela/integridade", formatarIntegridade],
+    isca: ["/central/acoes/sentinela/isca", formatarIsca],
+  };
+  const NOMES_DAS_PAGINAS = { inicio: "Início", cyber: "Cyber", videos: "Vídeos", jogos: "Jogos" };
+
+  function mostrarLinhas(linhas, classe) {
+    const li = mostrarFala("Jarvis:", "", classe);
+    for (const linha of linhas.slice(0, 12)) {
+      li.appendChild(document.createElement("br"));
+      li.appendChild(document.createTextNode(String(linha).slice(0, 300)));
+    }
+    falas.scrollTop = falas.scrollHeight;
+  }
+
+  async function fazerAcao(r) {
+    if (r.acao === "pagina") {
+      if (!Object.hasOwn(NOMES_DAS_PAGINAS, r.pagina)) {
+        throw new Error("Página desconhecida.");
+      }
+      abrirPagina(r.pagina);
+      mostrarFala("Jarvis:", `📂 Abri a página ${NOMES_DAS_PAGINAS[r.pagina]}.`, "chat-ia");
+      return;
+    }
+    if (r.acao === "golpe") {
+      const g = await enviar("/central/acoes/sentinela/golpe", { texto: String(r.texto || "").slice(0, 4000) });
+      mostrarLinhas(formatarGolpe(g), NIVEL_GOLPE[g.nivel].classe);
+      return;
+    }
+    if (!Object.hasOwn(ACOES_DO_CHAT, r.acao)) {
+      throw new Error("Ação desconhecida.");
+    }
+    const [rota, formatar] = ACOES_DO_CHAT[r.acao];
+    mostrarLinhas(formatar(await pedir(rota)), "chat-ia");
+  }
+
   async function conversar(botao) {
     const texto = campo.value.trim();
     if (!texto) {
@@ -153,6 +194,12 @@
     const espera = mostrarFala("Jarvis:", "pensando… (IA local, pode levar alguns segundos)", "fu");
     try {
       const r = await enviar("/central/acoes/chat", { texto, historico });
+      if (r && typeof r.acao === "string") {
+        espera.remove();
+        await fazerAcao(r); // ação não entra no histórico da IA
+        document.dispatchEvent(new Event("jarvis:acao"));
+        return;
+      }
       const resposta = String(r && r.resposta ? r.resposta : "").slice(0, 2100);
       if (!resposta) {
         throw new Error("A IA não respondeu.");

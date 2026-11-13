@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import io.github.jjoseffelipe2028.bracos.acoes.conversa.ConversaService;
+import io.github.jjoseffelipe2028.bracos.acoes.conversa.RoteadorDoChat;
 import io.github.jjoseffelipe2028.bracos.acoes.git.GitStatusService;
 import io.github.jjoseffelipe2028.bracos.acoes.pendencias.PendenciasService;
 import io.github.jjoseffelipe2028.bracos.erros.AcaoIndisponivelException;
@@ -39,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** Ticket 039: conversa com a IA local pela Central, atrás do crachá. A IA aqui é FALSA. 💬 */
 @WebMvcTest({CentralChatController.class, CentralController.class})
-@Import({ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class, WebConfig.class, ErrosHandler.class})
+@Import({RoteadorDoChat.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class, WebConfig.class, ErrosHandler.class})
 @ExtendWith(OutputCaptureExtension.class)
 class CentralChatControllerTest {
 

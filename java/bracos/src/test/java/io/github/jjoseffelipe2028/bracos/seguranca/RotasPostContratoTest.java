@@ -44,7 +44,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @WebMvcTest
 @Import({DailyService.class, PendenciasService.class, GitStatusService.class, PortaoDoLaboratorio.class,
         AnalisadorDeRetencao.class, RelatorioService.class, PortasService.class, IntegridadeService.class, DetectorDeGolpe.class, VerificadorDePropostas.class,
-        io.github.jjoseffelipe2028.bracos.acoes.conversa.ConversaService.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class,
+        io.github.jjoseffelipe2028.bracos.acoes.conversa.ConversaService.class,
+        io.github.jjoseffelipe2028.bracos.acoes.conversa.RoteadorDoChat.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class,
         WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste")
 class RotasPostContratoTest {
