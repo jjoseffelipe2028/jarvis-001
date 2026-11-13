@@ -20,13 +20,15 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 
 | | |
 |---|---|
-| ☕ **API REST em Java 21 + Spring Boot 4** | 9 ações reais, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
+| ☕ **API REST em Java 21 + Spring Boot 4** | 11 ações reais + 9 rotas da Central, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
 | 🔒 **Segurança como requisito** | Pedidos assinados com HMAC (o segredo nunca viaja), anti replay, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **339 testes Java + 85 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| 🧪 **408 testes Java + 268 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
 | ⚙️ **CI/CD no GitHub** | 4 robôs a cada push: testes Java, testes Python, CodeQL e gitleaks (segredos). Dependabot vigia Maven, pip e Actions |
-| 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC |
+| 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC. **Chat com a IA direto na Central** |
+| 🦸 **Super agentes** | **Super defensor** (ronda com 5 vigias e nota geral) e **super produtor de vídeos** (da live ao pacote de cortes legendados num comando) |
 | 🖥️ **Central com escritório ao vivo** | Tela do Jarvis em pixel art: os agentes reagem às ações reais da API e o Jarvis narra por voz local |
-| 🛡️ **Sentinela (só avisa)** | Vigia de portas abertas para a rede (`netstat` com comando fixo), vigia de integridade (SHA-256 das travas do projeto) e **detector de golpe brasileiro** (regras explicáveis, nunca abre o link) |
+| 🛡️ **Sentinela (só avisa)** | Vigia de portas, de integridade (SHA-256 das travas), de **processos** (minerador escondido) e da **rede** (aparelho novo); **isca (honeytoken)**; **detector de golpe brasileiro** (nunca abre o link) |
+| ⚔️ **Red Team próprio** | **Duelo Hacker × Sentinela** (ataques reais contra uma cópia de teste, com placar), Red Team dos cortes (63 pedidos maliciosos) e **auditor de skills** com MITRE ATT&CK |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
 
 ## 🏗️ Como funciona
@@ -61,6 +63,8 @@ Uma página servida pela própria API em `127.0.0.1`, aberta em **modo app** por
 - **🎣 Golpe?**: cola uma mensagem suspeita e o Jarvis mostra o nível (baixo/suspeito/alto), os motivos e o que fazer. Só lê o texto.
 - **Escritório pixel**: 001, Jarvis e 002 andam, sentam e mostram as skills de cada um.
 - **Ao vivo**: quando a voz ou o terminal usam um braço, o Jarvis reage na tela. Um pedido **sem token** aparece como 🚨 *Pedido recusado!*, então a segurança fica visível.
+- **💬 Fale com o Jarvis**: chat com a IA local (Gemma via Ollama, fixo em `127.0.0.1`) direto na tela. A IA só conversa: não executa nada, e o histórico fica limitado.
+- **Menu lateral com páginas**: Início · 🛡️ Cyber (portas, travas, isca, golpe e proposta suspeita) · 🎬 Vídeos · 🎮 Jogos.
 - **Narração por voz**: o Jarvis fala os eventos usando **só a voz local do Windows**. Vozes "online" mandariam o texto para a nuvem, então são bloqueadas.
 
 **Travas da Central:** CSP `default-src 'self'` sem `unsafe-inline`; o navegador **nunca** recebe o token; crachá em cookie `HttpOnly` trocado por uma chave de **uso único**; texto na tela só com `textContent`, nunca `innerHTML`. Um teste lê o próprio código da página para garantir isso (`CentralPaginaTest`).
@@ -78,11 +82,26 @@ Uma página servida pela própria API em `127.0.0.1`, aberta em **modo app** por
 | `GET` 🔒 | `/acoes/sentinela/portas` | Sentinela: portas abertas para a rede, com risco e nota (só avisa) |
 | `GET` 🔒 | `/acoes/sentinela/integridade` | Sentinela: as travas do projeto mudaram desde que a API ligou? (SHA-256) |
 | `POST` 🔒 | `/acoes/sentinela/golpe` | Sentinela: essa mensagem tem cara de golpe? (PIX, falso parente, link disfarçado; nunca abre o link) |
+| `GET` 🔒 | `/acoes/sentinela/isca` | Isca (honeytoken): alguém tocou no arquivo armadilha? |
+| `POST` 🔒 | `/acoes/sentinela/proposta` | Proposta de parceria tem cara de golpe? (escudo do criador) |
 | `GET` | `/acoes/prova` | Aperto de mão: prova (HMAC) que esta é a API verdadeira, antes de qualquer pedido |
 
-**Rotas da Central** (só leitura, atrás do crachá): `POST /central/sessao` (chave de uso único → crachá), `GET /central/acoes/pendencias`, `GET /central/acoes/git-status` e `GET /central/acoes/eventos` (o quadro de eventos do escritório, só na memória, com nomes fixos).
+**Rotas da Central** (só leitura, atrás do crachá): `POST /central/sessao` (chave de uso único → crachá), `GET /central/acoes/pendencias`, `GET /central/acoes/git-status`, `GET /central/acoes/eventos` (o quadro de eventos do escritório, só na memória, com nomes fixos), `POST /central/acoes/chat` (conversa com a IA local, um pedido por vez) e as rotas da Sentinela (`portas`, `integridade`, `golpe`, `proposta`, `isca`).
 
 Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
+
+## 🦸 Super agentes (Python)
+
+Cada um junta robôs que já existem, com os mesmos porteiros. **Nenhum age sozinho**: eles só leem, avisam e preparam; quem aprova é o José.
+
+| Agente | Comando | O que faz |
+|---|---|---|
+| 🛡️ **Super defensor** | `python defensor.py` | Ronda com 5 vigias (Sentinela, processos, rede, backup 3-2-1, último duelo). A nota geral é a do **pior** vigia; um vigia quebrado vira "não deu para conferir", nunca some. Grava a ronda no caderno de incidentes |
+| 🎬 **Super produtor** | `python produtor.py live.mp4 --arroba @dono --idioma en` | Caça os momentos da live → corta → textos do post com a Gemma → gancho na tela → painel no cofre → legenda traduzida de cada corte. **Nada é postado** |
+| ⚔️ **Duelo** | `python duelo.py` | O "hacker" do projeto ataca uma cópia de teste e a Sentinela tenta pegar cada golpe. Sai um placar |
+| 🔎 **Auditor de skills** | `python auditor_skills.py pasta/` | Lê skills de terceiros **antes de instalar** e aponta comando escondido, roubo de `.env`, envio para fora (MITRE ATT&CK). Nunca executa o que lê |
+
+Outros robôs: vigia de processos e da rede, guarda do backup 3-2-1, caderno de incidentes, catálogo de afiliados (só lojas da lista), legendas traduzidas, historinhas e o "bom dia" que fala tudo isso.
 
 ## 🔒 Segurança: ameaça → defesa → prova
 
@@ -107,6 +126,8 @@ Detalhes, exemplos e como rodar: [`java/README.md`](java/README.md).
 | Mensagem de golpe virando ataque (link aberto, XSS, regex travado, texto no log) | Detector nunca abre link; resposta só com textos fixos; 4000 caracteres e 10 links no máximo; log só com o nível | `DetectorDeGolpeTest` (inclui ReDoS) |
 | Mensagem colada mandando o Jarvis agir ("faz um PIX e apaga") | O pedido de golpe é conferido antes de tudo e o resto da frase nunca vira ação | `test_intencoes.py` |
 | Narração vazando texto para a nuvem | Só voz com `localService === true`; frases fixas, nunca texto da API | `CentralPaginaTest` + teste no navegador |
+| IA da conversa sendo usada para agir ou falar com a internet | Endereço do Ollama **fixo** em `127.0.0.1`, sem redirecionamento, instruções fixas, texto e histórico limitados, a resposta só vira texto na tela | `ConversaServiceTest`, `CentralChatControllerTest` |
+| Skill de terceiros com comando escondido | Auditor com regras fixas (sem IA), o relatório não copia o trecho suspeito | `test_auditor_skills.py` |
 | Vazamento de dado pessoal | Respostas e logs sem caminho, sem texto do usuário e sem stack trace | testes de controller |
 
 Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fichas de cada ticket.
@@ -130,7 +151,7 @@ Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fich
 **API Java** (precisa de Java 21):
 ```bash
 cd java/bracos
-./mvnw test              # 283 testes
+./mvnw test              # 408 testes
 ./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
 ```
 
@@ -143,6 +164,8 @@ python -m venv .venv
 source .venv/Scripts/activate   # Git Bash
 pip install -r requirements.txt
 python chat.py
+python -m unittest discover -s tests   # 268 testes
+python defensor.py      # ronda do super defensor
 ```
 
 ## 🗺️ Roteiro
@@ -154,7 +177,11 @@ python chat.py
 - [x] Central v1/v2: botões com ações reais, cartão de aceite e escritório pixel com os agentes
 - [x] Escritório **ao vivo** (eventos reais da API) + **narração por voz local**
 - [x] **Sentinela v1** (só avisa): vigia de portas + vigia de integridade + detector de golpe · daily pela Central · bom dia com a Sentinela
-- [ ] Módulos: Vídeos (V3+), Biblioteca offline
+- [x] **Vídeos**: cortes, textos, gancho, historinhas, afiliados (V3), legenda traduzida (V7, parte 1)
+- [x] **Sentinela v2**: isca, duelo Hacker × Sentinela, processos, rede, backup 3-2-1, caderno de incidentes
+- [x] **Central v4**: chat com a IA local e páginas por área
+- [x] **Super agentes**: defensor e produtor de vídeos
+- [ ] Botões dos super agentes na Central · dublagem com voz local · estúdio de jogos · biblioteca offline
 - [ ] Dupla 001 + 002 em loop com GitHub Issues
 - [x] Revisão OWASP Top 10 + gitleaks + portas testadas pela rede
 - [ ] Spring Security
