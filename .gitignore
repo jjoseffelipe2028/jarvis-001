@@ -38,3 +38,6 @@ python/vozes/
 
 # Chave de uso unico da Central (Ticket 015): nunca no Git
 .central-chave
+
+# Ticket 041: aparelhos conhecidos da rede (dado so deste PC)
+.rede-conhecida.json
