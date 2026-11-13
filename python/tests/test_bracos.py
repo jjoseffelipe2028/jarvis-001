@@ -227,6 +227,23 @@ class BracosTest(unittest.TestCase):
         self.bracos.golpe("a" * 9000)
         self.assertEqual(len(json.loads(_ApiFalsa.ultimo["corpo"])["texto"]), 4000)
 
+    def test_proposta_manda_so_os_campos_preenchidos(self):
+        # Ticket 030
+        self._rota("/acoes/sentinela/proposta", corpo={"nivel": "baixo"})
+        self.assertEqual(self.bracos.proposta(" oi ", " a@marca.com ", "Marca"), {"nivel": "baixo"})
+        self.assertEqual(json.loads(_ApiFalsa.ultimo["corpo"]),
+                         {"texto": "oi", "remetente": "a@marca.com", "marca": "Marca"})
+        self.assertTrue(_ApiFalsa.ultimo["assinatura_ok"])
+        self.bracos.proposta("a" * 9000, "  ", None)
+        corpo = json.loads(_ApiFalsa.ultimo["corpo"])
+        self.assertEqual(list(corpo), ["texto"])
+        self.assertEqual(len(corpo["texto"]), 4000)
+
+    def test_proposta_vazia_nem_chama_a_api(self):
+        with self.assertRaisesRegex(ErroBraco, "Cola o texto"):
+            self.bracos.proposta("  ")
+        self.assertEqual(_ApiFalsa.ultimo, {})
+
     def test_golpe_vazio_nem_chama_a_api(self):
         with self.assertRaisesRegex(ErroBraco, "Cola a mensagem"):
             self.bracos.golpe("  ")

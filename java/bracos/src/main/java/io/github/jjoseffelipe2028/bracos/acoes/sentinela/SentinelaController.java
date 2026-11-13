@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET /acoes/sentinela/portas → quais portas do PC estão abertas para a rede (Ticket 021). 🛡️
  * GET /acoes/sentinela/integridade → alguém mexeu nas travas do projeto? (Ticket 022). 🔏
  * POST /acoes/sentinela/golpe → essa mensagem tem cara de golpe? (Ticket 023). 🎣
+ * POST /acoes/sentinela/proposta → essa proposta de marca é de verdade? (Ticket 030). 🤝
  * Nada é alterado no PC. O token (pedido assinado) já foi conferido antes de chegar aqui.
  */
 @RestController
@@ -26,11 +27,23 @@ public class SentinelaController {
     private final PortasService portas;
     private final IntegridadeService integridade;
     private final DetectorDeGolpe detector;
+    private final VerificadorDePropostas verificador;
 
-    public SentinelaController(PortasService portas, IntegridadeService integridade, DetectorDeGolpe detector) {
+    public SentinelaController(PortasService portas, IntegridadeService integridade, DetectorDeGolpe detector,
+            VerificadorDePropostas verificador) {
         this.portas = portas;
         this.integridade = integridade;
         this.detector = detector;
+        this.verificador = verificador;
+    }
+
+    /** Ticket 030: nem o texto, nem o remetente, nem a marca vão para o log. Nenhum link é aberto. */
+    @PostMapping("/proposta")
+    public VerificadorDePropostas.Parecer proposta(@Valid @RequestBody PropostaRequest pedido,
+            @RequestHeader(value = Cliente.CABECALHO, required = false) String clienteBruto) {
+        VerificadorDePropostas.Parecer p = verificador.analisar(pedido.texto(), pedido.remetente(), pedido.marca());
+        log.info("cliente={} acao=proposta resultado=ok nivel={} links={}", Cliente.de(clienteBruto), p.nivel(), p.links());
+        return p;
     }
 
     /** O texto colado NUNCA vai para o log: só o nível e quantos links. O link não é aberto. */

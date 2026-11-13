@@ -534,6 +534,7 @@
     "sentinela": { nome: "a vigia de portas", fala: "Portas vigiadas 🛡️", voz: "Portas vigiadas." }, // Ticket 021
     "integridade": { nome: "a conferência das travas", fala: "Travas conferidas 🔏", voz: "Travas conferidas." }, // Ticket 022
     "golpe": { nome: "a análise de golpe", fala: "Mensagem analisada 🎣", voz: "Mensagem analisada." }, // Ticket 023
+    "proposta": { nome: "a conferência da proposta", fala: "Proposta conferida 🤝", voz: "Proposta conferida." }, // Ticket 030
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
   const elVivo = document.getElementById("esc-vivo");

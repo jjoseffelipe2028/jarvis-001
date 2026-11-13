@@ -140,6 +140,18 @@ class Bracos:
             raise ErroBraco("Cola a mensagem depois dos dois pontos. Ex.: isso é golpe: <mensagem>")
         return self._pedir("POST", "/acoes/sentinela/golpe", {"texto": texto[:4000]})
 
+    def proposta(self, texto, remetente=None, marca=None):
+        """Ticket 030: essa proposta de marca é de verdade? O Java só lê: nunca abre link nem manda e-mail."""
+        texto = (texto or "").strip()
+        if not texto:
+            raise ErroBraco("Cola o texto do e-mail da proposta.")
+        corpo = {"texto": texto[:4000]}
+        if (remetente or "").strip():
+            corpo["remetente"] = remetente.strip()[:254]
+        if (marca or "").strip():
+            corpo["marca"] = marca.strip()[:60]
+        return self._pedir("POST", "/acoes/sentinela/proposta", corpo)
+
     # ---------- o pedido em si ----------
 
     def _pedir(self, metodo, rota, corpo=None):

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Detector de golpe brasileiro (Ticket 023). 🎣 Ideia do José de 01/11: "Sentinela comandante cyber".
+ * Ticket 029 (Escudo do Criador): + golpes contra canal (falso patrocínio com anexo, falso aviso de direitos autorais).
  * - Regras FIXAS escritas à mão (sem IA): mesmas regras, mesma resposta, fácil de testar e explicar.
  * - NUNCA abre o link: só lê o texto. Nada sai do PC.
  * - A resposta tem só textos fixos daqui (motivos e conselho): o texto colado nunca volta na resposta.
@@ -57,18 +58,38 @@ public class DetectorDeGolpe {
                     1, "Pede segredo: golpe tenta te isolar de quem poderia avisar."),
             sinal("receita federal|cpf (irregular|bloqueado|cancelado|suspenso)|detran|\\bmulta\\b|\\binss\\b|correios"
                     + "|encomenda (retida|taxada|parada)",
-                    1, "Usa nome de órgão do governo ou dos Correios."));
+                    1, "Usa nome de órgão do governo ou dos Correios."),
+            // --- Escudo do Criador (Ticket 029): golpes contra quem tem canal ou página ---
+            sinal("\\.(exe|scr|bat|cmd|msi|vbs|lnk|iso|rar|zip|7z)\\b|arquivo (protegido|com senha|compactado)"
+                    + "|senha do (arquivo|anexo)",
+                    3, "Anexo executável ou compactado com senha: é assim que roubam o canal."),
+            sinal("(baix(e|ar|a)|download|instal(e|ar|a)) (\\w+ ){0,4}(jogo|game|app|aplicativo|software|programa"
+                    + "|media ?kit|press ?kit|contrato|briefing|material)",
+                    2, "Pede para baixar ou instalar algo para fechar a parceria."),
+            sinal("(canal|conta|perfil|video|pagina) (\\w+ ){0,3}(sera|vai ser|foi|esta sendo|pode ser) "
+                    + "(removid|excluid|encerrad|suspens|desativad|banid|apagad)"
+                    + "|(aviso|notificacao|reivindicacao|denuncia|violacao) de (direitos autorais|copyright)"
+                    + "|copyright strike|strike de direitos",
+                    3, "Ameaça de remover o canal: aviso de verdade aparece dentro do YouTube Studio, não por link."),
+            sinal("verifi(que|car|cacao) (\\w+ ){0,2}(conta|canal|perfil)|confirm(e|ar) (\\w+ ){0,2}(conta|identidade|login)"
+                    + "|faca (o )?login|entre (na|com a) sua conta|selo (azul|de verificacao)",
+                    2, "Pede para fazer login ou \"verificar\" a conta por um link."));
 
-    // Link: com http(s)://, com www., ou "algo.com.br/..." solto no texto
+    // Link: com http(s)://, com www., ou "algo.com.br/..." solto no texto.
+    // Ticket 029: sem grupo repetido "(\.nome)*". No Java, grupo repetido usa a pilha a cada volta, e um texto
+    // de 4000 letras tipo "a.a.a.a..." estourava a pilha (erro 500). Uma classe de letras só não tem esse risco.
     private static final Pattern LINK = Pattern.compile(
             "(?:https?://|www\\.)[^\\s<>\"']+"
-                    + "|\\b[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.(?:com|net|org|br|xyz|top|click|icu|live|buzz|info|site|online"
-                    + "|me|io|ly|gl|co|at|is|gd|cc|ai|sbs|cfd|rest|monster|shop)\\b(?:/[^\\s<>\"']*)?");
+                    + "|\\b[a-z0-9-][a-z0-9.-]*\\.(?:com|net|org|br|xyz|top|click|icu|live|buzz|info|site|online"
+                    + "|me|io|ly|gl|co|at|is|gd|cc|ai|sbs|cfd|rest|monster|shop|tv|app|gg|ru|nz)\\b(?:/[^\\s<>\"']*)?");
     private static final Pattern IP = Pattern.compile("^\\d{1,3}(?:\\.\\d{1,3}){3}$");
 
     private static final Set<String> ENCURTADORES = Set.of("bit.ly", "tinyurl.com", "cutt.ly", "t.co", "is.gd",
             "encurtador.com.br", "shorturl.at", "rb.gy", "t.ly", "tiny.cc", "ow.ly", "goo.gl", "abre.ai", "s.id");
-    private static final Set<String> TLD_SUSPEITO = Set.of("xyz", "top", "click", "icu", "live", "buzz", "sbs",
+    /** Ticket 029: onde o falso "media kit" costuma ficar hospedado. */
+    private static final Set<String> GUARDA_ARQUIVOS = Set.of("mediafire.com", "mega.nz", "dropbox.com",
+            "wetransfer.com", "4shared.com", "anonfiles.com", "cdn.discordapp.com", "gofile.io");
+    private static final Set<String> TLD_SUSPEITO =Set.of("xyz", "top", "click", "icu", "live", "buzz", "sbs",
             "cfd", "rest", "monster", "online", "site", "shop");
 
     /** Marca → domínios oficiais. Marca no endereço SEM ser o domínio oficial = imitação. */
@@ -85,6 +106,14 @@ public class DetectorDeGolpe {
             Map.entry("serasa", List.of("serasa.com.br")),
             Map.entry("picpay", List.of("picpay.com")),
             Map.entry("whatsapp", List.of("whatsapp.com", "wa.me")),
+            // Escudo do Criador (Ticket 029): as plataformas que o golpista imita para roubar canal
+            Map.entry("youtube", List.of("youtube.com", "youtu.be")),
+            Map.entry("google", List.of("google.com", "google.com.br", "withgoogle.com")),
+            Map.entry("instagram", List.of("instagram.com")),
+            Map.entry("tiktok", List.of("tiktok.com")),
+            Map.entry("facebook", List.of("facebook.com", "fb.com")),
+            Map.entry("twitch", List.of("twitch.tv")),
+            Map.entry("kwai", List.of("kwai.com")),
             Map.entry("gov", List.of("gov.br")),
             Map.entry("receitafederal", List.of("gov.br")));
 
@@ -138,6 +167,9 @@ public class DetectorDeGolpe {
         }
         if (imitaMarca(host)) {
             pontos += novo(motivos, 3, "Endereço imita banco, loja ou governo, mas não é o site oficial.");
+        }
+        if (GUARDA_ARQUIVOS.stream().anyMatch(d -> host.equals(d) || host.endsWith("." + d))) {
+            pontos += novo(motivos, 1, "Link para baixar arquivo de um site de armazenamento: confira antes de abrir.");
         }
         String tld = host.substring(host.lastIndexOf('.') + 1);
         if (TLD_SUSPEITO.contains(tld)) {

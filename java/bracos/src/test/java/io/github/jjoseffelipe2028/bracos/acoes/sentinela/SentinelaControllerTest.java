@@ -33,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** GET /acoes/sentinela/portas: protegido pelo token, só leitura, vira evento no escritório. 🛡️ */
 @WebMvcTest(SentinelaController.class)
-@Import({QuadroDeEventos.class, DetectorDeGolpe.class, WebConfig.class, ErrosHandler.class})
+@Import({QuadroDeEventos.class, DetectorDeGolpe.class, VerificadorDePropostas.class, WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste") // valor FICTÍCIO
 @ExtendWith(OutputCaptureExtension.class)
 class SentinelaControllerTest {
@@ -115,6 +115,55 @@ class SentinelaControllerTest {
         mockMvc.perform(post("/acoes/sentinela/golpe").header(TokenInterceptor.CABECALHO, "token-de-teste")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"" + "a".repeat(4001) + "\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void golpe_textoNoLimiteCheioDePontos_naoDerrubaAApi() throws Exception {
+        // Ticket 029: "a.a.a..." com 4000 letras estourava a pilha do regex de link (erro 500)
+        for (String ataque : List.of("a.".repeat(2000), "a-".repeat(2000), ".zip".repeat(1000), "www." + "x.".repeat(1998))) {
+            mockMvc.perform(post("/acoes/sentinela/golpe").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"" + ataque + "\"}"))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    // --- Ticket 030: verificador de propostas ---
+
+    @Test
+    void proposta_comToken_200_naoLogaNada_eViraEvento(CapturedOutput saida) throws Exception {
+        mockMvc.perform(post("/acoes/sentinela/proposta")
+                        .header(TokenInterceptor.CABECALHO, "token-de-teste").header(Cliente.CABECALHO, "python")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texto\":\"Parceria paga! Baixe o media kit em mediafire.com/x e instale o jogo.exe\","
+                                + "\"remetente\":\"marketing.tecnobrasa@gmail.com\",\"marca\":\"TecnoBrasa\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nivel").value("alto"))
+                .andExpect(jsonPath("$.passos.length()").value(5));
+        assertTrue(saida.getOut().contains("cliente=python acao=proposta resultado=ok nivel=alto links=1"));
+        assertFalse(saida.getOut().contains("tecnobrasa") || saida.getOut().contains("media kit"),
+                "texto, remetente e marca não vão para o log");
+        List<QuadroDeEventos.Evento> eventos = quadro.depois(0).eventos();
+        assertEquals("proposta", eventos.get(eventos.size() - 1).acao());
+    }
+
+    @Test
+    void proposta_semToken_401_vazia_ouGrande_400() throws Exception {
+        mockMvc.perform(post("/acoes/sentinela/proposta").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"texto\":\"oi\"}")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/acoes/sentinela/proposta").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\" \"}")).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/acoes/sentinela/proposta").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"texto\":\"oi\",\"marca\":\"" + "m".repeat(61) + "\"}")).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/acoes/sentinela/proposta").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"texto\":\"so o texto, sem remetente\"}")).andExpect(status().isOk());
+        mockMvc.perform(post("/acoes/sentinela/proposta").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"" + "a.".repeat(2001) + "\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/acoes/sentinela/proposta").header(TokenInterceptor.CABECALHO, "token-de-teste")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"texto\":\"" + "a.".repeat(2000) + "\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test

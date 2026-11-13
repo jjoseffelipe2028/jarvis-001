@@ -1,5 +1,5 @@
 # 028 — Vídeos: pacote do dia da live (um comando só)
-**Status:** ✅ construído e ensaiado (12/11) · pedido do José: "bora arrochar" · ⏳ commit com o OK
+**Status:** ✅ construído e ensaiado (12/11) · pedido do José: "bora arrochar" · ✅ no GitHub (12/11)
 **Módulo de Vídeos, junta o V5 e o V6**
 
 ## Ideia

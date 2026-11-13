@@ -88,6 +88,62 @@ class DetectorDeGolpeTest {
         assertTrue(r.conselho().contains("nunca passe senha"));
     }
 
+    // --- Ticket 029: Escudo do Criador (golpes contra quem tem canal) ---
+
+    @Test
+    void falsoPatrocinio_comAnexoExecutavel_eAlto() {
+        DetectorDeGolpe.Veredito r = v("Olá! Somos da equipe de marketing e queremos patrocinar seu canal. "
+                + "Baixe o media kit em https://mediafire.com/file/abc e abra o arquivo Contrato.scr. A senha do arquivo é 1234.");
+        assertEquals(DetectorDeGolpe.ALTO, r.nivel());
+        assertTrue(temMotivo(r, "roubam o canal"));
+        assertTrue(temMotivo(r, "baixar ou instalar"));
+        assertTrue(temMotivo(r, "armazenamento"));
+    }
+
+    @Test
+    void falsoAvisoDeDireitosAutorais_eAlto() {
+        DetectorDeGolpe.Veredito r = v("Aviso de direitos autorais: seu canal será removido em 24h. "
+                + "Verifique sua conta em https://youtube-suporte.com/recurso");
+        assertEquals(DetectorDeGolpe.ALTO, r.nivel());
+        assertTrue(temMotivo(r, "YouTube Studio"));
+        assertTrue(temMotivo(r, "fazer login"));
+        assertTrue(temMotivo(r, "imita"));
+    }
+
+    @Test
+    void plataformaOficial_naoEImitacao_masImitadorE() {
+        assertFalse(DetectorDeGolpe.imitaMarca("studio.youtube.com"));
+        assertFalse(DetectorDeGolpe.imitaMarca("youtu.be"));
+        assertFalse(DetectorDeGolpe.imitaMarca("support.google.com"));
+        assertFalse(DetectorDeGolpe.imitaMarca("clips.twitch.tv"));
+        assertTrue(DetectorDeGolpe.imitaMarca("youtube.com.partner-verificacao.app"));
+        assertTrue(DetectorDeGolpe.imitaMarca("instagram-selo.com"));
+        assertTrue(DetectorDeGolpe.imitaMarca("tiktok-creators.gg"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Postei o vídeo novo no canal, depois me fala o que achou do corte.",
+            "A live de GTA foi boa, o canal ganhou 30 inscritos hoje.",
+            "Gravei a aula e mandei o link do meu vídeo: https://youtu.be/abc123",
+            "Oi, tudo bem? Vi seu canal e gostei muito do conteúdo. Podemos conversar sobre uma parceria?"})
+    void conversaNormalDeCriador_eBaixo(String texto) {
+        assertEquals(DetectorDeGolpe.BAIXO, v(texto).nivel(), texto);
+    }
+
+    @Test
+    void regrasDoCriador_naoTravamORegex() {
+        for (String ataque : List.of(
+                // Todos com até 4000 letras: é o limite que a API aceita (GolpeRequest e PropostaRequest)
+                "baixe " + "a ".repeat(1990) + "jogo",
+                "canal " + "x ".repeat(1990) + "sera removido",
+                "verifique " + "sua ".repeat(990),
+                ".zip".repeat(1000),
+                "a.zip ".repeat(660))) {
+            assertTimeoutPreemptively(Duration.ofSeconds(2), () -> v(ataque));
+        }
+    }
+
     @Test
     void respostaNuncaDevolveOTextoColado() {
         DetectorDeGolpe.Veredito r = v("<script>alert(1)</script> PIX urgente bit.ly/xss");
