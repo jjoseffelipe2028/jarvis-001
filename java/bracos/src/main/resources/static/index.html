@@ -79,8 +79,24 @@
       <div class="comando-topo"><b>💬 FALAR COM O JARVIS</b> <span class="ok">IA local · nada sai do PC</span></div>
       <ul id="chat-falas" class="chat-falas" aria-live="polite"></ul>
       <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ... Enter envia."></textarea>
-      <div class="daily-linha"><span class="fu">Ele só conversa: para agir, use os botões.</span>
+      <div class="daily-linha"><span class="fu">Conversa e pede ações da lista. Para criar um jogo, use o Estúdio abaixo.</span>
         <span><button id="bt-chat-limpar" type="button">Limpar</button> <button id="bt-chat" type="button" class="aceitar">Enviar</button></span></div>
+    </section>
+    <section class="comando estudio" aria-label="Estúdio 001">
+      <div class="comando-topo"><b>🎮 ESTÚDIO 001 · PEÇA UM JOGO</b> <span class="ok">001 planeja → 002 revisa → 001 constrói</span></div>
+      <textarea id="es-texto" maxlength="2000" rows="3" placeholder="Ex.: um mini jogo de nave em HTML, com 3 vidas, placar e tela de game over."></textarea>
+      <div class="daily-linha"><label class="fu"><input id="es-revisao" type="checkbox" checked> Revisão da 002 (Antigravity)</label>
+        <button id="es-revisar" type="button">Revisar</button></div>
+      <div id="es-cartao" class="cartao cartao-daily" hidden>
+        <div>🎮 <b>Vai para a dupla (só na pasta do estúdio, sem terminal e sem internet):</b></div>
+        <div id="es-cartao-texto" class="cartao-texto"></div>
+        <div class="botoes">
+          <button id="es-confirmar" type="button" class="aceitar">Confirmar</button>
+          <button id="es-cancelar" type="button" class="recusar">Cancelar</button>
+        </div>
+      </div>
+      <ul id="es-passos" class="saida" aria-live="polite"></ul>
+      <div id="es-resumo" class="cartao-texto" hidden></div>
     </section>
     <section class="comando" aria-label="Comandos">
       <div class="comando-topo"><b>⚡ COMANDOS</b> <span id="conexao" class="esperando">🔑 conectando…</span></div>
@@ -249,7 +265,7 @@
 
 <section id="pg-jogos" class="pagina" hidden aria-label="Jogos">
   <h2>🎮 JOGOS · Estúdio</h2>
-  <p class="fu">Ainda não tem robô de jogo no Jarvis. Aqui fica o plano, para acompanhar.</p>
+  <p class="fu">Para pedir um jogo, use o 🎮 Estúdio 001 na página Início: a dupla planeja, revisa e constrói.</p>
   <div class="pagina-grade">
     <article class="mod" data-cor="ambar">
       <h3>🤠 POEIRA SECA <em>ROBLOX</em></h3>
@@ -262,7 +278,8 @@
     <article class="mod" data-cor="ciano">
       <h3>🏗️ ESTÚDIO DE JOGOS <em>2027</em></h3>
       <ul>
-        <li class="fu">○ Super produtor de jogos (agente game-dev)</li>
+        <li class="ok">✅ Estúdio 001: a dupla cria o jogo sozinha (Ticket 047)</li>
+        <li class="ok">✅ 79 skills de game-dev auditadas e instaladas</li>
         <li class="fu">○ 1 protótipo no Roblox, 1 na Godot e 1 na Unity</li>
         <li class="fu">○ Mapa de nichos de jogos</li>
       </ul>
@@ -272,7 +289,7 @@
 
 <footer class="rodape">
   <span class="ok">✅ pronto</span> <span class="nx">▸ próximo</span> <span class="fu">○ depois</span>
-  <span class="sep">·</span> Central v4 (Tickets 016 a 046) · José Felipe
+  <span class="sep">·</span> Central v4 (Tickets 016 a 047) · José Felipe
 </footer>
 
 <script src="central.js"></script>

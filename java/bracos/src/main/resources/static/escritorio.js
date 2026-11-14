@@ -537,6 +537,7 @@
     "proposta": { nome: "a conferência da proposta", fala: "Proposta conferida 🤝", voz: "Proposta conferida." }, // Ticket 030
     "isca": { nome: "a conferência da isca", fala: "Isca conferida 🪤", voz: "Isca conferida." }, // Ticket 034
     "chat": { nome: "a conversa", fala: "Respondi 💬", voz: "" }, // Ticket 039 (a resposta já aparece na tela)
+    "estudio": { nome: "o Estúdio", fala: "Dupla trabalhando 🎮", voz: "Pedido entregue ao Estúdio. A dupla começou." }, // Ticket 047
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
   const elVivo = document.getElementById("esc-vivo");

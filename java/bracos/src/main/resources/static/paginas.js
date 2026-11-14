@@ -232,4 +232,73 @@
     historico = [];
     falas.replaceChildren();
   });
+
+  // ---------- Estúdio 001 (Ticket 047): a dupla cria o jogo ----------
+  // Revisar → Confirmar: o pedido só sai depois do clique. A tela só mostra o que a API devolve, em texto puro.
+
+  const esTexto = el("es-texto");
+  const esCartao = el("es-cartao");
+  const esPassos = el("es-passos");
+  const esResumo = el("es-resumo");
+  let esperando = null;
+
+  function revisarEstudio() {
+    const texto = esTexto.value.trim();
+    if (!texto) {
+      escreverEm(esPassos, ["✍️ Escreva o jogo que você quer primeiro."], "nx");
+      return;
+    }
+    el("es-cartao-texto").textContent = texto;
+    esCartao.hidden = false;
+  }
+
+  function mostrarEstado(r) {
+    const passos = Array.isArray(r && r.passos) ? r.passos.slice(0, 10).map((p) => String(p).slice(0, 200)) : [];
+    escreverEm(esPassos, passos.length ? passos : ["…"], r && r.terminou ? (r.ok ? "ok" : "erro") : "fu");
+    const resumo = r && typeof r.resumo === "string" ? r.resumo.slice(0, 3000) : "";
+    esResumo.textContent = resumo;
+    esResumo.hidden = !resumo;
+  }
+
+  async function acompanhar() {
+    try {
+      const r = await pedir("/central/acoes/estudio");
+      mostrarEstado(r);
+      if (r && r.terminou) {
+        clearInterval(esperando);
+        esperando = null;
+        el("es-revisar").disabled = false;
+      }
+    } catch (e) {
+      escreverEm(esPassos, erroDe(e), "erro");
+    }
+  }
+
+  async function confirmarEstudio(botao) {
+    const texto = el("es-cartao-texto").textContent; // exatamente o que você revisou
+    botao.disabled = true;
+    try {
+      const r = await enviar("/central/acoes/estudio", { texto, revisao: el("es-revisao").checked });
+      esCartao.hidden = true;
+      esTexto.value = "";
+      el("es-revisar").disabled = true;
+      mostrarEstado(r);
+      document.dispatchEvent(new Event("jarvis:acao"));
+      if (!esperando) {
+        esperando = setInterval(acompanhar, 4000);
+      }
+    } catch (e) {
+      const motivo = e instanceof Error && e.message.startsWith("Ação desligada")
+        ? "O Estúdio está ocupado com outro pedido (ou a pasta workSpace/estudio-jogos não existe)."
+        : (e instanceof Error ? e.message : "falhou");
+      escreverEm(esPassos, [`⚠️ ${motivo}`], "erro");
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  el("es-revisar").addEventListener("click", revisarEstudio);
+  el("es-confirmar").addEventListener("click", (e) => confirmarEstudio(e.currentTarget));
+  el("es-cancelar").addEventListener("click", () => { esCartao.hidden = true; });
+  esTexto.addEventListener("input", () => { esCartao.hidden = true; }); // mudou o texto: revisar de novo
 })();

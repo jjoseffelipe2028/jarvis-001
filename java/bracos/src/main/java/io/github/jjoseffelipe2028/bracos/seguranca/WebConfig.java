@@ -37,7 +37,8 @@ public class WebConfig implements WebMvcConfigurer {
         // Tickets 020/023: o daily e o detector de golpe pela Central também viram evento (até recusados).
         quadroEventos.ifAvailable(q -> registry.addInterceptor(new EventosInterceptor(q))
                 .addPathPatterns("/acoes/**", "/central/acoes/daily", "/central/acoes/sentinela/golpe",
-                        "/central/acoes/sentinela/proposta", "/central/acoes/sentinela/isca", "/central/acoes/chat"));
+                        "/central/acoes/sentinela/proposta", "/central/acoes/sentinela/isca", "/central/acoes/chat",
+                        "/central/acoes/estudio"));
         // Ordem importa: primeiro confere o Host (DNS rebinding), depois o token
         registry.addInterceptor(new HostInterceptor()).addPathPatterns("/acoes/**");
         // Ticket 034: o porteiro conhece a isca (se existir). Token-isca nunca abre a porta: só dispara o alarme.
