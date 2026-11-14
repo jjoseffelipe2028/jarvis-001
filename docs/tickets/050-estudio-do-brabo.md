@@ -1,5 +1,5 @@
 # 050 — Estúdio do Brabo: corte vira Short com apresentador IA (rosto, voz e legenda)
-**Status:** ✅ construído e testado com vídeos de ensaio (14/11) · pedido do José 14/11 · código pela 001 · ⏳ commit com o OK
+**Status:** ✅ construído e testado com vídeos de ensaio (14/11) · pedido do José 14/11 · código pela 001 · ✅ commit `8a365aa`
 
 ## Ideia
 Um corte 9:16 (do Ticket 048) vira um Short com o **apresentador IA original** comentando por cima:
