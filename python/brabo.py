@@ -8,7 +8,8 @@ Pega um corte em pé (9:16) e entrega o Short com o APRESENTADOR IA por cima:
 Dois modos (dois canais SEPARADOS):
   gta    → "o Brabo", facecam no canto, áudio do jogo baixinho (rádio do GTA dá Content ID).
   ensino → "Mestre Parafuso", meio corpo com o braço, passos grandes na tela.
-           Sem vídeo próprio ainda? "fundo": "cartoes" desenha a tela com a tomada.
+           Sem vídeo próprio ainda? "fundo": "cartoes" desenha um cartão por fala ("cartao": nome da
+           lista avatar.CARTOES; "passo": 1..9), com troca suave, número do passo e barra de progresso.
 
   python brabo.py rascunho 2026-11-14-034152-corte-01.mp4            → Gemma escreve <corte>.brabo.json
   python brabo.py fazer 2026-11-14-034152-corte-01.brabo.json         → <corte>-brabo.mp4 + .post.txt
@@ -51,6 +52,13 @@ MAX_DURACAO = 60.0
 FOLGA = 0.15                   # respiro entre uma fala e outra (s)
 TEMPO_LIMITE = 20 * 60
 VOZ = Path(__file__).parent / "vozes" / "pt_BR-faber-medium.onnx"
+# cenário do ensino ("fundo": "cartoes") — medidas em pixels do Short 1080x1920
+LARGURA, ALTURA = 1080, 1920
+CARTAO_LADO, CARTAO_X, CARTAO_Y = 760, 160, 250
+MESTRE_LADO, MESTRE_X, MESTRE_Y = 640, -40, 1300
+PASSO_LADO, PASSO_X, PASSO_Y = 180, 205, 320         # bolinha amarela do número do passo (centro)
+BARRA = (44, 60, 60, 1020)                             # y0, y1, x0, x1 da barra de progresso
+TRANSICAO, DESLIZE, SURGIR_PASSO = 0.4, 160, 0.25      # troca de cartão (s), slide (px), fade do passo (s)
 _LINK = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|net|org|br|ly|io|me|gg|tv|xyz|top)\b", re.I)
 _PALAVRAO = re.compile(r"\b(?:porra|caralho|merda|puta|fdp|buceta|cacete|foda)\w*", re.I)
 
@@ -105,6 +113,15 @@ def validar_roteiro(dado):
         item = {"em": float(em), "texto": _texto(f.get("texto"), MAX_LETRAS, f"fala {n}")}
         if f.get("tela") is not None:
             item["tela"] = _texto(f["tela"], MAX_TELA, f"tela da fala {n}")
+        if f.get("cartao") is not None:
+            if not isinstance(f["cartao"], str) or f["cartao"] not in avatar.CARTOES:
+                raise ErroBrabo(f"fala {n}: cartão desconhecido (use: {', '.join(avatar.CARTOES)})")
+            item["cartao"] = f["cartao"]
+        passo = f.get("passo")
+        if passo is not None:
+            if isinstance(passo, bool) or not isinstance(passo, int) or not 1 <= passo <= 9:
+                raise ErroBrabo(f"fala {n}: 'passo' precisa ser um número inteiro de 1 a 9")
+            item["passo"] = passo
         limpas.append(item)
     nota = dado.get("nota")
     if nota is not None and (isinstance(nota, bool) or not isinstance(nota, int) or not 0 <= nota <= 10):
@@ -152,12 +169,19 @@ def pedacos(texto, ini, fim, palavras=3):
 def gerar_ass(roteiro, tempos, duracao):
     m = MODOS[roteiro["modo"]]
     ensino = roteiro["modo"] == "ensino"
-    margem_fala = 700 if ensino else 640
+    cena = roteiro["fundo"] == "cartoes"
+    margem_fala = 690 if cena else 700 if ensino else 640
+    margem_tela = 100 if cena else 200 if ensino else 660
+    # cores do .ass são &HAABBGGRR. No cenário azul: faixa amarela (#f2c200) com letra azul-escura (#0b2d5c)
+    cor_tela = "&H0000C2F2" if cena else m["cor_tela"]
+    letra_tela = "&H005C2D0B" if cena else "&H00FFFFFF"
     estilos = (
         f"Style: Fala,Arial,{84 if ensino else 92},{m['cor_legenda']},&H000000FF,&H00000000,&H96000000,"
         f"-1,0,0,0,100,100,0,0,1,9,3,2,70,70,{margem_fala},1\n"
-        f"Style: Tela,Arial,{70 if ensino else 64},&H00FFFFFF,&H000000FF,{m['cor_tela']},{m['cor_tela']},"
-        f"-1,0,0,0,100,100,0,0,3,18,0,8,80,80,{200 if ensino else 660},1\n"
+        f"Style: Tela,Arial,{70 if ensino else 64},{letra_tela},&H000000FF,{cor_tela},{cor_tela},"
+        f"-1,0,0,0,100,100,0,0,3,18,0,8,80,80,{margem_tela},1\n"
+        "Style: Passo,Arial,130,&H005C2D0B,&H000000FF,&H005C2D0B,&H00000000,"
+        "-1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1\n"
         "Style: Nota,Arial,190,&H0000FFFF,&H000000FF,&H00000000,&H96000000,"
         "-1,0,0,0,100,100,0,0,1,12,4,5,60,60,0,1"
     )
@@ -168,10 +192,16 @@ def gerar_ass(roteiro, tempos, duracao):
         for a, b, txt in pedacos(fala["texto"].upper(), ini, min(fim, duracao)):
             if b > a:
                 linhas.append(f"Dialogue: 1,{tf(a)},{tf(b)},Fala,,0,0,0,,{desarmar_ass(txt)}")
+        ate = min(tempos[i + 1][0] if i + 1 < len(tempos) else duracao, duracao)
         if "tela" in fala:
-            ate = tempos[i + 1][0] if i + 1 < len(tempos) else duracao
-            linhas.append(f"Dialogue: 0,{tf(ini)},{tf(min(ate, duracao))},Tela,,0,0,0,,"
+            fade = "{\\fad(250,0)}" if cena else ""
+            linhas.append(f"Dialogue: 0,{tf(ini)},{tf(ate)},Tela,,0,0,0,,{fade}"
                           f"{desarmar_ass(fala['tela'])}")
+        if cena and "passo" in fala:                       # número grande dentro da bolinha amarela
+            igual = i > 0 and roteiro["falas"][i - 1].get("passo") == fala["passo"]
+            fade = "" if igual else f"\\fad({int(SURGIR_PASSO * 1000)},0)"
+            linhas.append(f"Dialogue: 3,{tf(ini)},{tf(ate)},Passo,,0,0,0,,"
+                          f"{{\\pos({PASSO_X},{PASSO_Y}){fade}}}{int(fala['passo'])}")
     if roteiro["nota"] is not None:
         linhas.append(f"Dialogue: 2,{tf(max(0.0, duracao - 3))},{tf(duracao)},Nota,,0,0,0,,"
                       f"NOTA {roteiro['nota']}/10")
@@ -222,27 +252,31 @@ _BASE = ["-hide_banner", "-nostdin", "-loglevel", "error", "-n"]
 
 
 def comando_final(ffmpeg, roteiro, duracao, saida, corte=None, tem_audio_jogo=True):
-    """Monta o Short. Entrada 0 = corte (ou fundo.png), 1 = rosto (pipe), 2 = voz."""
+    """Monta o Short. Corte: 0 = corte, 1 = rosto (pipe), 2 = voz. Cartões: 0 = quadro inteiro (pipe), 1 = voz."""
     m = MODOS[roteiro["modo"]]
-    if roteiro["fundo"] == "cartoes":
-        fundo = ["-loop", "1", "-framerate", str(avatar.FPS), "-t", f"{duracao:.3f}", "-i", "file:fundo.png"]
-    else:
-        fundo = ["-ss", f"{roteiro['inicio']:.3f}", "-t", f"{duracao:.3f}", "-i", f"file:{corte}"]
-    rosto = ["-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{avatar.LADO}x{avatar.LADO}",
-             "-framerate", str(avatar.FPS), "-i", "pipe:0"]
     tom = m["tom"]
-    filtro = (
-        f"[0:v]scale=1080:1920,setsar=1,fps={avatar.FPS}[base];"
-        f"[1:v]scale={m['lado']}:{m['lado']}[rosto];"
-        f"[base][rosto]overlay={m['x']}:{m['y']}:eof_action=pass,subtitles=brabo.ass[v];"
-        f"[2:a]asetrate={int(22050 * tom)},aresample=44100,atempo={1 / tom:.4f},volume=1.5[voz]"
-    )
-    if roteiro["fundo"] == "corte" and tem_audio_jogo and roteiro["som_jogo"] > 0:
-        filtro += (f";[0:a]aresample=44100,volume={roteiro['som_jogo']:.2f}[jogo];"
-                   "[jogo][voz]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.9[a]")
+    voz = f"asetrate={int(22050 * tom)},aresample=44100,atempo={1 / tom:.4f},volume=1.5[voz]"
+    if roteiro["fundo"] == "cartoes":
+        # O Python já manda o quadro inteiro (cenário + Mestre); o FFmpeg só põe legenda e voz.
+        entradas = ["-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{LARGURA}x{ALTURA}",
+                    "-framerate", str(avatar.FPS), "-i", "pipe:0"]
+        filtro = f"[0:v]setsar=1,subtitles=brabo.ass[v];[1:a]{voz};[voz]alimiter=limit=0.9[a]"
     else:
-        filtro += ";[voz]alimiter=limit=0.9[a]"
-    return [ffmpeg, *_BASE, *fundo, *rosto, "-i", "file:voz.wav", "-filter_complex", filtro,
+        entradas = ["-ss", f"{roteiro['inicio']:.3f}", "-t", f"{duracao:.3f}", "-i", f"file:{corte}",
+                    "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{avatar.LADO}x{avatar.LADO}",
+                    "-framerate", str(avatar.FPS), "-i", "pipe:0"]
+        filtro = (
+            f"[0:v]scale=1080:1920,setsar=1,fps={avatar.FPS}[base];"
+            f"[1:v]scale={m['lado']}:{m['lado']}[rosto];"
+            f"[base][rosto]overlay={m['x']}:{m['y']}:eof_action=pass,subtitles=brabo.ass[v];"
+            f"[2:a]{voz}"
+        )
+        if tem_audio_jogo and roteiro["som_jogo"] > 0:
+            filtro += (f";[0:a]aresample=44100,volume={roteiro['som_jogo']:.2f}[jogo];"
+                       "[jogo][voz]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.9[a]")
+        else:
+            filtro += ";[voz]alimiter=limit=0.9[a]"
+    return [ffmpeg, *_BASE, *entradas, "-i", "file:voz.wav", "-filter_complex", filtro,
             "-map", "[v]", "-map", "[a]", "-t", f"{duracao:.3f}",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f"file:{saida}"]
@@ -282,16 +316,115 @@ def gravar_png(ffmpeg, imagem, destino, pasta):
         raise ErroBrabo("Não consegui gravar a imagem.")
 
 
-def fundo_cartoes():
-    """Tela de ensino 1080x1920: fundo claro com a tomada desenhada no meio."""
-    tela = np.zeros((1920, 1080, 4), dtype=np.uint8)
-    tela[...] = (238, 243, 248, 255)
-    tomada = avatar.desenhar_tomada(lado=600)
-    y0, x0 = 430, 240
-    a = tomada[..., 3:4].astype(np.float32) / 255.0
-    area = tela[y0:y0 + 600, x0:x0 + 600, :3].astype(np.float32)
-    tela[y0:y0 + 600, x0:x0 + 600, :3] = (tomada[..., :3] * a + area * (1 - a)).astype(np.uint8)
-    return tela
+# ---------------------------- cenário do ensino (cartões por passo) ----------------------------
+
+def fundo_degrade(altura=ALTURA, largura=LARGURA):
+    """Degradê azul do canal (escuro em cima, claro embaixo) com um brilho atrás do cartão."""
+    k = np.linspace(0.0, 1.0, altura, dtype=np.float32)[:, None, None]
+    img = np.array([11, 45, 92], np.float32) * (1 - k) + np.array([31, 111, 209], np.float32) * k
+    yy, xx = np.ogrid[:altura, :largura]
+    brilho = np.clip(1 - ((xx - largura / 2) / (largura * 0.6)) ** 2 - ((yy - altura / 3) / (altura * 0.3)) ** 2,
+                     0, 1).astype(np.float32)
+    img = img + 45.0 * brilho[..., None]
+    return np.ascontiguousarray(np.broadcast_to(img, (altura, largura, 3))).clip(0, 255).astype(np.uint8)
+
+
+def colar(quadro, img, x, y, opacidade=1.0):
+    """Cola um desenho RGBA no quadro RGB na posição (x, y); o que sair da tela é cortado."""
+    h, w = img.shape[:2]
+    x0, y0 = max(x, 0), max(y, 0)
+    x1, y1 = min(x + w, quadro.shape[1]), min(y + h, quadro.shape[0])
+    if x1 <= x0 or y1 <= y0:
+        return quadro
+    pedaco = img[y0 - y:y1 - y, x0 - x:x1 - x].astype(np.float32)
+    a = pedaco[..., 3:4] * (opacidade / 255.0)
+    area = quadro[y0:y1, x0:x1].astype(np.float32)
+    quadro[y0:y1, x0:x1] = (pedaco[..., :3] * a + area * (1 - a) + 0.5).astype(np.uint8)
+    return quadro
+
+
+def misturar(a, b, p):
+    """Fade: p=0 → só a, p=1 → só b."""
+    return (a.astype(np.float32) * (1 - p) + b.astype(np.float32) * p + 0.5).astype(np.uint8)
+
+
+def suave(p):
+    p = min(max(p, 0.0), 1.0)
+    return p * p * (3 - 2 * p)
+
+
+def barra(quadro, p):
+    """Barra de progresso no topo: trilho claro e enchimento amarelo até p (0..1)."""
+    y0, y1, x0, x1 = BARRA
+    trilho = quadro[y0:y1, x0:x1].astype(np.float32)
+    quadro[y0:y1, x0:x1] = (trilho * 0.7 + 255 * 0.3).astype(np.uint8)
+    fim = x0 + int(round((x1 - x0) * min(max(p, 0.0), 1.0)))
+    quadro[y0:y1, x0:fim] = (242, 194, 0)
+    return quadro
+
+
+def cenas_da_tela(roteiro, tempos):
+    """[(início, cartão, passo)] por fala. Fala sem cartão repete o anterior (o 1º padrão é a tomada)."""
+    cenas, atual = [], "tomada"
+    for i, (fala, (ini, _)) in enumerate(zip(roteiro["falas"], tempos)):
+        atual = fala.get("cartao", atual)
+        cenas.append((0.0 if i == 0 else ini, atual, fala.get("passo")))
+    return cenas
+
+
+def bolinha_do_passo(lado=PASSO_LADO):
+    t = avatar.Tela(lado=lado)
+    t.elipse(212, 216, 180, 180, avatar._cor("#000000", 80))
+    t.elipse(200, 200, 190, 190, avatar.AZUL_ESCURO)
+    t.elipse(200, 200, 168, 168, avatar.AMARELO)
+    return t.pronta()
+
+
+def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=None, fps=avatar.FPS):
+    """Quadros 1080x1920 RGB do ensino: degradê + cartão do passo (com fade/slide) + passo + barra + Mestre."""
+    cenas = cenas_da_tela(roteiro, tempos)
+    if cartoes is None:
+        cartoes = {nome: avatar.desenhar_cartao(nome, CARTAO_LADO) for nome in {c for _, c, _ in cenas}}
+    if mestre is None:
+        mestre = {k: avatar.com_sombra(v) for k, v in
+                  avatar.sprites("mestre", fundo=False, lado=MESTRE_LADO).items()}
+    fundo = fundo_degrade()
+    bolinha = bolinha_do_passo()
+    parado = {}
+
+    def cenario(nome, dx=0):
+        if dx == 0 and nome in parado:
+            return parado[nome]
+        q = colar(fundo.copy(), cartoes[nome], CARTAO_X + dx, CARTAO_Y)
+        if dx == 0:
+            parado[nome] = q
+        return q
+
+    bocas = avatar.bocas_pela_voz(trilha, taxa, fps)
+    olhos = avatar.piscadas(len(bocas), fps)
+    inicios = [c[0] for c in cenas]
+    for n in range(int(round(duracao * fps))):
+        t = n / fps
+        k = max(0, int(np.searchsorted(inicios, t, side="right")) - 1)
+        ini, nome, passo = cenas[k]
+        anterior = cenas[k - 1] if k else None
+        p = (t - ini) / TRANSICAO
+        if anterior and anterior[1] != nome and p < 1:              # troca de cartão: fade + slide
+            p = suave(p)
+            q = misturar(cenario(anterior[1]), cenario(nome, int((1 - p) * DESLIZE)), p)
+        else:
+            q = cenario(nome).copy()
+        if passo:
+            igual = anterior is not None and anterior[2] == passo
+            opac = 1.0 if igual else suave((t - ini) / SURGIR_PASSO)
+            colar(q, bolinha, PASSO_X - PASSO_LADO // 2, PASSO_Y - PASSO_LADO // 2, opac)
+        barra(q, t / duracao)
+        b = int(bocas[n]) if n < len(bocas) else 0
+        img = mestre[(b, bool(olhos[n]) if n < len(olhos) else False)]
+        if b:
+            img = np.roll(img, -3 * b, axis=0)                      # leve "subida" ao falar
+        colar(q, img, MESTRE_X, MESTRE_Y)
+        yield q
 
 
 # ---------------------------- fazer o Short ----------------------------
@@ -350,8 +483,9 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
         gravar_wav(Path(tmp) / "voz.wav", trilha, taxa)
         Path(tmp, "brabo.ass").write_text(gerar_ass(roteiro, tempos, duracao), encoding="utf-8")
         if roteiro["fundo"] == "cartoes":
-            gravar_png(ffmpeg, fundo_cartoes(), "fundo.png", tmp)
-        quadros = avatar.quadros(m["personagem"], trilha, taxa, fundo=m["fundo_avatar"])
+            quadros = quadros_ensino(roteiro, tempos, duracao, trilha, taxa)
+        else:
+            quadros = avatar.quadros(m["personagem"], trilha, taxa, fundo=m["fundo_avatar"])
         _rodar_com_quadros(comando_final(ffmpeg, roteiro, duracao, saida, corte, tem_audio), tmp, quadros)
     with open(saida.with_suffix(".post.txt"), "x", encoding="utf-8", newline="\n") as f:
         f.write(texto_do_post(roteiro))

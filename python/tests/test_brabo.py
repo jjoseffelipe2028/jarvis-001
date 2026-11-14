@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 import avatar
+import brabo
 from brabo import (ErroBrabo, agendar, comando_final, gerar_ass, montar_trilha, pedacos, rascunho,
                    texto_do_post, validar_roteiro)
 
@@ -113,6 +114,110 @@ class TestAvatar(unittest.TestCase):
         img = avatar.desenhar_brabo(2, True)
         self.assertEqual(img.shape, (avatar.LADO, avatar.LADO, 4))
         self.assertEqual(img.dtype, np.uint8)
+
+
+def ensino(**extra):
+    base = {"modo": "ensino", "fundo": "cartoes",
+            "falas": [{"em": 0, "texto": "Chuveiro gelado?", "cartao": "gelado"},
+                      {"em": 2, "texto": "Desliga o disjuntor.", "cartao": "disjuntor", "passo": 1,
+                       "tela": "DESLIGA O DISJUNTOR"},
+                      {"em": 4, "texto": "Confere que desligou.", "passo": 1}]}
+    base.update(extra)
+    return base
+
+
+class TestCenarioEnsino(unittest.TestCase):
+    """O cenário do Mestre: cartão por passo, troca suave, número do passo e barra de progresso."""
+
+    def test_cartao_e_passo_validos_passam(self):
+        r = validar_roteiro(ensino())
+        self.assertEqual(r["falas"][1]["cartao"], "disjuntor")
+        self.assertEqual(r["falas"][2]["passo"], 1)
+
+    def test_recusa_cartao_fora_da_lista_e_passo_errado(self):
+        for errado in ({"cartao": "../../segredo"}, {"cartao": ["tomada"]}, {"cartao": 3},
+                       {"passo": 0}, {"passo": 10}, {"passo": 1.5}, {"passo": True}, {"passo": "2"}):
+            with self.assertRaises(ErroBrabo):
+                validar_roteiro(ensino(falas=[{"em": 0, "texto": "oi", **errado}]))
+
+    def test_fala_sem_cartao_repete_o_anterior_e_o_primeiro_e_a_tomada(self):
+        r = validar_roteiro(ensino())
+        cenas = brabo.cenas_da_tela(r, [(0, 1), (2, 3), (4, 5)])
+        self.assertEqual([c[1] for c in cenas], ["gelado", "disjuntor", "disjuntor"])
+        antigo = validar_roteiro({"modo": "ensino", "fundo": "cartoes", "falas": [{"em": 0, "texto": "Oi"}]})
+        self.assertEqual(brabo.cenas_da_tela(antigo, [(0.5, 1)]), [(0.0, "tomada", None)])
+
+    def test_barra_cresce_com_o_tempo(self):
+        def amarelos(p):
+            q = brabo.barra(np.zeros((100, 1080, 3), np.uint8), p)
+            y0, _, x0, x1 = brabo.BARRA
+            return int((q[y0, x0:x1] == (242, 194, 0)).all(axis=1).sum())
+        self.assertEqual(amarelos(0.0), 0)
+        self.assertLess(amarelos(0.3), amarelos(0.7))
+        self.assertEqual(amarelos(1.0), brabo.BARRA[3] - brabo.BARRA[2])
+
+    def test_colar_corta_o_que_sai_da_tela(self):
+        q = np.zeros((10, 10, 3), np.uint8)
+        img = np.full((6, 6, 4), 255, np.uint8)
+        brabo.colar(q, img, -3, 7)
+        self.assertTrue((q[7:, :3] == 255).all())
+        self.assertTrue((q[:7] == 0).all())
+
+    def test_fade_mistura_os_dois_cartoes(self):
+        a, b = np.zeros((2, 2, 3), np.uint8), np.full((2, 2, 3), 200, np.uint8)
+        self.assertTrue((brabo.misturar(a, b, 0.0) == 0).all())
+        self.assertTrue((brabo.misturar(a, b, 0.5) == 100).all())
+        self.assertEqual(brabo.suave(0.0), 0.0)
+        self.assertEqual(brabo.suave(1.0), 1.0)
+
+    def test_quadros_tem_tamanho_certo_e_trocam_de_cartao(self):
+        r = validar_roteiro(ensino())
+        tempos = [(0, 1.5), (2, 3.5), (4, 5)]
+        cores = {"gelado": 50, "disjuntor": 200, "tomada": 0}
+        cartoes = {n: np.dstack([np.full((brabo.CARTAO_LADO,) * 2 + (3,), c, np.uint8),
+                                 np.full((brabo.CARTAO_LADO,) * 2, 255, np.uint8)]) for n, c in cores.items()}
+        mestre = {(b, p): np.zeros((brabo.MESTRE_LADO,) * 2 + (4,), np.uint8) for b in (0, 1, 2) for p in (0, 1)}
+        quadros = list(brabo.quadros_ensino(r, tempos, 5.0, np.zeros(5 * 1000, np.float32), 1000,
+                                            cartoes=cartoes, mestre=mestre, fps=10))
+        self.assertEqual(len(quadros), 50)
+        self.assertEqual(quadros[0].shape, (brabo.ALTURA, brabo.LARGURA, 3))
+        centro = (brabo.CARTAO_Y + 600, brabo.CARTAO_X + 600)
+        self.assertEqual(int(quadros[10][centro][0]), 50)          # 1 s: cartão do gancho
+        self.assertEqual(int(quadros[30][centro][0]), 200)         # 3 s: já trocou para o disjuntor
+        meio = int(quadros[21][centro][0])                         # 2,1 s: no meio da troca
+        self.assertTrue(50 < meio < 200)
+
+    def test_ass_tem_numero_do_passo_so_no_cenario(self):
+        r = validar_roteiro(ensino())
+        ass = gerar_ass(r, [(0, 1.5), (2, 3.5), (4, 5)], 6)
+        self.assertEqual(ass.count(",Passo,,"), 2)
+        self.assertIn(r"\fad(", ass)
+        self.assertIn("}1", ass)
+        corte = validar_roteiro(roteiro(modo="ensino", falas=[{"em": 0, "texto": "oi", "passo": 1}]))
+        self.assertNotIn(",Passo,,", gerar_ass(corte, [(0, 1)], 3))
+
+    def test_comando_do_cenario_recebe_quadro_inteiro(self):
+        r = validar_roteiro(ensino())
+        cmd = comando_final("ffmpeg", r, 20, "saida.mp4")
+        self.assertIn(f"{brabo.LARGURA}x{brabo.ALTURA}", cmd)
+        self.assertIn("rgb24", cmd)
+        self.assertNotIn("file:fundo.png", cmd)
+        self.assertTrue(any("[1:a]" in c for c in cmd))
+
+    def test_todos_os_cartoes_desenham(self):
+        for nome in avatar.CARTOES:
+            img = avatar.desenhar_cartao(nome, lado=80)
+            self.assertEqual(img.shape, (80, 80, 4))
+        with self.assertRaises(ValueError):
+            avatar.desenhar_cartao("rede")
+
+    def test_sombra_aparece_fora_do_desenho(self):
+        img = np.zeros((60, 60, 4), np.uint8)
+        img[10:30, 10:30] = (255, 0, 0, 255)
+        com = avatar.com_sombra(img, dx=6, dy=6, raio=2)
+        self.assertEqual(int(com[20, 20, 3]), 255)                 # o desenho continua igual
+        self.assertGreater(int(com[33, 33, 3]), 0)                 # e ganhou sombra embaixo/à direita
+        self.assertEqual(int(com[5, 5, 3]), 0)
 
 
 class TestRascunho(unittest.TestCase):

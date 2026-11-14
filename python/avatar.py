@@ -80,6 +80,19 @@ class Tela:
             m &= self.y <= cy
         self.pintar(m, cor)
 
+    def linha(self, x0, y0, x1, y1, esp, cor):
+        """Traço grosso com ponta redonda, de (x0, y0) até (x1, y1)."""
+        vx, vy = x1 - x0, y1 - y0
+        k = np.clip(((self.x - x0) * vx + (self.y - y0) * vy) / max(vx * vx + vy * vy, 1e-6), 0, 1)
+        d2 = (self.x - x0 - k * vx) ** 2 + (self.y - y0 - k * vy) ** 2
+        self.pintar(d2 <= (esp / 2) ** 2, cor)
+
+    def zoom(self, z):
+        """Desenha o que vier depois z vezes do tamanho, centrado (z=0.8 → 80%)."""
+        eixo = (np.arange(self.n, dtype=np.float32) + 0.5) / self.s
+        eixo = (eixo - 200.0) / z + 200.0
+        self.y, self.x = np.meshgrid(eixo, eixo, indexing="ij")
+
     def pronta(self):
         """Reduz para o tamanho final (média dos blocos) → uint8 RGBA."""
         k = SUPER
@@ -164,8 +177,8 @@ def desenhar_brabo(boca=0, piscando=False, fundo=True):
     return t.pronta()
 
 
-def desenhar_mestre(boca=0, piscando=False, fundo=True, braco=True):
-    t = Tela()
+def desenhar_mestre(boca=0, piscando=False, fundo=True, braco=True, lado=LADO):
+    t = Tela(lado=lado)
     if fundo:
         t.retangulo(0, 0, 400, 400, "#eef3f8", raio=36)
         t.anel(200, 200, 197, 184, "#1f6fd1")
@@ -197,6 +210,11 @@ def desenhar_mestre(boca=0, piscando=False, fundo=True, braco=True):
 def desenhar_tomada(lado=600):
     """Tomada padrão brasileiro (3 pinos) com os 3 fios: fase, neutro e terra no MEIO. Para o quadro de ensino."""
     t = Tela(lado=lado)
+    _tomada(t)
+    return t.pronta()
+
+
+def _tomada(t):
     t.retangulo(40, 230, 200, 246, "#1a1a1a", raio=6)          # fio fase (preto) → borne da esquerda
     t.retangulo(40, 236, 120, 240, "#c98b3a")
     t.retangulo(200, 280, 360, 296, "#3b8fd9", raio=6)         # fio neutro (azul claro) → borne da direita
@@ -211,15 +229,198 @@ def desenhar_tomada(lado=600):
     t.elipse(200, 160, 11, 11, "#2b2b2b")                       # furo do terra (no meio, em cima)
     t.elipse(200, 74, 7, 7, "#bdbdbd")                          # parafusos
     t.elipse(200, 296, 7, 7, "#bdbdbd")
+
+
+# ---------------------------- cartões do ensino (Mestre Parafuso) ----------------------------
+
+AZUL, AZUL_ESCURO, AMARELO = "#1f6fd1", "#0b2d5c", "#f2c200"
+COBRE, METAL, PERIGO, CERTO = "#c97b3a", "#9aa3ad", "#d63b3b", "#2f9e44"
+
+
+def _seta_baixo(t, cx, y0, y1, cor=AMARELO):
+    t.retangulo(cx - 9, y0, cx + 9, y1 - 18, cor, raio=4)
+    t.poligono([(cx - 26, y1 - 22), (cx + 26, y1 - 22), (cx, y1)], cor)
+
+
+def _check(t, cx, cy, r, fundo=CERTO):
+    t.elipse(cx, cy, r, r, fundo)
+    t.linha(cx - r * .45, cy, cx - r * .1, cy + r * .38, r * .22, "#ffffff")
+    t.linha(cx - r * .1, cy + r * .38, cx + r * .5, cy - r * .35, r * .22, "#ffffff")
+
+
+def _mola(t, x0, y0, x1, y1, cor=COBRE, voltas=11, r=22):
+    """A resistência: uma mola de fio, vista de lado (anéis em fila)."""
+    t.linha(x0 - 26, y0 + 10, x0, y0, 6, METAL)
+    t.linha(x1, y1, x1 + 26, y1 - 10, 6, METAL)
+    for i in range(voltas):
+        k = i / (voltas - 1)
+        t.anel(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, r, r - 6, cor)
+
+
+def _etiqueta(t, x, y, cor=AMARELO):
+    """Plaquinha de voltagem/potência (o mesmo desenho = o mesmo valor)."""
+    t.retangulo(x, y, x + 84, y + 46, cor, raio=8)
+    t.retangulo(x + 12, y + 12, x + 72, y + 19, AZUL_ESCURO, raio=3)
+    t.retangulo(x + 12, y + 27, x + 52, y + 34, AZUL_ESCURO, raio=3)
+
+
+def _cabeca_chuveiro(t, cx, cy, aberto=False, escala=1.0):
+    e = escala
+    t.retangulo(cx - 10 * e, cy - 130 * e, cx + 10 * e, cy - 30 * e, METAL, raio=4)       # cano
+    t.elipse(cx, cy, 128 * e, 56 * e, "#c9d1da")
+    t.elipse(cx, cy - 4 * e, 120 * e, 50 * e, "#f4f6f8")
+    if aberto:                                                          # por dentro: a mola
+        t.elipse(cx, cy + 4 * e, 96 * e, 34 * e, "#3a4450")
+        for i in range(9):
+            t.anel(cx - 64 * e + i * 16 * e, cy + 4 * e, 13 * e, 8 * e, COBRE)
+    else:
+        for i in range(-3, 4):
+            t.elipse(cx + i * 26 * e, cy + 26 * e, 5 * e, 3 * e, "#7d8794")
+
+
+def _gotas(t, cx, cy, cor, linhas=4):
+    for j in range(linhas):
+        for i in range(-3, 4):
+            t.elipse(cx + i * 30 + (j % 2) * 15, cy + j * 46, 6, 13, cor)
+
+
+def _disjuntor(t, cx, y0, ligado, destaque=False, e=1.0):
+    if destaque:
+        t.retangulo(cx - 40 * e, y0 - 14 * e, cx + 40 * e, y0 + 194 * e, AMARELO, raio=14 * e)
+    t.retangulo(cx - 30 * e, y0, cx + 30 * e, y0 + 180 * e, METAL, raio=8 * e)
+    t.retangulo(cx - 26 * e, y0 + 4 * e, cx + 26 * e, y0 + 176 * e, "#ffffff", raio=7 * e)
+    t.retangulo(cx - 14 * e, y0 + 30 * e, cx + 14 * e, y0 + 150 * e, "#dfe4ea", raio=5 * e)
+    if ligado:                                                          # alavanca em cima = ligado
+        t.retangulo(cx - 12 * e, y0 + 32 * e, cx + 12 * e, y0 + 88 * e, "#2b2b33", raio=5 * e)
+    else:                                                               # alavanca embaixo = desligado
+        t.retangulo(cx - 12 * e, y0 + 92 * e, cx + 12 * e, y0 + 148 * e, PERIGO, raio=5 * e)
+    t.elipse(cx, y0 + 163 * e, 6 * e, 6 * e, CERTO if ligado else PERIGO)
+
+
+def _c_disjuntor(t):
+    t.retangulo(60, 70, 340, 330, "#c9d1da", raio=18)
+    t.retangulo(74, 84, 326, 316, "#e6ebf0", raio=12)
+    _disjuntor(t, 130, 110, True)
+    _disjuntor(t, 200, 110, False, destaque=True)
+    _disjuntor(t, 270, 110, True)
+
+
+def _c_gelado(t):
+    _cabeca_chuveiro(t, 175, 150)
+    _gotas(t, 175, 225, "#9fd3ff", 3)
+    cx, cy = 328, 72                                                   # floco de neve
+    for ang in (0, 60, 120):
+        a = np.deg2rad(ang)
+        t.linha(cx - 46 * np.cos(a), cy - 46 * np.sin(a), cx + 46 * np.cos(a), cy + 46 * np.sin(a), 10, AZUL)
+    t.elipse(cx, cy, 12, 12, "#ffffff")
+
+
+def _c_chuveiro(t):
+    _cabeca_chuveiro(t, 200, 175, aberto=True)
+    t.elipse(200, 318, 112, 36, "#c9d1da")                             # a tampa, já solta embaixo
+    t.elipse(200, 314, 106, 31, "#f4f6f8")
+    for i in range(-3, 4):
+        t.elipse(200 + i * 26, 318, 5, 3, "#7d8794")
+
+
+def _c_resistencia(t):
+    t.elipse(200, 205, 150, 95, "#e9eef4")
+    _mola(t, 95, 250, 305, 160)
+    t.elipse(70, 262, 14, 14, METAL)
+    t.elipse(330, 148, 14, 14, METAL)
+
+
+def _c_pecas(t):
+    _cabeca_chuveiro(t, 105, 205, escala=0.55)                         # o chuveiro...
+    _etiqueta(t, 63, 250)
+    t.retangulo(180, 175, 220, 187, AZUL_ESCURO, raio=4)               # ... "=" ...
+    t.retangulo(180, 199, 220, 211, AZUL_ESCURO, raio=4)
+    _mola(t, 255, 205, 335, 170, voltas=7, r=18)                       # ... a resistência
+    _etiqueta(t, 258, 250)
+    _check(t, 200, 330, 38)
+
+
+def _c_encaixe(t):
+    _mola(t, 120, 95, 280, 95, cor="#e08c45", voltas=10, r=20)        # a nova, novinha
+    _cabeca_chuveiro(t, 200, 290, aberto=True)
+    _seta_baixo(t, 200, 128, 215)
+
+
+def _c_agua(t):
+    _cabeca_chuveiro(t, 165, 140)
+    _gotas(t, 165, 215, "#3b8fd9", 4)
+    t.elipse(325, 120, 34, 34, AZUL)                                   # registro aberto
+    t.retangulo(318, 60, 332, 120, AZUL_ESCURO, raio=6)
+    t.elipse(325, 120, 12, 12, "#ffffff")
+    _disjuntor(t, 325, 220, False, e=0.6)                              # e o disjuntor AINDA desligado
+
+
+def _c_perigo(t):
+    t.poligono([(200, 40), (330, 260), (70, 260)], "#1a1a1a")
+    t.poligono([(200, 64), (308, 248), (92, 248)], AMARELO)
+    t.retangulo(190, 120, 210, 200, "#1a1a1a", raio=8)
+    t.elipse(200, 224, 12, 12, "#1a1a1a")
+    t.linha(40, 330, 360, 330, 16, "#1a1a1a")                          # fio derretido
+    t.elipse(200, 330, 40, 18, "#6b3a1a")
+    t.elipse(194, 326, 24, 10, "#e0712b")
+    for i, (x, y) in enumerate([(176, 300), (214, 290), (196, 276)]):  # fumaça
+        t.elipse(x + 100, y - 8 * i, 16, 12, "#a7adb5")
+
+
+def _c_ok(t):
+    _check(t, 200, 190, 120)
+    t.elipse(200, 340, 70, 18, AMARELO)
+
+
+CARTOES = {"tomada": _tomada, "disjuntor": _c_disjuntor, "gelado": _c_gelado, "chuveiro": _c_chuveiro,
+           "resistencia": _c_resistencia, "pecas": _c_pecas, "encaixe": _c_encaixe, "agua": _c_agua,
+           "perigo": _c_perigo, "ok": _c_ok}
+
+
+def desenhar_cartao(nome, lado=760):
+    """Cartão branco com borda amarela, sombra e o desenho do passo. Só nomes de CARTOES (allowlist)."""
+    if nome not in CARTOES:
+        raise ValueError("cartão desconhecido")
+    t = Tela(lado=lado)
+    t.retangulo(26, 30, 390, 394, _cor("#000000", 70), raio=34)       # sombra
+    t.retangulo(14, 14, 386, 386, AMARELO, raio=34)                   # borda amarela
+    t.retangulo(22, 22, 378, 378, "#ffffff", raio=28)
+    t.zoom(0.84)
+    CARTOES[nome](t)
     return t.pronta()
 
 
-def sprites(personagem, fundo=True):
+def _borrar(a, raio):
+    """Borrão de caixa (média de uma janela) nos dois eixos."""
+    for eixo in (0, 1):
+        pad = [(0, 0), (0, 0)]
+        pad[eixo] = (raio + 1, raio)
+        soma = np.cumsum(np.pad(a, pad), axis=eixo)
+        n = soma.shape[eixo]
+        a = (np.take(soma, np.arange(2 * raio + 1, n), axis=eixo)
+             - np.take(soma, np.arange(0, n - 2 * raio - 1), axis=eixo)) / (2 * raio + 1)
+    return a
+
+
+def com_sombra(img, dx=14, dy=10, raio=10, forca=0.35):
+    """Põe uma sombra leve atrás do desenho (o alfa borrado e deslocado)."""
+    frente = img[..., 3].astype(np.float32) / 255.0
+    borrado = _borrar(frente, raio)
+    sombra = np.zeros_like(frente)
+    h, w = frente.shape
+    sombra[dy:, dx:] = borrado[:h - dy, :w - dx] * forca
+    alfa = frente + sombra * (1 - frente)
+    cor = img[..., :3].astype(np.float32) * (frente / np.maximum(alfa, 1e-6))[..., None]
+    return np.concatenate([cor, alfa[..., None] * 255.0], axis=-1).clip(0, 255).astype(np.uint8)
+
+
+def sprites(personagem, fundo=True, lado=LADO):
     """{(boca, piscando): imagem} — os 6 desenhos de um personagem, feitos uma vez só."""
     if personagem not in PERSONAGENS:
         raise ValueError("personagem desconhecido")
-    desenhar = desenhar_brabo if personagem == "brabo" else desenhar_mestre
-    return {(b, p): desenhar(b, p, fundo=fundo) for b in (0, 1, 2) for p in (False, True)}
+    if personagem == "brabo":
+        return {(b, p): desenhar_brabo(b, p, fundo=fundo) for b in (0, 1, 2) for p in (False, True)}
+    return {(b, p): desenhar_mestre(b, p, fundo=fundo, lado=lado) for b in (0, 1, 2) for p in (False, True)}
 
 
 # ---------------------------- animação pela voz ----------------------------
