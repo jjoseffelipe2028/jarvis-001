@@ -301,4 +301,123 @@
   el("es-confirmar").addEventListener("click", (e) => confirmarEstudio(e.currentTarget));
   el("es-cancelar").addEventListener("click", () => { esCartao.hidden = true; });
   esTexto.addEventListener("input", () => { esCartao.hidden = true; }); // mudou o texto: revisar de novo
+
+  // ---------- Estúdio de cortes (Ticket 048): vídeo da lista ou link → cortes prontos ----------
+
+  const ctVideo = el("ct-video");
+  const ctCartao = el("ct-cartao");
+  const ctPassos = el("ct-passos");
+  const ctSaida = el("ct-saida");
+  const ctDupla = el("ct-dupla-texto");
+  const IDIOMA = { "": "sem legenda extra", en: "+ legenda em inglês", es: "+ legenda em espanhol" };
+  let ctPedido = null;
+  let ctEsperando = null;
+
+  async function carregarVideos() {
+    try {
+      const r = await pedir("/central/acoes/cortes/videos");
+      const videos = Array.isArray(r && r.videos) ? r.videos.slice(0, 30) : [];
+      const primeira = ctVideo.options[0];
+      ctVideo.replaceChildren(primeira);
+      for (const v of videos) {
+        const op = document.createElement("option");
+        op.value = String(v.nome);
+        op.textContent = `${String(v.nome).slice(0, 80)} (${Number.isInteger(v.megas) ? v.megas : "?"} MB)`;
+        ctVideo.appendChild(op);
+      }
+    } catch (e) {
+      escreverEm(ctPassos, erroDe(e).concat(["(confira JARVIS_CORTES_ENTRADA e JARVIS_CORTES_SAIDA no .env)"]), "erro");
+    }
+  }
+
+  function revisarCortes() {
+    const video = ctVideo.value;
+    const link = el("ct-link").value.trim();
+    const arroba = el("ct-arroba").value.trim();
+    const top = Number.parseInt(el("ct-top").value, 10);
+    const idioma = el("ct-idioma").value;
+    if (!video === !link) {
+      escreverEm(ctPassos, ["✍️ Escolha um vídeo da lista OU cole um link (só um dos dois)."], "nx");
+      return;
+    }
+    if (link && !el("ct-autorizado").checked) {
+      escreverEm(ctPassos, ["✋ Marque que tem autorização do dono do vídeo."], "nx");
+      return;
+    }
+    if (!/^@?[A-Za-z0-9_.]{1,30}$/.test(arroba)) {
+      escreverEm(ctPassos, ["✍️ Escreva o @ do dono do vídeo (vai como crédito em todo corte)."], "nx");
+      return;
+    }
+    if (!(top >= 1 && top <= 20)) {
+      escreverEm(ctPassos, ["✍️ Quantidade de cortes: de 1 a 20."], "nx");
+      return;
+    }
+    ctPedido = { arroba, top, idioma, dupla: el("ct-dupla").checked };
+    if (video) {
+      ctPedido.video = video;
+    } else {
+      ctPedido.link = link;
+      ctPedido.autorizado = true;
+    }
+    el("ct-cartao-texto").textContent = `${video ? "Vídeo: " + video : "Link: " + link} · crédito ${arroba} · ${top} cortes · `
+      + `${IDIOMA[idioma] || ""} · ${ctPedido.dupla ? "001 + 002 escolhem os melhores" : "sem revisão da dupla"}`;
+    ctCartao.hidden = false;
+  }
+
+  function mostrarCortes(r) {
+    const limpar = (lista, n) => (Array.isArray(lista) ? lista.slice(0, n).map((x) => String(x).slice(0, 220)) : []);
+    const passos = limpar(r && r.passos, 12);
+    escreverEm(ctPassos, passos.length ? passos : ["…"], r && r.terminou ? (r.ok ? "ok" : "erro") : "fu");
+    escreverEm(ctSaida, limpar(r && r.saida, 12), "fu");
+    const dupla = r && typeof r.dupla === "string" ? r.dupla.slice(0, 3000) : "";
+    ctDupla.textContent = dupla;
+    ctDupla.hidden = !dupla;
+  }
+
+  async function acompanharCortes() {
+    try {
+      const r = await pedir("/central/acoes/cortes");
+      mostrarCortes(r);
+      if (r && r.terminou) {
+        clearInterval(ctEsperando);
+        ctEsperando = null;
+        el("ct-revisar").disabled = false;
+      }
+    } catch (e) {
+      escreverEm(ctPassos, erroDe(e), "erro");
+    }
+  }
+
+  async function confirmarCortes(botao) {
+    if (!ctPedido) {
+      return;
+    }
+    botao.disabled = true;
+    try {
+      const r = await enviar("/central/acoes/cortes", ctPedido);
+      ctCartao.hidden = true;
+      el("ct-revisar").disabled = true;
+      mostrarCortes(r);
+      document.dispatchEvent(new Event("jarvis:acao"));
+      if (!ctEsperando) {
+        ctEsperando = setInterval(acompanharCortes, 5000);
+      }
+    } catch (e) {
+      const motivo = e instanceof Error && e.message.startsWith("Ação desligada")
+        ? "O Estúdio de cortes está ocupado (ou as pastas de cortes não estão no .env)."
+        : (e instanceof Error ? e.message : "falhou");
+      escreverEm(ctPassos, [`⚠️ ${motivo}`], "erro");
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  el("ct-atualizar").addEventListener("click", carregarVideos);
+  el("ct-revisar").addEventListener("click", revisarCortes);
+  el("ct-confirmar").addEventListener("click", (e) => confirmarCortes(e.currentTarget));
+  el("ct-cancelar").addEventListener("click", () => { ctCartao.hidden = true; });
+  for (const id of ["ct-video", "ct-link", "ct-arroba", "ct-top", "ct-idioma", "ct-dupla", "ct-autorizado"]) {
+    el(id).addEventListener("input", () => { ctCartao.hidden = true; });
+  }
+  ctVideo.addEventListener("focus", () => { if (ctVideo.options.length <= 1) carregarVideos(); });
 })();

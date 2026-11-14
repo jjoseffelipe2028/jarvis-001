@@ -38,7 +38,7 @@ public class WebConfig implements WebMvcConfigurer {
         quadroEventos.ifAvailable(q -> registry.addInterceptor(new EventosInterceptor(q))
                 .addPathPatterns("/acoes/**", "/central/acoes/daily", "/central/acoes/sentinela/golpe",
                         "/central/acoes/sentinela/proposta", "/central/acoes/sentinela/isca", "/central/acoes/chat",
-                        "/central/acoes/estudio"));
+                        "/central/acoes/estudio", "/central/acoes/cortes"));
         // Ordem importa: primeiro confere o Host (DNS rebinding), depois o token
         registry.addInterceptor(new HostInterceptor()).addPathPatterns("/acoes/**");
         // Ticket 034: o porteiro conhece a isca (se existir). Token-isca nunca abre a porta: só dispara o alarme.

@@ -46,7 +46,6 @@ public class EstudioService {
 
     private static final Logger log = LoggerFactory.getLogger(EstudioService.class);
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-    private static final Pattern SEGREDO = Pattern.compile("(?i)^(jarvis_.*|.*(token|secret|senha|password|passwd|key|credential).*)$");
     static final int LIMITE_SAIDA = 64 * 1024;
     static final int LIMITE_TELA = 3000;
 
@@ -75,7 +74,8 @@ public class EstudioService {
     public EstudioService(@Value("${jarvis.estudio.pasta:}") String raiz,
                           @Value("${jarvis.estudio.claude:claude}") String claude,
                           @Value("${jarvis.estudio.agy:agy}") String agy) {
-        this(raiz, claude, agy, EstudioService::rodarDeVerdade, Clock.systemDefaultZone());
+        this(raiz, claude, agy, (comando, pasta, limite) -> Processos.rodar(comando, pasta, limite, true, LIMITE_SAIDA, false),
+                Clock.systemDefaultZone());
     }
 
     EstudioService(String raiz, String claude, String agy, Executor executor, Clock relogio) {
@@ -175,30 +175,11 @@ public class EstudioService {
     // ---------- comandos FIXOS (o pedido do José nunca entra aqui: ele está no PEDIDO.md) ----------
 
     List<String> comandoClaude(String prompt, boolean escreve) throws IOException {
-        return List.of(claude, "-p", prompt,
-                "--allowedTools", escreve ? "Read,Write,Edit,Glob,Grep,Skill" : "Read,Glob,Grep,Skill",
-                "--disallowedTools", "Bash,PowerShell,WebFetch,WebSearch",
-                "--permission-mode", "dontAsk", "--strict-mcp-config", "--settings", arquivoDeRegras().toString());
-    }
-
-    private Path regras;
-
-    /**
-     * As regras de "deny" vão num arquivo FORA da pasta do estúdio (a 001 não consegue escrever lá),
-     * e não na linha de comando (no Windows, aspas dentro de argumento se perdem).
-     */
-    private synchronized Path arquivoDeRegras() throws IOException {
-        if (regras == null || !Files.isRegularFile(regras)) {
-            Path arquivo = Files.createTempFile("jarvis-estudio-", ".json");
-            Files.writeString(arquivo, DENY, StandardCharsets.UTF_8);
-            arquivo.toFile().deleteOnExit();
-            regras = arquivo;
-        }
-        return regras;
+        return EstudioComandos.claude(claude, prompt, escreve);
     }
 
     List<String> comandoAgy(String prompt) {
-        return List.of(agy, "--mode", "plan", "--print-timeout", "330s", "-p=" + prompt);
+        return EstudioComandos.agy(agy, prompt);
     }
 
     static String promptPlano(String rel) {
@@ -237,60 +218,5 @@ public class EstudioService {
     static String limparParaTela(String texto) {
         String limpo = texto == null ? "" : texto.replaceAll("[\\p{Cc}&&[^\\n\\t]]|[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069]", "");
         return limpo.length() > LIMITE_TELA ? limpo.substring(0, LIMITE_TELA) + "…" : limpo.strip();
-    }
-
-    /** Roda o comando sem shell, com ambiente sem segredos, tempo máximo e saída limitada. */
-    static String rodarDeVerdade(List<String> comando, Path pasta, Duration limite) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(comando).directory(pasta.toFile())
-                .redirectError(ProcessBuilder.Redirect.DISCARD)
-                .redirectInput(ProcessBuilder.Redirect.from(nulo()));
-        Map<String, String> ambiente = pb.environment();
-        ambiente.keySet().removeIf(nome -> SEGREDO.matcher(nome).matches());
-        Process processo = pb.start();
-        byte[] saida;
-        try (InputStream in = processo.getInputStream()) {
-            saida = lerAte(in, processo, limite);
-        }
-        if (!processo.waitFor(5, TimeUnit.SECONDS) || processo.exitValue() != 0) {
-            processo.destroyForcibly();
-            throw new IOException("agente terminou com erro");
-        }
-        return new String(saida, StandardCharsets.UTF_8).strip();
-    }
-
-    private static byte[] lerAte(InputStream in, Process processo, Duration limite) throws IOException, InterruptedException {
-        long fim = System.nanoTime() + limite.toNanos();
-        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
-        byte[] pedaco = new byte[8192];
-        while (true) {
-            if (System.nanoTime() > fim) {
-                processo.destroyForcibly();
-                throw new IOException("tempo esgotado");
-            }
-            if (in.available() > 0) {
-                int lidos = in.read(pedaco);
-                if (lidos < 0) {
-                    break;
-                }
-                if (buffer.size() + lidos > LIMITE_SAIDA) {
-                    processo.destroyForcibly();
-                    throw new IOException("saida grande demais");
-                }
-                buffer.write(pedaco, 0, lidos);
-            } else if (!processo.isAlive()) {
-                int lidos;
-                while ((lidos = in.read(pedaco)) > 0 && buffer.size() + lidos <= LIMITE_SAIDA) {
-                    buffer.write(pedaco, 0, lidos);
-                }
-                break;
-            } else {
-                Thread.sleep(200);
-            }
-        }
-        return buffer.toByteArray();
-    }
-
-    private static java.io.File nulo() {
-        return new java.io.File(System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win") ? "NUL" : "/dev/null");
     }
 }

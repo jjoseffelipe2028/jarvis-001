@@ -32,6 +32,7 @@ public class EventosInterceptor implements HandlerInterceptor {
             Map.entry("GET /central/acoes/sentinela/isca", "isca"), // Ticket 039
             Map.entry("POST /central/acoes/chat", "chat"), // Ticket 039: conversa com a IA local
             Map.entry("POST /central/acoes/estudio", "estudio"), // Ticket 047: pedido ao Estúdio 001
+            Map.entry("POST /central/acoes/cortes", "cortes"), // Ticket 048: cortes pela Central
             Map.entry("POST /central/acoes/sentinela/golpe", "golpe"));
 
     private final QuadroDeEventos quadro;

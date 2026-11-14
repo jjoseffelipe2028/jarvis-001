@@ -98,6 +98,29 @@
       <ul id="es-passos" class="saida" aria-live="polite"></ul>
       <div id="es-resumo" class="cartao-texto" hidden></div>
     </section>
+    <section class="comando estudio" aria-label="Estúdio de cortes">
+      <div class="comando-topo"><b>✂️ ESTÚDIO DE CORTES · VÍDEO OU LINK</b> <span class="ok">produtor → 001 escolhe → 002 revisa</span></div>
+      <div class="daily-linha"><select id="ct-video" aria-label="Vídeo da pasta de entrada"><option value="">— vídeo da pasta de entrada —</option></select>
+        <button id="ct-atualizar" type="button" title="Atualizar a lista">↻</button></div>
+      <input id="ct-link" type="url" maxlength="300" placeholder="…ou cole o link do YouTube (https://...)" autocomplete="off">
+      <label class="fu"><input id="ct-autorizado" type="checkbox"> Tenho autorização do dono do vídeo para cortar</label>
+      <div class="daily-linha"><input id="ct-arroba" type="text" maxlength="31" placeholder="@ do dono do vídeo" autocomplete="off">
+        <input id="ct-top" type="number" min="1" max="20" value="8" aria-label="Quantos cortes">
+        <select id="ct-idioma" aria-label="Legenda extra"><option value="">sem legenda extra</option><option value="en">+ legenda em inglês</option><option value="es">+ legenda em espanhol</option></select></div>
+      <div class="daily-linha"><label class="fu"><input id="ct-dupla" type="checkbox" checked> 001 + 002 escolhem os melhores</label>
+        <button id="ct-revisar" type="button">Revisar</button></div>
+      <div id="ct-cartao" class="cartao cartao-daily" hidden>
+        <div>✂️ <b>Vai fazer os cortes (nada é postado):</b></div>
+        <div id="ct-cartao-texto" class="cartao-texto"></div>
+        <div class="botoes">
+          <button id="ct-confirmar" type="button" class="aceitar">Confirmar</button>
+          <button id="ct-cancelar" type="button" class="recusar">Cancelar</button>
+        </div>
+      </div>
+      <ul id="ct-passos" class="saida" aria-live="polite"></ul>
+      <ul id="ct-saida" class="saida"></ul>
+      <div id="ct-dupla-texto" class="cartao-texto" hidden></div>
+    </section>
     <section class="comando" aria-label="Comandos">
       <div class="comando-topo"><b>⚡ COMANDOS</b> <span id="conexao" class="esperando">🔑 conectando…</span></div>
       <div class="botoes">
@@ -231,7 +254,7 @@
 
 <section id="pg-videos" class="pagina" hidden aria-label="Vídeos">
   <h2>🎬 VÍDEOS · Produção</h2>
-  <p class="fu">Os robôs de vídeo rodam pelo terminal (pasta python). Nada é postado sozinho: você aprova.</p>
+  <p class="fu">Para cortar uma live, use o ✂️ Estúdio de cortes na página Início. Nada é postado sozinho: você aprova.</p>
   <div class="pagina-grade">
     <article class="mod" data-cor="rosa">
       <h3>✂️ CORTES DE LIVE <em>PRONTO</em></h3>
@@ -289,7 +312,7 @@
 
 <footer class="rodape">
   <span class="ok">✅ pronto</span> <span class="nx">▸ próximo</span> <span class="fu">○ depois</span>
-  <span class="sep">·</span> Central v4 (Tickets 016 a 047) · José Felipe
+  <span class="sep">·</span> Central v4 (Tickets 016 a 048) · José Felipe
 </footer>
 
 <script src="central.js"></script>
