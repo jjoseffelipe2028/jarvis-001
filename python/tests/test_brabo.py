@@ -1,6 +1,7 @@
 """Testes do Estúdio do Brabo (Ticket 050): sem FFmpeg, sem voz e sem Gemma de verdade."""
 
 import json
+import re
 import unittest
 
 import numpy as np
@@ -68,6 +69,18 @@ class TestTempo(unittest.TestCase):
         self.assertAlmostEqual(blocos[0][0], 1.0)
         self.assertAlmostEqual(blocos[-1][1], 4.0)
 
+    def test_voz_kokoro_usa_alex_e_fala_mais_rapido(self):
+        pedidos = []
+
+        class ModeloFalso:
+            def create(self, texto, voice, speed, lang):
+                pedidos.append((texto, voice, speed, lang))
+                return np.ones(240, np.float32), 24000
+
+        som, taxa = brabo.sintetizar(brabo.VozKokoro(ModeloFalso()), "Chegou o Brabo!", 0.92)
+        self.assertEqual((len(som), taxa), (240, 24000))
+        self.assertEqual(pedidos, [("Chegou o Brabo!", "pm_alex", 1.09, "pt-br")])
+
     def test_trilha_nao_passa_do_tamanho(self):
         trilha = montar_trilha([np.ones(100, np.float32) * 2], [(0.99, 1.1)], 100, 1.0)
         self.assertEqual(len(trilha), 101)
@@ -78,9 +91,25 @@ class TestSaida(unittest.TestCase):
     def test_ass_tem_fala_tela_e_nota(self):
         r = validar_roteiro(roteiro(nota=3))
         ass = gerar_ass(r, [(0, 2.5), (3, 5)], 10)
-        self.assertIn("CHEGOU O BRABO,", ass)
+        self.assertIn("CHEGOU O BRABO,", re.sub(r"\{[^}]*\}", "", ass))  # sem as marcas do karaoke
+        self.assertIn(r"{\k", ass)
         self.assertIn("O BRABO AVALIA", ass)
         self.assertIn("NOTA 3/10", ass)
+
+    def test_efeito_vira_pop_up_e_lista_e_fechada(self):
+        base = roteiro()
+        base["falas"][0]["efeito"] = "vacilo"
+        ass = gerar_ass(validar_roteiro(base), [(0, 2.5), (3, 5)], 10)
+        self.assertIn(",Efeito,,", ass)
+        self.assertIn("VACILO!", ass)
+        for ruim in (r"{\pos(0,0)}hack", "nota11", 3):
+            base["falas"][0]["efeito"] = ruim
+            with self.assertRaises(ErroBrabo):
+                validar_roteiro(base)
+        muitos = roteiro()
+        muitos["falas"] = [{"em": i, "texto": "oi", "efeito": "kkk"} for i in range(5)]
+        with self.assertRaises(ErroBrabo):
+            validar_roteiro(muitos)
 
     def test_comando_ffmpeg_e_lista_sem_sobrescrever(self):
         r = validar_roteiro(roteiro())

@@ -24,3 +24,23 @@ O primeiro link real (Fortnite do amigo, com autorização) veio **sem fala**: a
   e o outro sai; lote repetido/fora da lista/vazio recusado. `CentralBraboControllerTest`: 9 cortes → 400.
 - ffmpeg real num corte do Fortnite: 13 fotos em 1,7 s.
 - **Java: 447 testes, 0 falhas.**
+
+## Estilo (15/11) — legenda karaokê + pop-ups
+- **Legenda karaokê** (só no Brabo): letra Impact, a palavra falada acende em amarelo (`\k` do .ass), bloco entra com "pop".
+- **Pop-ups** de lista FECHADA (`brabo.EFEITOS`): nota10, brabo, clutch, eliminou, vacilo, fail, quase, kkk — no máximo 4
+  por vídeo; a 001 escolhe a chave (o texto e a cor são nossos). A NOTA final também entra com pop.
+- **Roteiro recusado no 1º teste real** (3 de 3): as falas passavam do tempo do corte. O prompt agora dá a conta
+  (~2 palavras/s, terminar 1,5 s antes do fim).
+- Evidências: `test_brabo` 30 OK (+1: efeito vira pop-up, lista fechada, máximo 4); `BraboServiceTest` OK.
+  Amostra: `Videos/cortes/amostra-estilo-brabo.mp4`.
+
+## Voz nova do Brabo (15/11)
+- `kokoro-onnx 0.6.1` (PyPI) + modelo `kokoro-v1.0.onnx`/`voices-v1.0.bin` do release oficial do GitHub
+  (thewh1teagle/kokoro-onnx), em `python/vozes/` (fora do git), instalados com o OK do José.
+- José ouviu 4 amostras e escolheu **pm_alex**. Brabo (gta) → Kokoro; Mestre (ensino) continua no Piper.
+  Sem o modelo na pasta, volta para o Piper sozinho. `test_brabo` 31 OK (+1: voz Kokoro com modelo falso).
+
+## Layout pelas zonas seguras (15/11)
+- José: "tá muito no meio". Pesquisa (guias de Shorts): meio livre para a ação, nada nos 20% de baixo nem na beirada direita.
+- Brabo: faixa (`tela`) no topo, pop-up menor (120) e mais alto (y 720), legenda no terço de baixo (margem 450).
+  Notas em `knowledge/edicao-7-tecnicas.md` do cofre.

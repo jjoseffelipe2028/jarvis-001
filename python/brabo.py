@@ -46,6 +46,15 @@ MODOS = {
                "cor_tela": "&H00D16F1F", "cor_legenda": "&H00FFFFFF", "tom": 0.86, "fala": 1.0},
 }
 MAX_FALAS = 14
+# Ticket 053: pop-ups do Brabo (lista FECHADA: a 001 só escolhe a chave). Cor no .ass = &HAABBGGRR.
+EFEITOS = {
+    "nota10": ("NOTA 10!", "&H0000D7FF"), "brabo": ("BRABO DEMAIS!", "&H0000D7FF"),
+    "clutch": ("CLUTCH!", "&H0000FF7F"), "eliminou": ("ELIMINOU!", "&H0000FF7F"),
+    "vacilo": ("VACILO!", "&H003030FF"), "fail": ("FAIL!", "&H003030FF"),
+    "quase": ("QUASE!", "&H0000A5FF"), "kkk": ("KKKKKK", "&H00FFFFFF"),
+}
+MAX_EFEITOS = 4
+DURA_EFEITO = 1.4
 MAX_LETRAS = 160
 MAX_TELA = 40
 MAX_DURACAO = 60.0
@@ -122,7 +131,14 @@ def validar_roteiro(dado):
             if isinstance(passo, bool) or not isinstance(passo, int) or not 1 <= passo <= 9:
                 raise ErroBrabo(f"fala {n}: 'passo' precisa ser um número inteiro de 1 a 9")
             item["passo"] = passo
+        efeito = f.get("efeito")
+        if efeito is not None:
+            if not isinstance(efeito, str) or efeito not in EFEITOS:
+                raise ErroBrabo(f"fala {n}: efeito desconhecido (use: {', '.join(EFEITOS)})")
+            item["efeito"] = efeito
         limpas.append(item)
+    if sum(1 for f in limpas if "efeito" in f) > MAX_EFEITOS:
+        raise ErroBrabo(f"no máximo {MAX_EFEITOS} efeitos por vídeo")
     nota = dado.get("nota")
     if nota is not None and (isinstance(nota, bool) or not isinstance(nota, int) or not 0 <= nota <= 10):
         raise ErroBrabo("nota precisa ser um número inteiro de 0 a 10")
@@ -166,24 +182,51 @@ def pedacos(texto, ini, fim, palavras=3):
 
 # ---------------------------- legenda (.ass) ----------------------------
 
+POP = "{\\fscx85\\fscy85\\t(0,120,\\fscx100\\fscy100)}"
+
+
+def karaoke(texto, ini, fim):
+    """Bloco de palavras com \\k: cada palavra acende (cor primária) na hora em que é falada."""
+    palavras = texto.split()
+    total = sum(len(p) for p in palavras) or 1
+    cs_total = max(1, round((fim - ini) * 100))
+    partes, usado = [], 0
+    for i, p in enumerate(palavras):
+        cs = cs_total - usado if i == len(palavras) - 1 else round(cs_total * len(p) / total)
+        usado += cs
+        partes.append(f"{{\\k{max(0, cs)}}}{desarmar_ass(p)}")
+    return " ".join(partes)
+
+
+def linha_efeito(tf, chave, ini, duracao):
+    """Pop-up (NOTA 10!, VACILO!…) no meio da tela: cresce, passa do ponto, volta e some."""
+    texto, cor = EFEITOS[chave]
+    fim = min(duracao, ini + DURA_EFEITO)
+    return (f"Dialogue: 4,{tf(ini)},{tf(fim)},Efeito,,0,0,0,,{{\\pos(540,720)\\frz-6\\c{cor}&"
+            f"\\fscx30\\fscy30\\t(0,160,\\fscx120\\fscy120)\\t(160,280,\\fscx100\\fscy100)\\fad(0,200)}}{texto}")
+
 def gerar_ass(roteiro, tempos, duracao):
     m = MODOS[roteiro["modo"]]
     ensino = roteiro["modo"] == "ensino"
     cena = roteiro["fundo"] == "cartoes"
-    margem_fala = 690 if cena else 700 if ensino else 640
-    margem_tela = 100 if cena else 200 if ensino else 660
+    margem_fala = 690 if cena else 700 if ensino else 450
+    margem_tela = 100 if cena else 200 if ensino else 130
     # cores do .ass são &HAABBGGRR. No cenário azul: faixa amarela (#f2c200) com letra azul-escura (#0b2d5c)
     cor_tela = "&H0000C2F2" if cena else m["cor_tela"]
     letra_tela = "&H005C2D0B" if cena else "&H00FFFFFF"
+    # GTA: letra Impact (já vem no Windows), palavra falada acende em amarelo (karaokê); o resto fica branco
+    fonte_fala, secundaria = ("Arial", "&H000000FF") if ensino else ("Impact", "&H00FFFFFF")
     estilos = (
-        f"Style: Fala,Arial,{84 if ensino else 92},{m['cor_legenda']},&H000000FF,&H00000000,&H96000000,"
+        f"Style: Fala,{fonte_fala},{84 if ensino else 100},{m['cor_legenda']},{secundaria},&H00000000,&H96000000,"
         f"-1,0,0,0,100,100,0,0,1,9,3,2,70,70,{margem_fala},1\n"
         f"Style: Tela,Arial,{70 if ensino else 64},{letra_tela},&H000000FF,{cor_tela},{cor_tela},"
         f"-1,0,0,0,100,100,0,0,3,18,0,8,80,80,{margem_tela},1\n"
         "Style: Passo,Arial,130,&H005C2D0B,&H000000FF,&H005C2D0B,&H00000000,"
         "-1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1\n"
-        "Style: Nota,Arial,190,&H0000FFFF,&H000000FF,&H00000000,&H96000000,"
-        "-1,0,0,0,100,100,0,0,1,12,4,5,60,60,0,1"
+        "Style: Nota,Impact,190,&H0000FFFF,&H000000FF,&H00000000,&H96000000,"
+        "-1,0,0,0,100,100,0,0,1,12,4,5,60,60,0,1\n"
+        "Style: Efeito,Impact,120,&H00FFFFFF,&H000000FF,&H00000000,&H96000000,"
+        "-1,0,0,0,100,100,0,0,1,10,4,5,60,60,0,1"
     )
     cab = cortador._CABECALHO_ASS.replace("\n\n[Events]", f"\n{estilos}\n\n[Events]")
     linhas = [cab.rstrip("\n")]
@@ -191,7 +234,10 @@ def gerar_ass(roteiro, tempos, duracao):
     for i, (fala, (ini, fim)) in enumerate(zip(roteiro["falas"], tempos)):
         for a, b, txt in pedacos(fala["texto"].upper(), ini, min(fim, duracao)):
             if b > a:
-                linhas.append(f"Dialogue: 1,{tf(a)},{tf(b)},Fala,,0,0,0,,{desarmar_ass(txt)}")
+                corpo = desarmar_ass(txt) if ensino else POP + karaoke(txt, a, b)
+                linhas.append(f"Dialogue: 1,{tf(a)},{tf(b)},Fala,,0,0,0,,{corpo}")
+        if "efeito" in fala and ini < duracao:
+            linhas.append(linha_efeito(tf, fala["efeito"], ini, duracao))
         ate = min(tempos[i + 1][0] if i + 1 < len(tempos) else duracao, duracao)
         if "tela" in fala:
             fade = "{\\fad(250,0)}" if cena else ""
@@ -204,13 +250,36 @@ def gerar_ass(roteiro, tempos, duracao):
                           f"{{\\pos({PASSO_X},{PASSO_Y}){fade}}}{int(fala['passo'])}")
     if roteiro["nota"] is not None:
         linhas.append(f"Dialogue: 2,{tf(max(0.0, duracao - 3))},{tf(duracao)},Nota,,0,0,0,,"
+                      f"{{\\fscx30\\fscy30\\t(0,200,\\fscx110\\fscy110)\\t(200,320,\\fscx100\\fscy100)}}"
                       f"NOTA {roteiro['nota']}/10")
     return "\n".join(linhas) + "\n"
 
 
-# ---------------------------- voz (Piper, local) ----------------------------
+# ---------------------------- voz (local: Kokoro no Brabo, Piper no Mestre) ----------------------------
 
-def carregar_voz():
+# Ticket 053: o José escolheu de ouvido a voz "pm_alex" do Kokoro para o Brabo (15/11). Modelo fora do git.
+KOKORO = Path(__file__).parent / "vozes" / "kokoro-v1.0.onnx"
+KOKORO_VOZES = Path(__file__).parent / "vozes" / "voices-v1.0.bin"
+VOZ_BRABO = "pm_alex"
+
+
+class VozKokoro:
+    """Voz mais natural (Kokoro, roda no PC). Fala mais rápido quando `fala` (length_scale do Piper) é menor que 1."""
+
+    def __init__(self, modelo, nome=VOZ_BRABO):
+        self._modelo = modelo
+        self.nome = nome
+
+    def falar(self, texto, fala=1.0):
+        amostras, taxa = self._modelo.create(texto, voice=self.nome, speed=round(1.0 / fala, 2), lang="pt-br")
+        return np.asarray(amostras, dtype=np.float32).reshape(-1), int(taxa)
+
+
+def carregar_voz(modo="ensino"):
+    """Brabo (gta) → Kokoro, se o modelo estiver em python/vozes/; senão (ou Mestre) → Piper."""
+    if modo == "gta" and KOKORO.is_file() and KOKORO_VOZES.is_file():
+        from kokoro_onnx import Kokoro
+        return VozKokoro(Kokoro(str(KOKORO), str(KOKORO_VOZES)))
     from piper import PiperVoice
     if not VOZ.is_file():
         raise ErroBrabo("Voz do Piper não encontrada em python/vozes/.")
@@ -219,6 +288,11 @@ def carregar_voz():
 
 def sintetizar(voz, texto, fala=1.0):
     """Texto → (áudio float32 mono, taxa)."""
+    if isinstance(voz, VozKokoro):
+        som, taxa = voz.falar(texto, fala)
+        if som.size == 0:
+            raise ErroBrabo("A voz não gerou som para uma fala.")
+        return som, taxa
     from piper import SynthesisConfig
     partes, taxa = [], 22050
     for chunk in voz.synthesize(texto, syn_config=SynthesisConfig(length_scale=fala)):
@@ -462,7 +536,7 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
         import av
         with av.open(str(corte)) as c:
             tem_audio = any(s.type == "audio" for s in c.streams)
-    voz = voz or carregar_voz()
+    voz = voz or carregar_voz(roteiro["modo"])
     audios, taxa = [], 22050
     for f in roteiro["falas"]:
         som, taxa = sintetizar(voz, f["texto"], m["fala"])
