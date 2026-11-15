@@ -33,8 +33,11 @@ public class CentralPedidoController {
     @PostMapping("/pedido-001")
     public Map<String, String> anotar(@Valid @RequestBody PedidoRequest pedido) {
         try {
-            String arquivo = pedidos.anotar(pedido.texto());
-            log.info("cliente=central acao=pedido001 resultado=ok");
+            boolean dupla = "dupla".equals(pedido.para()); // Ticket 072: lista fechada (@Pattern)
+            String arquivo = dupla
+                    ? pedidos.anotar(pedido.texto(), PedidoService.Destino.DUPLA)
+                    : pedidos.anotar(pedido.texto());
+            log.info("cliente=central acao=pedido001 para={} resultado=ok", dupla ? "dupla" : "001");
             return Map.of("arquivo", arquivo, "resultado", "ok");
         } catch (RuntimeException e) {
             log.warn("cliente=central acao=pedido001 resultado=erro motivo={}", e.getClass().getSimpleName());

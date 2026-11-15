@@ -107,7 +107,7 @@ class CentralPedidoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultado").value("ok"))
                 .andExpect(jsonPath("$.arquivo").value("2026-11-15-143205.md"));
-        assertTrue(saida.getOut().contains("cliente=central acao=pedido001 resultado=ok"));
+        assertTrue(saida.getOut().contains("cliente=central acao=pedido001 para=001 resultado=ok"));
         assertFalse(saida.getOut().contains("jogo de nave"), "o pedido não vai para o log");
         assertEquals("ok", ultimoResultado());
     }
@@ -153,5 +153,18 @@ class CentralPedidoControllerTest {
         mockMvc.perform(anotar(cracha, "{\"texto\":\"de novo\"}"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.erro").value("limite de pedidos do dia"));
+    }
+
+    // ---------- Ticket 072 ----------
+
+    @Test
+    void paraDupla_vaiComODestinoCerto_eDestinoForaDaLista400() throws Exception {
+        Cookie cracha = entrar();
+        when(pedidos.anotar("vale usar records?", PedidoService.Destino.DUPLA)).thenReturn("2026-11-15-143205.md");
+        mockMvc.perform(anotar(cracha, "{\"texto\":\"vale usar records?\",\"para\":\"dupla\"}"))
+                .andExpect(status().isOk());
+        verify(pedidos).anotar("vale usar records?", PedidoService.Destino.DUPLA);
+        mockMvc.perform(anotar(cracha, "{\"texto\":\"oi\",\"para\":\"002\"}")).andExpect(status().isBadRequest());
+        mockMvc.perform(anotar(cracha, "{\"texto\":\"oi\",\"para\":\"../x\"}")).andExpect(status().isBadRequest());
     }
 }

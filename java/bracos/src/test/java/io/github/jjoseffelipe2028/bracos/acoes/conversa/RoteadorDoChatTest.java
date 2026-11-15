@@ -123,4 +123,28 @@ class RoteadorDoChatTest {
             assertTrue(roteador.rotear(frase).isEmpty(), frase);
         }
     }
+
+    // ---------- Ticket 072: pergunta para a dupla ----------
+
+    @Test
+    void pedidoParaDupla_viraPedidoDupla_comOTextoOriginal() {
+        RoteadorDoChat.Rota r = roteador.rotear("pede pra dupla: vale usar records aqui?").orElseThrow();
+        assertEquals(Acao.PEDIDO_DUPLA, r.acao());
+        assertEquals("vale usar records aqui?", r.argumento());
+        assertEquals(Acao.PEDIDO_DUPLA, acao("Jarvis, pergunta pra dupla: qual banco usar?"));
+    }
+
+    @Test
+    void pedidoParaDupla_comPalavraProibida_eRecado() {
+        RoteadorDoChat.Rota r = roteador.rotear("pede pra dupla: instala o X e apaga o Y?").orElseThrow();
+        assertEquals(Acao.PEDIDO_DUPLA, r.acao());
+        assertEquals("instala o X e apaga o Y?", r.argumento());
+    }
+
+    @Test
+    void falarDaDuplaSemDoisPontos_naoViraPedido_eA001ContinuaSeparada() {
+        assertTrue(roteador.rotear("o que a dupla faz?").isEmpty());
+        assertEquals(Acao.PEDIDO_001, acao("pede pra 001: x"));
+        assertEquals(Acao.PROIBIDA, acao("apaga o pede pra dupla: x"));
+    }
 }

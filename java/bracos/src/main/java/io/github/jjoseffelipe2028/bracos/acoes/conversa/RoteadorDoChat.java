@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class RoteadorDoChat {
 
     /** A lista fechada. Uma frase vira no máximo UMA destas. */
-    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PEDIDO_001, JORNAL, PROIBIDA }
+    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PEDIDO_001, PEDIDO_DUPLA, JORNAL, PROIBIDA }
 
     /** O resultado: a ação e, só para GOLPE (a mensagem colada), PEDIDO_001 (o pedido) e PAGINA (o nome da página), um argumento. */
     public record Rota(Acao acao, String argumento) {
@@ -42,6 +42,10 @@ public class RoteadorDoChat {
     private static final Pattern PEDIDO_001 = Pattern.compile(JARVIS
             + "(?:pede|peca|pedir|pedido|anota|anote|manda\\s+(?:um\\s+)?pedido)\\s+(?:para|pra|pro|a|ao)\\s+(?:a\\s+|o\\s+)?"
             + "(?:001|zero\\s+zero\\s+um)\\s*[:,\\-]\\s*");
+
+    // Ticket 072: "pede pra dupla: ..." (irmã da PEDIDO_001): a pergunta vai para a caixa com "para: dupla".
+    private static final Pattern PEDIDO_DUPLA = Pattern.compile(JARVIS
+            + "(?:pede|peca|pedir|pedido|pergunta|pergunte|anota|anote)\\s+(?:para|pra|pro|a|ao)\\s+(?:a\\s+)?dupla\\s*[:,\\-]\\s*");
 
     // Ticket 062: "bom dia", "bom dia, jarvis", "boa tarde", "jornal"... só a frase INTEIRA (senão é conversa).
     private static final Pattern JORNAL = Pattern.compile(JARVIS
@@ -104,6 +108,11 @@ public class RoteadorDoChat {
             // Também antes da lista proibida: "pede pra 001: instala o X" é recado para a 001, não ordem ao Jarvis.
             // Nada é gravado aqui: a tela mostra Revisar → Confirmar.
             return Optional.of(new Rota(Acao.PEDIDO_001, frase.substring(pedido.end()).strip()));
+        }
+        Matcher dupla = PEDIDO_DUPLA.matcher(normal);
+        if (dupla.lookingAt()) {
+            // Ticket 072: também antes da lista proibida ("pede pra dupla: instala X" é recado, não ordem)
+            return Optional.of(new Rota(Acao.PEDIDO_DUPLA, frase.substring(dupla.end()).strip()));
         }
         Matcher pagina = PAGINA.matcher(normal);
         if (pagina.lookingAt()) {

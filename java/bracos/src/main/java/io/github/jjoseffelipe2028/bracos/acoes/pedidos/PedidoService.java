@@ -68,13 +68,31 @@ public class PedidoService {
      * @return só o NOME do arquivo (ex.: 2026-11-15-143200.md), nunca o caminho completo.
      */
     public String anotar(String texto) {
+        return anotar(texto, Destino.A_001);
+    }
+
+    /** Ticket 072: para quem vai o pedido (lista fechada). Vai no cabeçalho da nota. */
+    public enum Destino {
+        A_001("001", "a 001"), DUPLA("dupla", "a dupla");
+
+        final String cabecalho;
+        final String titulo;
+
+        Destino(String cabecalho, String titulo) {
+            this.cabecalho = cabecalho;
+            this.titulo = titulo;
+        }
+    }
+
+    public String anotar(String texto, Destino destino) {
         String limpo = TextoSeguro.desarmar(texto);
         if (limpo.isEmpty()) {
             throw new EntradaInvalidaException("texto vazio");
         }
         LocalDateTime agora = LocalDateTime.now(relogio);
-        String conteudo = "---\nstatus: aberto\norigem: central\ncriado: " + agora.format(CRIADO) + "\n---\n"
-                + "# Pedido para a 001\n" + limpo + "\n";
+        String conteudo = "---\nstatus: aberto\norigem: central\npara: " + destino.cabecalho
+                + "\ncriado: " + agora.format(CRIADO) + "\n---\n"
+                + "# Pedido para " + destino.titulo + "\n" + limpo + "\n";
         Path base = PastaSegura.base(pastaConfigurada);
 
         trava.lock();

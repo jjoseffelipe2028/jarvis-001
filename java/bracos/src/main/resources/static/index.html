@@ -82,6 +82,8 @@
         <button id="bt-cortes" type="button">🎬 Produzir cortes</button>
         <button id="bt-jornal" type="button">📰 Bom dia</button>
       </div>
+      <div class="comando-topo espaco"><b>🤝 ÚLTIMA PALAVRA DA DUPLA</b> <button id="bt-dupla" type="button">↻ Ler</button></div>
+      <ul id="dupla-registros" class="saida" aria-live="polite"></ul>
       <div id="jornal" class="jornal" hidden>
         <div id="jornal-titulo" class="jornal-titulo"></div>
         <dl id="jornal-manchetes"></dl>
@@ -92,7 +94,7 @@
     <section class="comando chat" aria-label="Conversa com a IA local">
       <div class="comando-topo"><b>💬 FALAR COM O JARVIS</b> <span class="ok">IA local · nada sai do PC</span></div>
       <ul id="chat-falas" class="chat-falas" aria-live="polite"></ul>
-      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ..., bom dia, faz a ronda, pede pra 001: ... Enter envia."></textarea>
+      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ..., bom dia, faz a ronda, pede pra 001: ..., pede pra dupla: ... Enter envia."></textarea>
       <div class="daily-linha"><span class="fu">Conversa e pede ações da lista. Para criar um jogo, use o Estúdio abaixo.</span>
         <span><select id="chat-modelo" aria-label="Tamanho da IA"><option value="pequeno">🧠 Gemma pequeno</option><option value="maior" disabled>🧠 Gemma maior (desligado)</option></select>
         <button id="bt-chat-limpar" type="button">Limpar</button> <button id="bt-chat" type="button" class="aceitar">Enviar</button></span></div>

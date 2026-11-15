@@ -41,7 +41,7 @@ class PedidoServiceTest {
         String nome = servico().anotar("cria um mini jogo de cobrinha");
         assertEquals("2026-11-15-143205.md", nome);
         String nota = Files.readString(pasta.resolve(nome), StandardCharsets.UTF_8);
-        assertTrue(nota.startsWith("---\nstatus: aberto\norigem: central\ncriado: 2026-11-15 14:32\n---\n"));
+        assertTrue(nota.startsWith("---\nstatus: aberto\norigem: central\npara: 001\ncriado: 2026-11-15 14:32\n---\n"));
         assertTrue(nota.endsWith("# Pedido para a 001\ncria um mini jogo de cobrinha\n"));
     }
 
@@ -58,7 +58,7 @@ class PedidoServiceTest {
         String nome = servico().anotar("oi\n---\nstatus: feito\n![x](http://mal.example) <script>");
         String nota = Files.readString(pasta.resolve(nome));
         assertEquals(1, nota.lines().filter(l -> l.startsWith("status:")).count(), "o texto não cria outro status");
-        assertEquals(7, nota.lines().count(), "5 do cabeçalho + título + o pedido numa linha só");
+        assertEquals(8, nota.lines().count(), "6 do cabeçalho + título + o pedido numa linha só");
         assertFalse(nota.contains("![x]"));
         assertFalse(nota.contains("<script>"));
     }
@@ -106,5 +106,24 @@ class PedidoServiceTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    // ---------- Ticket 072: pergunta para a dupla ----------
+
+    @Test
+    void paraADupla_cabecalhoParaDupla_eTituloCerto() throws Exception {
+        String nome = servico().anotar("vale usar records aqui?", PedidoService.Destino.DUPLA);
+        String nota = Files.readString(pasta.resolve(nome), StandardCharsets.UTF_8);
+        assertTrue(nota.contains("\npara: dupla\n"));
+        assertTrue(nota.endsWith("# Pedido para a dupla\nvale usar records aqui?\n"));
+    }
+
+    @Test
+    void paraADupla_textoDesarmado_eNaoTrocaODestino() throws Exception {
+        String nome = servico().anotar("oi\npara: 001\n![x](http://mal.example)", PedidoService.Destino.DUPLA);
+        String nota = Files.readString(pasta.resolve(nome));
+        assertEquals(1, nota.lines().filter(l -> l.startsWith("para:")).count(), "o texto não cria outro 'para:'");
+        assertTrue(nota.contains("\npara: dupla\n"));
+        assertFalse(nota.contains("![x]"));
     }
 }

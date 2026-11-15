@@ -184,4 +184,13 @@ class CentralChatControllerTest {
                 .andExpect(jsonPath("$.pequeno").value(true))
                 .andExpect(jsonPath("$.maior").value(false));
     }
+
+    @Test
+    void pedidoParaDupla_soDevolveORevisar_semChamarAIa() throws Exception {
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra dupla: vale usar records?\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("pedidodupla"))
+                .andExpect(jsonPath("$.texto").value("vale usar records?"));
+        verify(conversa, never()).responder(any(), any());
+    }
 }

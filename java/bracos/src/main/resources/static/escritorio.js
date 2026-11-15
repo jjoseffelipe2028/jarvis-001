@@ -391,8 +391,9 @@
       { ic: "🎓", nome: "Mentor Java + Cyber", st: "term", rodar: async () => prepararNuvem(A1, "001, qual a minha próxima micro-etapa de estudo (Java ou Cyber)?") },
     ] },
     { id: "002", papel: "Revisor e pesquisador · contesta tudo", onde: "🌐 nuvem · só com Aceitar", lista: [
-      { ic: "🥊", nome: "Contestar plano", st: "breve", rodar: async () => emBreve(A2, "O 002 contestando direto pela Central (Fase 7)") },
-      { ic: "🔍", nome: "Revisar código", st: "breve", rodar: async () => emBreve(A2, "O 002 revisando direto pela Central (Fase 7)") },
+      // Ticket 072: a 002 já funciona pelo /dupla no terminal. A Central só PREPARA o texto; quem aciona é o José.
+      { ic: "🥊", nome: "Contestar plano", st: "term", rodar: async () => prepararNuvem(A2, "/dupla plano") },
+      { ic: "🔍", nome: "Revisar código", st: "term", rodar: async () => prepararNuvem(A2, "/dupla codigo") },
       { ic: "📚", nome: "Pesquisar fontes", st: "breve", rodar: async () => emBreve(A2, "O 002 pesquisando direto pela Central (Fase 7)") },
     ] },
   ];

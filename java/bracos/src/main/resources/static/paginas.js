@@ -164,9 +164,12 @@
 
   // Ticket 060: caixa de pedidos para a 001. O chat só MOSTRA o pedido (Revisar);
   // a nota só nasce no clique em Confirmar. Texto em textContent (nunca HTML).
-  function revisarPedido001(texto) {
+  // Ticket 072: o mesmo cartão serve para "pede pra dupla:" (para = "dupla", lista fechada).
+  function revisarPedido001(texto, para = "001") {
+    const destino = para === "dupla" ? "dupla" : "001";
     const pedido = String(texto || "").slice(0, 2000);
-    const li = mostrarFala("Jarvis:", "📬 Revise o pedido para a caixa da 001:", "chat-ia");
+    const li = mostrarFala("Jarvis:", destino === "dupla"
+      ? "🤝 Revise a pergunta para a dupla (001 responde, 002 contesta):" : "📬 Revise o pedido para a caixa da 001:", "chat-ia");
     const cartao = document.createElement("div");
     cartao.className = "cartao-texto";
     cartao.textContent = pedido;
@@ -191,10 +194,11 @@
       confirmar.disabled = true;
       cancelar.disabled = true;
       try {
-        const r = await enviar("/central/acoes/pedido-001", { texto: pedido }); // exatamente o que você revisou
+        const r = await enviar("/central/acoes/pedido-001", { texto: pedido, para: destino }); // exatamente o que você revisou
         botoes.remove();
-        mostrarFala("Jarvis:", `✅ Anotado na caixa da 001 (${String(r.arquivo || "").slice(0, 40)}). `
-          + "Quando abrir o Claude Code, ela lê e te mostra o plano antes de fazer.", "chat-ia");
+        mostrarFala("Jarvis:", `✅ Anotado na caixa ${destino === "dupla" ? "para a dupla" : "da 001"} (${String(r.arquivo || "").slice(0, 40)}). `
+          + (destino === "dupla" ? "No Claude Code, rode /dupla: a resposta aparece em 🤝 Última palavra da dupla."
+            : "Quando abrir o Claude Code, ela lê e te mostra o plano antes de fazer."), "chat-ia");
         document.dispatchEvent(new Event("jarvis:acao"));
       } catch (e) {
         confirmar.disabled = false;
@@ -203,6 +207,36 @@
       }
     });
   }
+
+  // ---------- Ticket 072: painel "Última palavra da dupla" ----------
+  // Só data, título curto e veredito (enum). O texto da nota nunca chega aqui. Tudo em textContent.
+  const VEREDITO = { APROVO: "✅ aprovo", AJUSTES: "🔧 ajustes", NAO_APROVO: "❌ não aprovo", RESPONDIDO: "💬 respondido", EM_ANALISE: "⏳ em análise" };
+
+  async function lerDupla() {
+    const lista = el("dupla-registros");
+    lista.replaceChildren();
+    const linha = (texto, classe) => {
+      const li = document.createElement("li");
+      li.className = classe;
+      li.textContent = texto;
+      lista.appendChild(li);
+    };
+    try {
+      const r = await pedir("/central/acoes/dupla");
+      const registros = Array.isArray(r && r.registros) ? r.registros.slice(0, 5) : [];
+      if (!registros.length) {
+        linha("Nenhum registro da dupla ainda. Rode /dupla no Claude Code.", "fu");
+      }
+      for (const g of registros) {
+        const v = g && Object.hasOwn(VEREDITO, g.veredito) ? VEREDITO[g.veredito] : VEREDITO.EM_ANALISE;
+        const data = /^\d{4}-\d{2}-\d{2}$/.test(String(g && g.data)) ? g.data.split("-").reverse().slice(0, 2).join("/") : "--/--";
+        linha(`${data} · ${v} · ${String(g && g.titulo).slice(0, 80)}`, g && g.veredito === "NAO_APROVO" ? "erro" : "ok");
+      }
+    } catch (e) {
+      linha(`⚠️ ${e instanceof Error ? e.message : "falhou"}`, "erro");
+    }
+  }
+  el("bt-dupla").addEventListener("click", () => lerDupla());
 
   // ---------- Ticket 064: Sala de Treino Cyber ----------
   // O nome do ataque sai de uma lista fixa da tela; a API confere de novo (@Pattern). Resposta só em textContent.
@@ -386,6 +420,10 @@
     }
     if (r.acao === "pedido001") {
       revisarPedido001(r.texto);
+      return;
+    }
+    if (r.acao === "pedidodupla") {
+      revisarPedido001(r.texto, "dupla"); // Ticket 072
       return;
     }
     if (r.acao === "pagina") {

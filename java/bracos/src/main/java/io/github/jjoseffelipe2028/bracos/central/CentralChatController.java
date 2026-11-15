@@ -41,6 +41,7 @@ public class CentralChatController {
     static final String RECUSA = "Isso eu não faço pelo chat: aqui eu só leio e aviso. "
             + "O que muda o PC continua com você (ou com a 001, com o seu OK).";
     static final String PEDIDO_VAZIO = "Escreva o pedido depois dos dois pontos. Exemplo: pede pra 001: cria um mini jogo de cobrinha";
+    static final String PEDIDO_DUPLA_VAZIO = "Escreva a pergunta depois dos dois pontos. Exemplo: pede pra dupla: vale usar records aqui?";
     static final String GOLPE_VAZIO = "Cole a mensagem depois dos dois pontos. Exemplo: isso é golpe: <mensagem>";
 
     private final ConversaService conversa;
@@ -96,6 +97,9 @@ public class CentralChatController {
             case PEDIDO_001 -> argumento == null || argumento.isBlank()
                     ? Map.of("resposta", PEDIDO_VAZIO)
                     : Map.of("acao", "pedido001", "texto", argumento); // só vira nota depois do Confirmar na tela
+            case PEDIDO_DUPLA -> argumento == null || argumento.isBlank()
+                    ? Map.of("resposta", PEDIDO_DUPLA_VAZIO)
+                    : Map.of("acao", "pedidodupla", "texto", argumento); // Ticket 072: mesmo Revisar → Confirmar
             case PAGINA -> Map.of("acao", "pagina", "pagina", argumento); // um dos 4 nomes fixos do roteador
             default -> Map.of("acao", acao.name().toLowerCase(Locale.ROOT));
         };
