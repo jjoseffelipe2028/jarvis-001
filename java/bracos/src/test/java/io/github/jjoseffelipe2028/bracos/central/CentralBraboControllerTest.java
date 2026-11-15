@@ -92,8 +92,8 @@ class CentralBraboControllerTest {
     @Test
     void comCracha_comeca_eOLogNaoGuardaOTema(CapturedOutput saida) throws Exception {
         Cookie cracha = entrar();
-        when(brabo.iniciar(eq("mestre"), eq("tema-secreto do chuveiro"), eq(null), eq(null), eq(true)))
-                .thenReturn(new BraboService.Estado("comecando", List.of("📝"), List.of(), "", "", false, false));
+        when(brabo.iniciar(eq("mestre"), eq("tema-secreto do chuveiro"), eq(List.<String>of()), eq(null), eq(true)))
+                .thenReturn(new BraboService.Estado("comecando", List.of("📝"), List.of(), "", "", false, false, List.of()));
         mockMvc.perform(pedido(cracha, "{\"personagem\":\"mestre\",\"tema\":\"tema-secreto do chuveiro\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.etapa").value("comecando"));
         assertTrue(saida.getOut().contains("cliente=central acao=brabo resultado=iniciado dupla=true"));
@@ -125,6 +125,9 @@ class CentralBraboControllerTest {
         mockMvc.perform(pedido(cracha, "{\"personagem\":\"mestre\",\"tema\":\"" + "a".repeat(301) + "\"}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(pedido(cracha, "{\"personagem\":\"mestre\"}")).andExpect(status().isBadRequest());
-        verify(brabo, never()).iniciar(any(), any(), any(), any(), anyBoolean());
+        mockMvc.perform(pedido(cracha, "{\"personagem\":\"brabo\",\"tema\":\"x\",\"arroba\":\"a\",\"cortes\":"
+                + "[\"1.mp4\",\"2.mp4\",\"3.mp4\",\"4.mp4\",\"5.mp4\",\"6.mp4\",\"7.mp4\",\"8.mp4\",\"9.mp4\"]}"))
+                .andExpect(status().isBadRequest());
+        verify(brabo, never()).iniciar(any(), any(), any(List.class), any(), anyBoolean());
     }
 }

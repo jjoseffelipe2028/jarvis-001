@@ -456,14 +456,15 @@
   function trocarPersonagem() {
     const brabo = brPersonagem.value === "brabo";
     el("br-so-brabo").hidden = !brabo;
-    el("br-tema").placeholder = brabo ? "Tema: ex. vacilo na fuga da polícia" : "Tema: ex. como trocar a resistência do chuveiro";
+    el("br-tema").placeholder = brabo ? "Tema (opcional): ex. vacilo na fuga" : "Tema: ex. como trocar a resistência do chuveiro";
     brCartao.hidden = true;
     if (brabo && brCorte.options.length <= 1) carregarCortesBrabo();
   }
 
   function revisarBrabo() {
     const personagem = brPersonagem.value;
-    const tema = el("br-tema").value.trim();
+    // Ticket 053: sem tema, o Brabo narra o que as fotos da jogada mostram
+    const tema = el("br-tema").value.trim() || (personagem === "brabo" ? "comente a jogada" : "");
     if (!tema || tema.length > 300) {
       escreverEm(brPassos, ["✍️ Escreva o tema do vídeo (até 300 letras)."], "nx");
       return;
@@ -477,13 +478,19 @@
         escreverEm(brPassos, ["✍️ Escolha o corte para o Brabo comentar."], "nx");
         return;
       }
+      // o escolhido e os de baixo dele na lista (até 8)
+      const quantos = Math.min(8, Math.max(1, parseInt(el("br-quantos").value, 10) || 1));
+      const cortes = Array.from(brCorte.options).slice(brCorte.selectedIndex, brCorte.selectedIndex + quantos)
+        .map((op) => op.value).filter(Boolean);
       if (!/^@?[A-Za-z0-9_.]{1,30}$/.test(arroba)) {
         escreverEm(brPassos, ["✍️ Escreva o @ do dono do vídeo (com autorização dele)."], "nx");
         return;
       }
-      brPedido.corte = corte;
+      brPedido.cortes = cortes;
       brPedido.arroba = arroba;
-      texto += ` · corte: ${corte} · crédito ${arroba}`;
+      texto += cortes.length > 1
+        ? ` · ${cortes.length} cortes: ${cortes[0]} … ${cortes[cortes.length - 1]} · crédito ${arroba}`
+        : ` · corte: ${corte} · crédito ${arroba}`;
     }
     el("br-cartao-texto").textContent = `${texto} · ${brPedido.dupla ? "002 revisa" : "sem revisão da 002"}`;
     brCartao.hidden = false;
@@ -508,6 +515,21 @@
     escreverEm(brPassos, passos.length ? passos : ["…"], r && r.terminou ? (r.ok ? "ok" : "erro") : "fu");
     escreverEm(brSaida, limpar(r && r.saida, 12), "fu");
     el("br-post").textContent = r && typeof r.post === "string" ? r.post.slice(0, 3000) : "";
+    const videos = Array.isArray(r && r.videos) ? r.videos.filter((v) => NOME_VIDEO.test(String(v))).slice(0, 8) : [];
+    const lista = el("br-lista");
+    if (videos.length > 1 && lista.childElementCount !== videos.length) {
+      lista.replaceChildren(...videos.map((nome, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = `▶ ${i + 1}`;
+        b.title = nome;
+        b.addEventListener("click", () => mostrarVideo(nome).catch(() => { brMostrado = ""; }));
+        return b;
+      }));
+      if (!r.terminou && !brMostrado) mostrarVideo(videos[videos.length - 1]).catch(() => { brMostrado = ""; });
+    } else if (videos.length <= 1) {
+      lista.replaceChildren();
+    }
     if (r && r.ok && typeof r.video === "string" && r.video) {
       mostrarVideo(r.video).catch(() => { brMostrado = ""; escreverEm(brSaida, ["⚠️ Não consegui abrir o vídeo pronto."], "erro"); });
     }
@@ -554,7 +576,7 @@
   el("br-revisar").addEventListener("click", revisarBrabo);
   el("br-confirmar").addEventListener("click", (e) => confirmarBrabo(e.currentTarget));
   el("br-cancelar").addEventListener("click", () => { brCartao.hidden = true; });
-  for (const id of ["br-tema", "br-corte", "br-arroba", "br-dupla"]) {
+  for (const id of ["br-tema", "br-corte", "br-quantos", "br-arroba", "br-dupla"]) {
     el(id).addEventListener("input", () => { brCartao.hidden = true; });
   }
 })();

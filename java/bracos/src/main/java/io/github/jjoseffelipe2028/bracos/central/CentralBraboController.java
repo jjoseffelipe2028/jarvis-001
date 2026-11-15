@@ -48,7 +48,7 @@ public class CentralBraboController {
 
     @PostMapping("/brabo")
     public BraboService.Estado iniciar(@Valid @RequestBody BraboRequest pedido) {
-        BraboService.Estado estado = brabo.iniciar(pedido.personagem(), pedido.tema(), pedido.corte(), pedido.arroba(),
+        BraboService.Estado estado = brabo.iniciar(pedido.personagem(), pedido.tema(), pedido.listaDeCortes(), pedido.arroba(),
                 pedido.comDupla());
         log.info("cliente=central acao=brabo resultado=iniciado dupla={}", pedido.comDupla());
         return estado;
