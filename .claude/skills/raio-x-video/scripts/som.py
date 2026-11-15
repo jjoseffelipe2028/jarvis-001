@@ -86,15 +86,22 @@ def achar_silencios(db: list[float], limite: float) -> list[dict]:
 
 
 def achar_golpes(db: list[float]) -> tuple[list[float], list[float]]:
-    """Golpe = subida forte de volume de uma janela para a outra (batida, impacto, efeito)."""
-    subida = [0.0] + [max(0.0, min(db[i], 0) - max(db[i - 1], -60)) for i in range(1, len(db))]
-    if len(subida) < 3:
-        return [], subida
+    """Golpe = subida forte de volume de uma janela para a outra (batida, impacto, efeito).
+    O "antes do vídeo" conta como silêncio (-60 dB): assim uma batida no segundo 0 também conta."""
+    if len(db) < 3:
+        return [], []
+    subida = []
+    for i in range(len(db)):
+        antes = -60.0 if i == 0 else max(db[i - 1], -60.0)
+        subida.append(max(0.0, min(db[i], 0.0) - antes))
     corte = statistics.mean(subida) + 2 * statistics.pstdev(subida)
     corte = max(corte, 6.0)  # pelo menos +6 dB de uma vez
+    n = len(subida)
     golpes: list[float] = []
-    for i in range(1, len(subida) - 1):
-        if subida[i] >= corte and subida[i] >= subida[i - 1] and subida[i] >= subida[i + 1]:
+    for i in range(n):
+        # compara só com os vizinhos que existem (subida[-1] seria o ÚLTIMO item, sem erro)
+        pico = (i == 0 or subida[i] >= subida[i - 1]) and (i == n - 1 or subida[i] >= subida[i + 1])
+        if subida[i] >= corte and pico:
             t = i * JANELA_S
             if not golpes or t - golpes[-1] >= GOLPE_GAP_S:
                 golpes.append(round(t, 3))
