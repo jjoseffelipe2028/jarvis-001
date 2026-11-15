@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * - Primeiro o {@link RoteadorDoChat} (regras fixas). Se for ação, a resposta é só {@code {"acao": nome}}:
  *   quem executa é a tela, pela rota que já existe. A IA nunca escolhe ação.
  * - Pedido de mudar o PC é recusado com texto fixo e nem chega na IA.
+ * - Ticket 061: "faz a ronda" vira {@code {"acao":"ronda"}} e a tela chama POST /central/acoes/ronda (o botão 🛡️).
  * - O log não guarda a conversa: só o nome da ação ou o tamanho da resposta.
  */
 @RestController
@@ -39,8 +40,6 @@ public class CentralChatController {
 
     static final String RECUSA = "Isso eu não faço pelo chat: aqui eu só leio e aviso. "
             + "O que muda o PC continua com você (ou com a 001, com o seu OK).";
-    static final String RONDA = "🛡️ A ronda do defensor roda no terminal: python defensor.py "
-            + "(o botão na Central vem no próximo lote).";
     static final String PEDIDO_VAZIO = "Escreva o pedido depois dos dois pontos. Exemplo: pede pra 001: cria um mini jogo de cobrinha";
     static final String GOLPE_VAZIO = "Cole a mensagem depois dos dois pontos. Exemplo: isso é golpe: <mensagem>";
 
@@ -80,7 +79,6 @@ public class CentralChatController {
     private Map<String, String> responderAcao(RoteadorDoChat.Acao acao, String argumento) {
         return switch (acao) {
             case PROIBIDA -> Map.of("resposta", RECUSA);
-            case RONDA -> Map.of("resposta", RONDA);
             case HORA -> Map.of("resposta", "🕒 Agora são "
                     + ZonedDateTime.now(relogio).withZoneSameInstant(BRASILIA).format(HORA) + ".");
             case GOLPE -> argumento == null || argumento.isBlank()

@@ -75,10 +75,19 @@
       <p>Um planeja, o outro contesta. José aprova.</p>
       <div class="mic">🎙️ "Bom dia, Jarvis"</div>
     </div>
+    <section class="comando agentes" aria-label="Super agentes">
+      <div class="comando-topo"><b>🦸 SUPER AGENTES</b> <span class="ok">comandos fixos · nada sai do PC</span></div>
+      <div class="botoes">
+        <button id="bt-ronda" type="button" class="aceitar">🛡️ Ronda do defensor</button>
+        <button id="bt-cortes" type="button">🎬 Produzir cortes</button>
+      </div>
+      <div id="ronda-geral" class="cartao-texto" hidden></div>
+      <ul id="ronda-vigias" class="saida" aria-live="polite"></ul>
+    </section>
     <section class="comando chat" aria-label="Conversa com a IA local">
       <div class="comando-topo"><b>💬 FALAR COM O JARVIS</b> <span class="ok">IA local · nada sai do PC</span></div>
       <ul id="chat-falas" class="chat-falas" aria-live="polite"></ul>
-      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ..., pede pra 001: ... Enter envia."></textarea>
+      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ..., faz a ronda, pede pra 001: ... Enter envia."></textarea>
       <div class="daily-linha"><span class="fu">Conversa e pede ações da lista. Para criar um jogo, use o Estúdio abaixo.</span>
         <span><button id="bt-chat-limpar" type="button">Limpar</button> <button id="bt-chat" type="button" class="aceitar">Enviar</button></span></div>
     </section>
@@ -98,7 +107,7 @@
       <ul id="es-passos" class="saida" aria-live="polite"></ul>
       <div id="es-resumo" class="cartao-texto" hidden></div>
     </section>
-    <section class="comando estudio" aria-label="Estúdio de cortes">
+    <section id="ct-secao" class="comando estudio" aria-label="Estúdio de cortes">
       <div class="comando-topo"><b>✂️ ESTÚDIO DE CORTES · VÍDEO OU LINK</b> <span class="ok">produtor → 001 escolhe → 002 revisa</span></div>
       <div class="daily-linha"><select id="ct-video" aria-label="Vídeo da pasta de entrada"><option value="">— vídeo da pasta de entrada —</option></select>
         <button id="ct-atualizar" type="button" title="Atualizar a lista">↻</button></div>

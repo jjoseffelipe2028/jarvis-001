@@ -139,6 +139,7 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 .menu button[aria-current="page"] { background: #155e75; border-color: var(--ciano); box-shadow: 0 0 10px #22d3ee55; }
 .clicavel { cursor: pointer; } .clicavel:hover { text-shadow: 0 0 10px currentColor; }
 .chat { margin-bottom: 4px; }
+.agentes { margin-bottom: 4px; } .agentes .botoes button { flex: 1; } /* Ticket 061 */
 .chat-falas { list-style: none; max-height: 220px; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
 .chat-falas li { padding: 4px 0; border-bottom: 1px dashed #1e293b; white-space: pre-wrap; word-break: break-word; }
 .chat-eu { color: #e9d5ff; } .chat-ia { color: var(--texto); }

@@ -151,4 +151,13 @@ class CentralChatControllerTest {
         assertTrue(saida.getOut().contains("rota=pedido_001"));
         assertFalse(saida.getOut().contains("jogo de nave"), "o pedido não vai para o log");
     }
+
+    @Test
+    void fazARonda_viraAcaoRonda_semChamarAIa() throws Exception {
+        // Ticket 061: antes respondia "roda no terminal"; agora a tela chama o botão 🛡️
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"faz a ronda\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("ronda"));
+        verify(conversa, never()).responder(any(), any());
+    }
 }

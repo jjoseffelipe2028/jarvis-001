@@ -204,7 +204,68 @@
     });
   }
 
+  // ---------- Ticket 061: botões dos super agentes ----------
+  // 🛡️ Ronda: comando fixo no Java (sem corpo). A tela só mostra o que volta, em textContent.
+  const ICONE_RONDA = { ok: "✅", atencao: "⚠️", alerta: "🚨", falha: "❔" };
+  const NOME_RONDA = { ok: "tudo certo", atencao: "atenção", alerta: "ALERTA", falha: "não deu para conferir" };
+
+  function nivelRonda(n) {
+    return Object.hasOwn(ICONE_RONDA, n) ? n : "falha";
+  }
+
+  async function fazerRonda() {
+    const botao = el("bt-ronda");
+    const lista = el("ronda-vigias");
+    const geral = el("ronda-geral");
+    botao.disabled = true;
+    botao.textContent = "🛡️ Rondando… (uns 15 s)";
+    lista.replaceChildren();
+    geral.hidden = true;
+    try {
+      const r = await enviar("/central/acoes/ronda", {});
+      const vigias = Array.isArray(r && r.vigias) ? r.vigias.slice(0, 5) : [];
+      for (const v of vigias) {
+        const li = document.createElement("li");
+        const n = nivelRonda(v.nivel);
+        li.className = n === "ok" ? "ok" : n === "alerta" ? "erro" : "nx";
+        li.textContent = `${ICONE_RONDA[n]} ${String(v.vigia).slice(0, 20)}: ${String(v.frase).slice(0, 300)}`;
+        lista.appendChild(li);
+      }
+      const n = nivelRonda(r && r.geral);
+      geral.textContent = `${ICONE_RONDA[n]} ${NOME_RONDA[n]} · ${String((r && r.frase) || "").slice(0, 300)}`;
+      geral.hidden = false;
+      document.dispatchEvent(new Event("jarvis:acao"));
+      return { geral: n, frase: geral.textContent };
+    } finally {
+      botao.disabled = false;
+      botao.textContent = "🛡️ Ronda do defensor";
+    }
+  }
+
+  el("bt-ronda").addEventListener("click", () => {
+    fazerRonda().catch((e) => {
+      const li = document.createElement("li");
+      li.className = "erro";
+      li.textContent = `⚠️ ${e instanceof Error ? e.message : "falhou"}`;
+      el("ronda-vigias").replaceChildren(li);
+    });
+  });
+
+  // 🎬 Produzir cortes: atalho para o Estúdio de cortes (Ticket 048), que já chama o produtor.py por lista fixa.
+  el("bt-cortes").addEventListener("click", () => {
+    abrirPagina("inicio");
+    el("ct-secao").scrollIntoView({ behavior: "smooth", block: "center" });
+    el("ct-video").focus();
+  });
+
   async function fazerAcao(r) {
+    if (r.acao === "ronda") {
+      const espera = mostrarFala("Jarvis:", "🛡️ Fazendo a ronda do defensor (uns 15 s)…", "fu");
+      const resultado = await fazerRonda();
+      espera.remove();
+      mostrarFala("Jarvis:", `${resultado.frase} (detalhes nos Super agentes)`, resultado.geral === "alerta" ? "erro" : "chat-ia");
+      return;
+    }
     if (r.acao === "pedido001") {
       revisarPedido001(r.texto);
       return;

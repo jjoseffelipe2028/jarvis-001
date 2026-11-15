@@ -47,7 +47,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
         io.github.jjoseffelipe2028.bracos.acoes.conversa.ConversaService.class,
         io.github.jjoseffelipe2028.bracos.acoes.conversa.RoteadorDoChat.class,
         io.github.jjoseffelipe2028.bracos.acoes.estudio.EstudioService.class, io.github.jjoseffelipe2028.bracos.acoes.estudio.CortesService.class, io.github.jjoseffelipe2028.bracos.acoes.estudio.BraboService.class,
-        io.github.jjoseffelipe2028.bracos.acoes.pedidos.PedidoService.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class,
+        io.github.jjoseffelipe2028.bracos.acoes.pedidos.PedidoService.class,
+        io.github.jjoseffelipe2028.bracos.acoes.ronda.RondaService.class, ChaveDaCentral.class, SessoesDaCentral.class, QuadroDeEventos.class,
         WebConfig.class, ErrosHandler.class})
 @TestPropertySource(properties = "jarvis.token=token-de-teste")
 class RotasPostContratoTest {
