@@ -420,4 +420,141 @@
     el(id).addEventListener("input", () => { ctCartao.hidden = true; });
   }
   ctVideo.addEventListener("focus", () => { if (ctVideo.options.length <= 1) carregarVideos(); });
+
+  // ---------- Vídeo do Mestre / Brabo (Ticket 052): tema → roteiro da dupla → vídeo na tela ----------
+
+  const brPersonagem = el("br-personagem");
+  const brCorte = el("br-corte");
+  const brCartao = el("br-cartao");
+  const brPassos = el("br-passos");
+  const brSaida = el("br-saida");
+  const brPronto = el("br-pronto");
+  const brPlayer = el("br-player");
+  const NOME_VIDEO = /^[A-Za-z0-9._-]{1,120}-(brabo|mestre)\.mp4$/;
+  let brPedido = null;
+  let brEsperando = null;
+  let brUrl = null;
+  let brMostrado = "";
+
+  async function carregarCortesBrabo() {
+    try {
+      const r = await pedir("/central/acoes/brabo/cortes");
+      const cortes = Array.isArray(r && r.cortes) ? r.cortes.slice(0, 30) : [];
+      const primeira = brCorte.options[0];
+      brCorte.replaceChildren(primeira);
+      for (const nome of cortes) {
+        const op = document.createElement("option");
+        op.value = String(nome);
+        op.textContent = String(nome).slice(0, 80);
+        brCorte.appendChild(op);
+      }
+    } catch (e) {
+      escreverEm(brPassos, erroDe(e).concat(["(confira JARVIS_CORTES_SAIDA no .env)"]), "erro");
+    }
+  }
+
+  function trocarPersonagem() {
+    const brabo = brPersonagem.value === "brabo";
+    el("br-so-brabo").hidden = !brabo;
+    el("br-tema").placeholder = brabo ? "Tema: ex. vacilo na fuga da polícia" : "Tema: ex. como trocar a resistência do chuveiro";
+    brCartao.hidden = true;
+    if (brabo && brCorte.options.length <= 1) carregarCortesBrabo();
+  }
+
+  function revisarBrabo() {
+    const personagem = brPersonagem.value;
+    const tema = el("br-tema").value.trim();
+    if (!tema || tema.length > 300) {
+      escreverEm(brPassos, ["✍️ Escreva o tema do vídeo (até 300 letras)."], "nx");
+      return;
+    }
+    brPedido = { personagem, tema, dupla: el("br-dupla").checked };
+    let texto = `${personagem === "mestre" ? "Mestre Parafuso" : "Brabo"} · tema: ${tema}`;
+    if (personagem === "brabo") {
+      const corte = brCorte.value;
+      const arroba = el("br-arroba").value.trim();
+      if (!corte) {
+        escreverEm(brPassos, ["✍️ Escolha o corte para o Brabo comentar."], "nx");
+        return;
+      }
+      if (!/^@?[A-Za-z0-9_.]{1,30}$/.test(arroba)) {
+        escreverEm(brPassos, ["✍️ Escreva o @ do dono do vídeo (com autorização dele)."], "nx");
+        return;
+      }
+      brPedido.corte = corte;
+      brPedido.arroba = arroba;
+      texto += ` · corte: ${corte} · crédito ${arroba}`;
+    }
+    el("br-cartao-texto").textContent = `${texto} · ${brPedido.dupla ? "002 revisa" : "sem revisão da 002"}`;
+    brCartao.hidden = false;
+  }
+
+  async function mostrarVideo(nome) {
+    if (!NOME_VIDEO.test(nome) || nome === brMostrado) return;
+    brMostrado = nome;
+    const arquivo = await pedirArquivo(`/central/acoes/brabo/video/${encodeURIComponent(nome)}`);
+    if (brUrl) URL.revokeObjectURL(brUrl);
+    brUrl = URL.createObjectURL(arquivo);
+    brPlayer.src = brUrl;
+    const baixar = el("br-baixar");
+    baixar.href = brUrl;
+    baixar.download = nome;
+    brPronto.hidden = false;
+  }
+
+  function mostrarBrabo(r) {
+    const limpar = (lista, n) => (Array.isArray(lista) ? lista.slice(0, n).map((x) => String(x).slice(0, 220)) : []);
+    const passos = limpar(r && r.passos, 14);
+    escreverEm(brPassos, passos.length ? passos : ["…"], r && r.terminou ? (r.ok ? "ok" : "erro") : "fu");
+    escreverEm(brSaida, limpar(r && r.saida, 12), "fu");
+    el("br-post").textContent = r && typeof r.post === "string" ? r.post.slice(0, 3000) : "";
+    if (r && r.ok && typeof r.video === "string" && r.video) {
+      mostrarVideo(r.video).catch(() => { brMostrado = ""; escreverEm(brSaida, ["⚠️ Não consegui abrir o vídeo pronto."], "erro"); });
+    }
+  }
+
+  async function acompanharBrabo() {
+    try {
+      const r = await pedir("/central/acoes/brabo");
+      mostrarBrabo(r);
+      if (r && r.terminou) {
+        clearInterval(brEsperando);
+        brEsperando = null;
+        el("br-revisar").disabled = false;
+      }
+    } catch (e) {
+      escreverEm(brPassos, erroDe(e), "erro");
+    }
+  }
+
+  async function confirmarBrabo(botao) {
+    if (!brPedido) return;
+    botao.disabled = true;
+    try {
+      const r = await enviar("/central/acoes/brabo", brPedido);
+      brCartao.hidden = true;
+      brPronto.hidden = true;
+      brMostrado = "";
+      el("br-revisar").disabled = true;
+      mostrarBrabo(r);
+      document.dispatchEvent(new Event("jarvis:acao"));
+      if (!brEsperando) brEsperando = setInterval(acompanharBrabo, 5000);
+    } catch (e) {
+      const motivo = e instanceof Error && e.message.startsWith("Ação desligada")
+        ? "O apresentador está ocupado com outro vídeo (ou JARVIS_CORTES_SAIDA não está no .env)."
+        : (e instanceof Error ? e.message : "falhou");
+      escreverEm(brPassos, [`⚠️ ${motivo}`], "erro");
+    } finally {
+      botao.disabled = false;
+    }
+  }
+
+  brPersonagem.addEventListener("change", trocarPersonagem);
+  el("br-atualizar").addEventListener("click", carregarCortesBrabo);
+  el("br-revisar").addEventListener("click", revisarBrabo);
+  el("br-confirmar").addEventListener("click", (e) => confirmarBrabo(e.currentTarget));
+  el("br-cancelar").addEventListener("click", () => { brCartao.hidden = true; });
+  for (const id of ["br-tema", "br-corte", "br-arroba", "br-dupla"]) {
+    el(id).addEventListener("input", () => { brCartao.hidden = true; });
+  }
 })();

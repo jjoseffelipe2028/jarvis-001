@@ -154,3 +154,4 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 #cy-texto { width: 100%; border-color: #fbbf2477; }
 .saida-grande { max-height: 340px; }
 @media (max-width: 1000px) { .menu, .pagina { padding-left: 16px; padding-right: 16px; } }
+.br-player { width: 100%; max-width: 270px; aspect-ratio: 9 / 16; margin: 10px auto 6px; display: block; background: #000; border-radius: 8px; } /* Ticket 052 */

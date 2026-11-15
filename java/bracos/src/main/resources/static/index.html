@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- 🔒 Só carrega coisas do próprio Jarvis (127.0.0.1). Nada da internet, nenhum script embutido. -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>J.A.R.V.I.S · 001</title>
 <link rel="stylesheet" href="central.css">
@@ -120,6 +120,35 @@
       <ul id="ct-passos" class="saida" aria-live="polite"></ul>
       <ul id="ct-saida" class="saida"></ul>
       <div id="ct-dupla-texto" class="cartao-texto" hidden></div>
+    </section>
+    <section class="comando estudio" aria-label="Vídeo do apresentador">
+      <div class="comando-topo"><b>🎙️ VÍDEO DO MESTRE / BRABO</b> <span class="ok">001 escreve → 002 revisa → Jarvis grava</span></div>
+      <div class="daily-linha"><select id="br-personagem" aria-label="Personagem">
+          <option value="mestre">🔧 Mestre Parafuso (canal de casa)</option>
+          <option value="brabo">🎮 Brabo (canal de GTA)</option></select></div>
+      <input id="br-tema" type="text" maxlength="300" placeholder="Tema: ex. como trocar a resistência do chuveiro" autocomplete="off">
+      <div id="br-so-brabo" hidden>
+        <div class="daily-linha"><select id="br-corte" aria-label="Corte para o Brabo comentar"><option value="">— corte da pasta dos cortes —</option></select>
+          <button id="br-atualizar" type="button" title="Atualizar a lista">↻</button></div>
+        <input id="br-arroba" type="text" maxlength="31" placeholder="@ do dono do vídeo (com autorização)" autocomplete="off">
+      </div>
+      <div class="daily-linha"><label class="fu"><input id="br-dupla" type="checkbox" checked> 002 revisa o roteiro</label>
+        <button id="br-revisar" type="button">Revisar</button></div>
+      <div id="br-cartao" class="cartao cartao-daily" hidden>
+        <div>🎙️ <b>Vai gravar o vídeo (nada é postado):</b></div>
+        <div id="br-cartao-texto" class="cartao-texto"></div>
+        <div class="botoes">
+          <button id="br-confirmar" type="button" class="aceitar">Confirmar</button>
+          <button id="br-cancelar" type="button" class="recusar">Cancelar</button>
+        </div>
+      </div>
+      <ul id="br-passos" class="saida" aria-live="polite"></ul>
+      <ul id="br-saida" class="saida"></ul>
+      <div id="br-pronto" hidden>
+        <video id="br-player" class="br-player" controls playsinline></video>
+        <div class="daily-linha"><a id="br-baixar" href="#" download>⬇️ Baixar o vídeo</a></div>
+        <div id="br-post" class="cartao-texto"></div>
+      </div>
     </section>
     <section class="comando" aria-label="Comandos">
       <div class="comando-topo"><b>⚡ COMANDOS</b> <span id="conexao" class="esperando">🔑 conectando…</span></div>

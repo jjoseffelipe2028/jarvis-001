@@ -117,6 +117,15 @@ async function pedir(rota) {
   return tratar(await fetch(rota, { cache: "no-store", credentials: "same-origin", headers: CABECALHOS_CENTRAL }));
 }
 
+// Ticket 052: baixa um arquivo (o vídeo pronto) com o crachá, para tocar na tela. Só leitura.
+async function pedirArquivo(rota) {
+  const resposta = await fetch(rota, { cache: "no-store", credentials: "same-origin", headers: CABECALHOS_CENTRAL });
+  if (!resposta.ok) {
+    throw new Error("Não consegui abrir o vídeo pronto.");
+  }
+  return resposta.blob();
+}
+
 // Ticket 020: único jeito de a Central ESCREVER. Só JSON, mesma origem e crachá.
 async function enviar(rota, corpo) {
   return tratar(await fetch(rota, {
