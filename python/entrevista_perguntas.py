@@ -1,0 +1,92 @@
+"""
+Jarvis 001 — Banco de perguntas do simulador de entrevista (Ticket 071) 🎤
+
+Cada pergunta tem os PONTOS-CHAVE de uma boa resposta. Cada ponto é uma lista de
+palavras equivalentes: basta a resposta citar UMA delas para o ponto contar.
+Escreva as palavras sem acento e em minúsculas (a comparação ignora acento).
+"""
+
+TEMAS = ("java", "cyber", "jarvis", "pessoal")
+
+PERGUNTAS = [
+    # ---------- Java back-end ----------
+    {"tema": "java", "pergunta": "Qual a diferença entre uma classe e um objeto em Java?",
+     "pontos": [["molde", "modelo", "planta", "forma"], ["instancia", "new"], ["atributo", "estado"],
+                ["metodo", "comportamento"]]},
+    {"tema": "java", "pergunta": "O que é encapsulamento e por que ele é importante?",
+     "pontos": [["private", "privado", "esconder", "proteger"], ["get", "set", "acesso controlado"],
+                ["validar", "regra", "consistente"]]},
+    {"tema": "java", "pergunta": "Qual a diferença entre uma interface e uma classe abstrata?",
+     "pontos": [["contrato", "assinatura"], ["implements", "implementa"], ["extends", "heranca", "herda"],
+                ["estado", "atributo", "construtor"]]},
+    {"tema": "java", "pergunta": "Explique a diferença entre List, Set e Map.",
+     "pontos": [["list", "lista", "ordem"], ["set", "repete", "duplicado", "unico"], ["map", "chave", "valor"]]},
+    {"tema": "java", "pergunta": "O que é uma exceção checada e uma não checada?",
+     "pontos": [["checada", "checked", "throws", "obrigado a tratar"],
+                ["runtime", "nao checada", "unchecked"], ["try", "catch"]]},
+    {"tema": "java", "pergunta": "O que o Spring Boot faz por você numa API REST?",
+     "pontos": [["configuracao", "autoconfig", "automatica"], ["servidor", "tomcat", "embutido"],
+                ["controller", "rota", "endpoint"], ["injecao", "dependencia", "bean"]]},
+    {"tema": "java", "pergunta": "Para que serve a anotação @Valid num controller?",
+     "pontos": [["validar", "validacao"], ["entrada", "corpo", "request", "dados"],
+                ["400", "bad request", "erro"], ["notblank", "size", "anotacao"]]},
+    {"tema": "java", "pergunta": "Por que escrever testes com JUnit?",
+     "pontos": [["erro", "bug", "quebrar"], ["mudanca", "refatorar", "mexer"], ["automatico", "rodar sempre"],
+                ["assert", "esperado"]]},
+
+    # ---------- Cibersegurança ----------
+    {"tema": "cyber", "pergunta": "O que é SQL Injection e como evitar?",
+     "pontos": [["entrada", "usuario", "texto"], ["comando", "consulta", "query"],
+                ["preparedstatement", "parametro", "prepared"], ["validar", "validacao"]]},
+    {"tema": "cyber", "pergunta": "O que é CSRF e como o Jarvis se defende dele?",
+     "pontos": [["navegador", "pagina", "site"], ["em nome", "sem saber", "forjado"],
+                ["token", "assinatura", "hmac"], ["origin", "confirmar"]]},
+    {"tema": "cyber", "pergunta": "O que é Path Traversal?",
+     "pontos": [["..", "ponto ponto", "subir pasta", "sair da pasta"], ["arquivo", "caminho"],
+                ["pasta permitida", "allowlist", "lista"]]},
+    {"tema": "cyber", "pergunta": "O que é prompt injection e por que é perigoso num assistente com IA?",
+     "pontos": [["texto", "instrucao", "escondida"], ["ia", "modelo", "assistente"],
+                ["executar", "acao", "comando", "obedecer"], ["allowlist", "regra fixa", "nao executa"]]},
+    {"tema": "cyber", "pergunta": "Explique a tríade CIA da segurança da informação.",
+     "pontos": [["confidencialidade"], ["integridade"], ["disponibilidade"]]},
+    {"tema": "cyber", "pergunta": "Qual a diferença entre autenticação e autorização?",
+     "pontos": [["quem", "identidade", "login"], ["pode", "permissao", "acesso"]]},
+    {"tema": "cyber", "pergunta": "Por que nunca colocar senha ou token dentro do código?",
+     "pontos": [["github", "repositorio", "publico", "vazar"], ["env", "variavel", "cofre de segredo"],
+                ["gitleaks", "historico", "nao some"]]},
+    {"tema": "cyber", "pergunta": "O que é o princípio do menor privilégio?",
+     "pontos": [["minimo", "so o necessario", "menor"], ["permissao", "acesso"],
+                ["estrago", "dano", "impacto", "invasor"]]},
+
+    # ---------- O próprio Jarvis (vem dos ADRs) ----------
+    {"tema": "jarvis", "pergunta": "Por que o Jarvis só escuta em 127.0.0.1?",
+     "pontos": [["rede", "wifi", "outro aparelho"], ["local", "so no pc", "localhost"],
+                ["ataque", "superficie", "porta"]]},
+    {"tema": "jarvis", "pergunta": "O que é a allowlist de ações do Jarvis e por que a IA não roda comando livre?",
+     "pontos": [["lista", "allowlist", "fixa"], ["java", "api", "rota"], ["injection", "injecao", "malicioso"],
+                ["comando livre", "terminal", "qualquer comando"]]},
+    {"tema": "jarvis", "pergunta": "Como funciona a dupla 001 e 002 e por que a 002 só lê?",
+     "pontos": [["claude", "001"], ["gemini", "002"], ["revisa", "contesta", "segunda opiniao"],
+                ["plan", "so le", "nao escreve"]]},
+    {"tema": "jarvis", "pergunta": "Por que o pedido para a 002 só leva caminhos de arquivo?",
+     "pontos": [["command injection", "injecao de comando", "crase", "$("], ["arquivo"],
+                ["limite", "tamanho", "8 mil"]]},
+    {"tema": "jarvis", "pergunta": "Por que o código do Jarvis fica fora do OneDrive?",
+     "pontos": [["git", ".git", "repositorio"], ["quebrou", "apagou", "corrompeu"], ["github", "nuvem do codigo"]]},
+    {"tema": "jarvis", "pergunta": "Me conta uma decisão técnica do Jarvis e qual foi o custo dela.",
+     "pontos": [["decidi", "decisao", "escolhi"], ["alternativa", "em vez de", "outra opcao"],
+                ["custo", "desvantagem", "mais lento", "mais trabalho"]]},
+
+    # ---------- Pessoal / comportamental ----------
+    {"tema": "pessoal", "pergunta": "Fale um pouco sobre você e por que quer trabalhar com tecnologia.",
+     "pontos": [["java", "back-end", "backend"], ["seguranca", "cyber"], ["projeto", "jarvis", "github"],
+                ["aprender", "estudo", "curso", "ebac"]]},
+    {"tema": "pessoal", "pergunta": "Conte de um problema difícil que você resolveu num projeto.",
+     "pontos": [["problema", "erro", "bug"], ["investiguei", "descobri", "causa"], ["resolvi", "solucao", "corrigi"],
+                ["aprendi", "licao"]]},
+    {"tema": "pessoal", "pergunta": "Como você faz para aprender uma tecnologia nova?",
+     "pontos": [["documentacao", "oficial"], ["pratica", "projeto", "codigo"], ["anotacao", "obsidian", "notas"]]},
+    {"tema": "pessoal", "pergunta": "Onde você se vê daqui a um ano?",
+     "pontos": [["trabalhando", "emprego", "empresa"], ["java", "back-end", "seguranca"],
+                ["evoluir", "crescer", "aprender"]]},
+]
