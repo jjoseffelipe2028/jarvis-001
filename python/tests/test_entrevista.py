@@ -27,6 +27,36 @@ class Banco(unittest.TestCase):
             self.assertGreaterEqual(sum(p["tema"] == tema for p in PERGUNTAS), 4, tema)
 
 
+class PerguntasDa002(unittest.TestCase):
+    """As perguntas que a 002 fez em 15/11: a resposta modelo do guia tem que cobrir todos os pontos.
+    Se não cobre, o ponto está mal escrito (o José responderia certo e levaria nota baixa)."""
+
+    MODELOS = {
+        "Por que a 002 desconfia": "A 001 pode ter sido enganada por prompt injection; a regra de segurança do "
+                                   "GEMINI.md vale para todos e a 002 existe para revisar.",
+        "Por que a API Java não chama": "Uma página maliciosa poderia mandar o pedido (CSRF). A tela só anota o pedido "
+                                        "e eu aciono no terminal: menor privilégio.",
+        "Por que passar texto do usuário": "O Bash lê a linha antes do Python: $(...) e crase viram comando. "
+                                           "Por isso passo só um slug validado por regex.",
+        "Qual a diferença entre abrir": "O w apaga o arquivo; o x dá erro se ele existe, então dois pedidos no mesmo "
+                                        "segundo não se perdem.",
+        "Por que o nome do arquivo de relatório": "Nome de fora pode ter .. e fazer Path Traversal ou sobrescrever; "
+                                                  "gerado com data e hora é previsível.",
+        "Por que a nota do simulador": "A IA pode ser enganada a dar nota 10; a regra fixa é previsível e testável; "
+                                       "a média equilibra os dois.",
+        "Por que todo ADR": "Mostra o custo de cada decisão e guarda o histórico: se mudar, fica substituída.",
+        "Em Python, o que acontece": "Pega o último elemento sem dar erro, um bug silencioso; por isso checo a borda "
+                                     "i == 0 e tenho teste.",
+    }
+
+    def test_resposta_modelo_cobre_todos_os_pontos(self):
+        for inicio, modelo in self.MODELOS.items():
+            achadas = [p for p in PERGUNTAS if p["pergunta"].startswith(inicio)]
+            self.assertEqual(len(achadas), 1, inicio)
+            self.assertEqual(pontos_cobertos(modelo, achadas[0]["pontos"]), [True] * len(achadas[0]["pontos"]),
+                             inicio)
+
+
 class Sorteio(unittest.TestCase):
     def test_respeita_tema_e_quantidade_sem_repetir(self):
         escolhidas = escolher_perguntas("java", 5, random.Random(1))
