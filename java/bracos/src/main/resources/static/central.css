@@ -162,3 +162,8 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 .jornal dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; margin: 0; }
 .jornal dt { font-weight: bold; white-space: nowrap; }
 .jornal dd { margin: 0; word-break: break-word; }
+/* Ticket 063: salas dos super agentes (a ala nova do escritório) */
+.esc-salas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 8px 0; }
+.esc-sala { display: flex; flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 8px; border: 1px solid #22406b; border-radius: 8px; background: #070d1a; transition: box-shadow .4s, border-color .4s; }
+.esc-sala.acesa { border-color: var(--verde); box-shadow: 0 0 14px #3ddc8455; }
+.esc-sala.alerta { border-color: #f87171; box-shadow: 0 0 14px #f8717155; }

@@ -188,4 +188,22 @@ class CentralPaginaTest {
         assertFalse(Pattern.compile("\\sstyle=").matcher(html).find(), "estilo embutido: a CSP bloqueia");
         assertTrue(html.contains("id=\"esc-cena\""), "falta o palco do escritório");
     }
+
+    /** Ticket 063: toda sala do escritório só acende com ações que o quadro de eventos conhece de verdade. */
+    @Test
+    void salasDoEscritorio_soUsamAcoesDoQuadro() throws IOException {
+        String js = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/static/escritorio.js"));
+        java.util.regex.Matcher salas = java.util.regex.Pattern.compile("acoes: \\[([^\\]]*)\\]").matcher(js);
+        java.util.Collection<String> conhecidas = EventosInterceptor.ROTAS.values();
+        int total = 0;
+        while (salas.find()) {
+            for (String nome : salas.group(1).split(",")) {
+                String acao = nome.strip().replace("\"", "");
+                assertTrue(conhecidas.contains(acao), "sala com ação que o quadro não conhece: " + acao);
+                total++;
+            }
+        }
+        assertTrue(total >= 6, "as salas dos super agentes sumiram do escritorio.js");
+        assertTrue(js.contains("acenderSala(e.acao, e.resultado)"), "a sala acende com o evento real");
+    }
 }
