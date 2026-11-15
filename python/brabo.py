@@ -37,6 +37,7 @@ import numpy as np
 
 import avatar
 import cortador
+import sons as sons_mod
 from cortador import ErroCorte, desarmar_ass
 
 MODOS = {
@@ -325,11 +326,19 @@ def gravar_wav(caminho, audio, taxa):
 _BASE = ["-hide_banner", "-nostdin", "-loglevel", "error", "-n"]
 
 
-def comando_final(ffmpeg, roteiro, duracao, saida, corte=None, tem_audio_jogo=True):
-    """Monta o Short. Corte: 0 = corte, 1 = rosto (pipe), 2 = voz. Cartões: 0 = quadro inteiro (pipe), 1 = voz."""
+def comando_final(ffmpeg, roteiro, duracao, saida, corte=None, tem_audio_jogo=True, taxa=22050, tom=None,
+                  impactos=(), sons=False):
+    """Monta o Short. Corte: 0 = corte, 1 = rosto (pipe), 2 = voz, 3 = sons (se `sons`).
+    Cartões: 0 = quadro inteiro (pipe), 1 = voz.
+    Ticket 055: `taxa` = taxa real da voz (Piper 22050, Kokoro 24000) — antes era fixa e a voz do Kokoro saía
+    grossa e fora de tempo; `tom`=1 não mexe no tom; `impactos` = punch (zoom, tremida, clarão); `sons` = sons.wav."""
     m = MODOS[roteiro["modo"]]
-    tom = m["tom"]
-    voz = f"asetrate={int(22050 * tom)},aresample=44100,atempo={1 / tom:.4f},volume=1.5[voz]"
+    tom = m["tom"] if tom is None else tom
+    voz = "aresample=44100" if tom == 1 else f"asetrate={int(taxa * tom)},aresample=44100,atempo={1 / tom:.4f}"
+    if roteiro["modo"] == "gta":                         # voz "de rádio": tira o grave sujo, dá presença, nivela
+        voz += ",highpass=f=90,equalizer=f=3500:t=q:w=1.4:g=4,acompressor=threshold=-20dB:ratio=3:attack=5:release=90"
+    sons = sons and roteiro["fundo"] == "corte"
+    voz += ",volume=1.5,asplit=2[voz][vk]" if sons else ",volume=1.5[voz]"
     if roteiro["fundo"] == "cartoes":
         # O Python já manda o quadro inteiro (cenário + Mestre); o FFmpeg só põe legenda e voz.
         entradas = ["-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{LARGURA}x{ALTURA}",
@@ -339,18 +348,35 @@ def comando_final(ffmpeg, roteiro, duracao, saida, corte=None, tem_audio_jogo=Tr
         entradas = ["-ss", f"{roteiro['inicio']:.3f}", "-t", f"{duracao:.3f}", "-i", f"file:{corte}",
                     "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{avatar.LADO}x{avatar.LADO}",
                     "-framerate", str(avatar.FPS), "-i", "pipe:0"]
+        punch = ""
+        expr = sons_mod.expressoes_punch(list(impactos))
+        if expr:
+            zoom, tx, ty, luz = expr
+            punch = (f",scale=w='trunc(1080*(1.04+{zoom})/2)*2':h=-2:eval=frame,"
+                     f"crop=1080:1920:x='(iw-1080)/2+{tx}':y='(ih-1920)/2+{ty}',"
+                     f"eq=brightness='{luz}':saturation=1.12:contrast=1.04:eval=frame")
         filtro = (
-            f"[0:v]scale=1080:1920,setsar=1,fps={avatar.FPS}[base];"
+            f"[0:v]scale=1080:1920,setsar=1,fps={avatar.FPS}{punch}[base];"
             f"[1:v]scale={m['lado']}:{m['lado']}[rosto];"
             f"[base][rosto]overlay={m['x']}:{m['y']}:eof_action=pass,subtitles=brabo.ass[v];"
             f"[2:a]{voz}"
         )
+        mix = []
         if tem_audio_jogo and roteiro["som_jogo"] > 0:
-            filtro += (f";[0:a]aresample=44100,volume={roteiro['som_jogo']:.2f}[jogo];"
-                       "[jogo][voz]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.9[a]")
+            filtro += f";[0:a]aresample=44100,volume={roteiro['som_jogo']:.2f}[jogo]"
+            mix.append("[jogo]")
+        mix.append("[voz]")
+        if sons:   # batida + efeitos, abaixando quando o Brabo fala
+            filtro += ";[3:a]aresample=44100[sn];[sn][vk]sidechaincompress=threshold=0.03:ratio=5:release=300[snd]"
+            mix.append("[snd]")
+        if len(mix) > 1:
+            # com sons: volume no padrão dos Shorts (-14 LUFS), sem estourar
+            nivel = ",loudnorm=I=-14:TP=-1.5:LRA=9" if sons else ""
+            filtro += f";{''.join(mix)}amix=inputs={len(mix)}:duration=longest:normalize=0,alimiter=limit=0.9{nivel}[a]"
         else:
             filtro += ";[voz]alimiter=limit=0.9[a]"
-    return [ffmpeg, *_BASE, *entradas, "-i", "file:voz.wav", "-filter_complex", filtro,
+    extra = ["-i", "file:sons.wav"] if sons else []
+    return [ffmpeg, *_BASE, *entradas, "-i", "file:voz.wav", *extra, "-filter_complex", filtro,
             "-map", "[v]", "-map", "[a]", "-t", f"{duracao:.3f}",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f"file:{saida}"]
@@ -553,14 +579,23 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
         if fim_voz > MAX_DURACAO:
             raise ErroBrabo("O roteiro passou de 60 s. Corte falas.")
     trilha = montar_trilha(audios, tempos, taxa, duracao)
+    # Ticket 055 (Kit do Editor): no Brabo, cada pop-up vira um impacto (punch + soco + quebra da batida)
+    gta_corte = roteiro["modo"] == "gta" and roteiro["fundo"] == "corte"
+    impactos = [ini for f, (ini, _) in zip(roteiro["falas"], tempos) if "efeito" in f and ini < duracao]
+    nota_em = max(0.0, duracao - 3) if roteiro["nota"] is not None else None
     with tempfile.TemporaryDirectory(prefix="jarvis-brabo-") as tmp:
         gravar_wav(Path(tmp) / "voz.wav", trilha, taxa)
+        if gta_corte:
+            gravar_wav(Path(tmp) / "sons.wav", sons_mod.trilha_de_sons(duracao, impactos, nota_em), sons_mod.TAXA)
         Path(tmp, "brabo.ass").write_text(gerar_ass(roteiro, tempos, duracao), encoding="utf-8")
         if roteiro["fundo"] == "cartoes":
             quadros = quadros_ensino(roteiro, tempos, duracao, trilha, taxa)
         else:
             quadros = avatar.quadros(m["personagem"], trilha, taxa, fundo=m["fundo_avatar"])
-        _rodar_com_quadros(comando_final(ffmpeg, roteiro, duracao, saida, corte, tem_audio), tmp, quadros)
+        comando = comando_final(ffmpeg, roteiro, duracao, saida, corte, tem_audio, taxa=taxa,
+                                tom=1.0 if isinstance(voz, VozKokoro) else None,
+                                impactos=impactos if gta_corte else (), sons=gta_corte)
+        _rodar_com_quadros(comando, tmp, quadros)
     with open(saida.with_suffix(".post.txt"), "x", encoding="utf-8", newline="\n") as f:
         f.write(texto_do_post(roteiro))
     return saida

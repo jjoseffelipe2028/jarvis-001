@@ -120,6 +120,21 @@ class TestSaida(unittest.TestCase):
         self.assertIn("pipe:0", cmd)
         self.assertTrue(any("amix" in c for c in cmd))
 
+    def test_kit_do_editor_punch_sons_e_voz_na_taxa_certa(self):
+        r = validar_roteiro(roteiro())
+        cmd = comando_final("ffmpeg", r, 20, "saida.mp4", corte="c.mp4", taxa=24000, tom=1.0,
+                            impactos=[3.0], sons=True)
+        filtro = cmd[cmd.index("-filter_complex") + 1]
+        self.assertIn("file:sons.wav", cmd)
+        self.assertIn("eval=frame", filtro)                                  # zoom/tremida/clarão
+        self.assertIn("sidechaincompress", filtro)                           # batida abaixa na fala
+        self.assertIn("amix=inputs=3", filtro)
+        self.assertNotIn("asetrate", filtro)                                 # Kokoro: sem mexer no tom
+        self.assertIn("acompressor", filtro)
+        piper = comando_final("ffmpeg", r, 20, "saida.mp4", corte="c.mp4")
+        self.assertIn(f"asetrate={int(22050 * brabo.MODOS['gta']['tom'])}", piper[piper.index("-filter_complex") + 1])
+        self.assertNotIn("file:sons.wav", piper)
+
     def test_som_do_jogo_zero_tira_o_jogo(self):
         r = validar_roteiro(roteiro(som_jogo=0))
         cmd = comando_final("ffmpeg", r, 20, "saida.mp4", corte="c.mp4")
