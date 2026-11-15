@@ -34,17 +34,10 @@ import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -59,7 +52,6 @@ import tools.jackson.databind.json.JsonMapper;
 class ContratoPythonTest {
 
     static final Path CONTRATO = Path.of("..", "..", "docs", "contratos", "bracos-python.json");
-    private static final String PACOTE = "io.github.jjoseffelipe2028.bracos";
     /** Rotas que devolvem Map (sem record para olhar por reflexão): conferidas com uma chamada de verdade. */
     private static final Set<String> ROTAS_MAPA = Set.of("/acoes/hora", "/acoes/daily", "/acoes/prova");
 
@@ -208,34 +200,7 @@ class ContratoPythonTest {
         assertEquals(ROTAS_MAPA.size(), conferidas, "toda rota de ROTAS_MAPA precisa estar no contrato");
     }
 
-    // ---------- mapa "METODO /rota" → método do controller ----------
-
     static Map<String, Method> rotasDoJava() throws Exception {
-        var scanner = new ClassPathScanningCandidateComponentProvider(false);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
-        Map<String, Method> mapa = new LinkedHashMap<>();
-        for (BeanDefinition bd : scanner.findCandidateComponents(PACOTE)) {
-            Class<?> c = Class.forName(bd.getBeanClassName());
-            RequestMapping base = c.getAnnotation(RequestMapping.class);
-            String prefixo = base == null ? "" : primeiro(base.value(), base.path());
-            for (Method m : c.getDeclaredMethods()) {
-                GetMapping g = m.getAnnotation(GetMapping.class);
-                PostMapping p = m.getAnnotation(PostMapping.class);
-                if (g != null) {
-                    mapa.put("GET " + prefixo + primeiro(g.value(), g.path()), m);
-                }
-                if (p != null) {
-                    mapa.put("POST " + prefixo + primeiro(p.value(), p.path()), m);
-                }
-            }
-        }
-        return mapa;
-    }
-
-    private static String primeiro(String[] valor, String[] caminho) {
-        if (valor.length > 0) {
-            return valor[0];
-        }
-        return caminho.length > 0 ? caminho[0] : "";
+        return io.github.jjoseffelipe2028.bracos.RotasDoJava.mapa();
     }
 }
