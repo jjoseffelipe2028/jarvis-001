@@ -2,10 +2,15 @@ package io.github.jjoseffelipe2028.bracos.acoes.ronda;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,17 +54,30 @@ public class RondaService {
     public record Resultado(String geral, String frase, List<Vigia> vigias) {
     }
 
+    /** Ticket 062: a última ronda, com a hora, para o jornal do "Bom dia". Só em memória: some quando a API fecha. */
+    public record Ultima(String quando, Resultado resultado) {
+    }
+
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
+
     private final Path python;
     private final Path pastaPython;
     private final EstudioService.Executor executor;
     private final AtomicBoolean ocupado = new AtomicBoolean(false);
+    private final Clock relogio;
+    private volatile Ultima ultima;
 
     @Autowired
     public RondaService(@Value("${jarvis.cortes.python:}") String python) {
-        this(python, RondaService::rodarDeVerdade);
+        this(python, RondaService::rodarDeVerdade, Clock.system(ZoneId.of("America/Sao_Paulo")));
     }
 
     RondaService(String python, EstudioService.Executor executor) {
+        this(python, executor, Clock.system(ZoneId.of("America/Sao_Paulo")));
+    }
+
+    RondaService(String python, EstudioService.Executor executor, Clock relogio) {
+        this.relogio = relogio;
         Path pastaDoPython = Path.of(System.getProperty("user.dir")).resolve("../../python").toAbsolutePath().normalize();
         this.python = python == null || python.isBlank()
                 ? pastaDoPython.resolve(".venv").resolve("Scripts").resolve("python.exe")
@@ -89,12 +107,18 @@ public class RondaService {
             }
             Resultado r = ler(saida);
             if (r.vigias().isEmpty()) {
-                throw new AcaoIndisponivelException("ronda sem resultado");
+                throw new AcaoIndisponivelException("ronda sem resultado"); // falha não apaga a última ronda boa
             }
+            ultima = new Ultima(LocalTime.now(relogio).format(HORA), r);
             return r;
         } finally {
             ocupado.set(false);
         }
+    }
+
+    /** A última ronda que deu certo (Ticket 062), ou vazio se ainda não teve nenhuma. */
+    public Optional<Ultima> ultima() {
+        return Optional.ofNullable(ultima);
     }
 
     /** Lê a saída do defensor.py. Só aceita o formato combinado e os vigias da lista fechada. */

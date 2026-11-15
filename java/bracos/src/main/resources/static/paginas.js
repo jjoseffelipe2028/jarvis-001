@@ -258,7 +258,84 @@
     el("ct-video").focus();
   });
 
+  // ---------- Ticket 062: "Bom dia" como jornalzinho ----------
+  // Só LÊ: rotas GET que já existem + a última ronda guardada na API. Cada manchete falha sozinha.
+  // Texto das pendências vem do cofre (dado de fora): só textContent, cortado.
+  const VIGIA_DA_RONDA = { ok: "✅", atencao: "⚠️", alerta: "🚨", falha: "❔" };
+
+  async function manchete(funcao) {
+    try {
+      return await funcao();
+    } catch (e) {
+      return "❔ não consegui ler agora";
+    }
+  }
+
+  function daRonda(ultima, nome) {
+    if (!ultima || !ultima.resultado || !Array.isArray(ultima.resultado.vigias)) {
+      return "faça a ronda 🛡️ para ver";
+    }
+    const v = ultima.resultado.vigias.find((x) => x && x.vigia === nome);
+    if (!v) {
+      return "❔ a última ronda não trouxe";
+    }
+    const icone = Object.hasOwn(VIGIA_DA_RONDA, v.nivel) ? VIGIA_DA_RONDA[v.nivel] : "❔";
+    const quando = /^\d{2}:\d{2}$/.test(String(ultima.quando)) ? ultima.quando : "--:--";
+    return `${icone} ${String(v.frase).slice(0, 160)} (ronda das ${quando})`;
+  }
+
+  async function abrirJornal() {
+    const caixa = el("jornal");
+    const lista = el("jornal-manchetes");
+    const agora = new Date();
+    const h = agora.getHours();
+    const saudacao = h >= 5 && h < 12 ? "BOM DIA" : h < 18 && h >= 12 ? "BOA TARDE" : "BOA NOITE";
+    el("jornal-titulo").textContent = `📰 ${saudacao}, JOSÉ · `
+      + agora.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" })
+      + ` · ${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    lista.replaceChildren();
+    caixa.hidden = false;
+
+    const ultima = pedir("/central/acoes/ronda/ultima").catch(() => null);
+    const manchetes = await Promise.all([
+      manchete(async () => {
+        const r = await pedir("/central/acoes/pendencias");
+        const total = Number.isInteger(r && r.total) ? r.total : 0;
+        const primeira = Array.isArray(r && r.pendencias) && r.pendencias[0] ? String(r.pendencias[0].texto).slice(0, 120) : "";
+        return total === 0 ? "✅ nenhuma nos últimos 7 dias" : `${total} aberta(s) · 1ª: ${primeira}`;
+      }),
+      manchete(async () => formatarGit(await pedir("/central/acoes/git-status")).slice(0, 2).join(" · ")),
+      manchete(async () => {
+        const [p, i, s] = await Promise.all([pedir("/central/acoes/sentinela/portas"),
+          pedir("/central/acoes/sentinela/integridade"), pedir("/central/acoes/sentinela/isca")]);
+        return [formatarPortas(p)[0], formatarIntegridade(i)[0], formatarIsca(s)[0]].join(" · ");
+      }),
+      ultima.then((u) => daRonda(u, "Duelo")),
+      ultima.then((u) => daRonda(u, "Backup")),
+    ]);
+    const nomes = ["📝 Pendências", "🌿 Git", "🛡️ Sentinela", "⚔️ Duelo", "💾 Backup"];
+    nomes.forEach((nome, i) => {
+      const dt = document.createElement("dt");
+      dt.textContent = nome;
+      const dd = document.createElement("dd");
+      dd.textContent = String(manchetes[i]).slice(0, 400);
+      lista.append(dt, dd);
+    });
+    document.dispatchEvent(new Event("jarvis:acao"));
+  }
+
+  el("bt-jornal").addEventListener("click", (e) => {
+    const botao = e.currentTarget;
+    botao.disabled = true;
+    abrirJornal().finally(() => { botao.disabled = false; });
+  });
+
   async function fazerAcao(r) {
+    if (r.acao === "jornal") {
+      await abrirJornal();
+      mostrarFala("Jarvis:", "📰 Seu jornalzinho do dia está nos Super agentes.", "chat-ia");
+      return;
+    }
     if (r.acao === "ronda") {
       const espera = mostrarFala("Jarvis:", "🛡️ Fazendo a ronda do defensor (uns 15 s)…", "fu");
       const resultado = await fazerRonda();

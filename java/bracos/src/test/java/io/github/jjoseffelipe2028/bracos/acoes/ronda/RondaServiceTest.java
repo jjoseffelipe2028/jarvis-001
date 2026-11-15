@@ -8,6 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -127,5 +130,32 @@ class RondaServiceTest {
         Constructor<Processos.SaidaComErro> c = Processos.SaidaComErro.class.getDeclaredConstructor(String.class);
         c.setAccessible(true);
         return c.newInstance(saida);
+    }
+
+    // ---------- Ticket 062: a última ronda vai para o jornal ----------
+
+    @Test
+    void guardaAUltimaRonda_comAHora() {
+        Clock relogio = Clock.fixed(Instant.parse("2026-11-15T10:55:00Z"), ZoneId.of("America/Sao_Paulo"));
+        RondaService s = new RondaService("", (c, p, l) -> SAIDA_NORMAL, relogio);
+        assertTrue(s.ultima().isEmpty(), "antes da 1ª ronda não tem nada");
+        s.fazerRonda();
+        assertEquals("07:55", s.ultima().orElseThrow().quando());
+        assertEquals("atencao", s.ultima().orElseThrow().resultado().geral());
+    }
+
+    @Test
+    void rondaQueFalha_naoApagaAUltimaBoa() {
+        boolean[] quebrar = {false};
+        RondaService s = new RondaService("", (c, p, l) -> {
+            if (quebrar[0]) {
+                throw new IOException("tempo esgotado");
+            }
+            return SAIDA_NORMAL;
+        });
+        s.fazerRonda();
+        quebrar[0] = true;
+        assertThrows(AcaoIndisponivelException.class, s::fazerRonda);
+        assertEquals(5, s.ultima().orElseThrow().resultado().vigias().size());
     }
 }

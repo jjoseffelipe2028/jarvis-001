@@ -107,4 +107,20 @@ class RoteadorDoChatTest {
         assertTrue(roteador.rotear("pede pra 001 cria um jogo").isEmpty()); // sem ":" não é pedido
         assertEquals(Acao.PROIBIDA, acao("apaga o pedido pra 001: x")); // começa com "apaga": recusa
     }
+
+    // ---------- Ticket 062: "bom dia" abre o jornal ----------
+
+    @Test
+    void bomDia_viraJornal() {
+        for (String frase : List.of("bom dia", "Bom dia, Jarvis!", "boa tarde", "Jarvis, boa noite", "jornal", "o jornal do dia")) {
+            assertEquals(Acao.JORNAL, acao(frase), frase);
+        }
+    }
+
+    @Test
+    void bomDiaComPergunta_continuaConversa() {
+        for (String frase : List.of("bom dia, me explica o que é um record", "bom dia jarvis tudo bem?", "li no jornal sobre java")) {
+            assertTrue(roteador.rotear(frase).isEmpty(), frase);
+        }
+    }
 }

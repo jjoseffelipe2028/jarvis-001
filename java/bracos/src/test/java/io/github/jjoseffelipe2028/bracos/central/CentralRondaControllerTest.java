@@ -127,4 +127,24 @@ class CentralRondaControllerTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.erro").value("ja tem uma ronda rodando"));
     }
+
+    // ---------- Ticket 062 ----------
+
+    @Test
+    void ultimaRonda_204SemRonda_200Depois_eSemCracha401() throws Exception {
+        Cookie cracha = entrar();
+        when(ronda.ultima()).thenReturn(java.util.Optional.empty());
+        mockMvc.perform(get(ROTA + "/ultima").cookie(cracha).header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isNoContent());
+        when(ronda.ultima()).thenReturn(java.util.Optional.of(new RondaService.Ultima("07:55",
+                new RondaService.Resultado("ok", "Defensor: tudo certo na ronda.",
+                        List.of(new RondaService.Vigia("Duelo", "ok", "a defesa pegou 13 de 13"))))));
+        mockMvc.perform(get(ROTA + "/ultima").cookie(cracha).header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quando").value("07:55"))
+                .andExpect(jsonPath("$.resultado.vigias[0].vigia").value("Duelo"));
+        mockMvc.perform(get(ROTA + "/ultima").header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isUnauthorized());
+        verify(ronda, never()).fazerRonda(); // ler a última NUNCA roda o defensor
+    }
 }

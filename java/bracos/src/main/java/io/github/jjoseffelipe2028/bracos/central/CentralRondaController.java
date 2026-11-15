@@ -1,6 +1,8 @@
 package io.github.jjoseffelipe2028.bracos.central;
 
 import io.github.jjoseffelipe2028.bracos.acoes.ronda.RondaService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +25,13 @@ public class CentralRondaController {
 
     public CentralRondaController(RondaService ronda) {
         this.ronda = ronda;
+    }
+
+    /** GET /central/acoes/ronda/ultima (Ticket 062): só lê a última ronda guardada. Nenhuma → 204. */
+    @GetMapping("/ronda/ultima")
+    public ResponseEntity<RondaService.Ultima> ultima() {
+        log.info("cliente=central acao=ronda-ultima resultado=ok");
+        return ronda.ultima().map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/ronda")

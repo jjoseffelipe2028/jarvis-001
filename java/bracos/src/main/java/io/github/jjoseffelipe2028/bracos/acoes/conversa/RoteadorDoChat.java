@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class RoteadorDoChat {
 
     /** A lista fechada. Uma frase vira no máximo UMA destas. */
-    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PEDIDO_001, PROIBIDA }
+    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PEDIDO_001, JORNAL, PROIBIDA }
 
     /** O resultado: a ação e, só para GOLPE (a mensagem colada), PEDIDO_001 (o pedido) e PAGINA (o nome da página), um argumento. */
     public record Rota(Acao acao, String argumento) {
@@ -42,6 +42,10 @@ public class RoteadorDoChat {
     private static final Pattern PEDIDO_001 = Pattern.compile(JARVIS
             + "(?:pede|peca|pedir|pedido|anota|anote|manda\\s+(?:um\\s+)?pedido)\\s+(?:para|pra|pro|a|ao)\\s+(?:a\\s+|o\\s+)?"
             + "(?:001|zero\\s+zero\\s+um)\\s*[:,\\-]\\s*");
+
+    // Ticket 062: "bom dia", "bom dia, jarvis", "boa tarde", "jornal"... só a frase INTEIRA (senão é conversa).
+    private static final Pattern JORNAL = Pattern.compile(JARVIS
+            + "(?:(?:bom\\s+dia|boa\\s+tarde|boa\\s+noite)(?:[\\s,]+jarvis)?|(?:o\\s+)?jornal(?:zinho)?(?:\\s+do\\s+dia)?)[\\s.!?]*$");
 
     private static final Pattern PAGINA = Pattern.compile(JARVIS
             + "(?:abre|abra|abrir|mostra|mostre|vai\\s+(?:para|pra)|ir\\s+(?:para|pra))\\s+(?:(?:a|o)\\s+)?(?:pagina\\s+)?(?:da\\s+|de\\s+|do\\s+)?"
@@ -106,6 +110,9 @@ public class RoteadorDoChat {
             String nome = pagina.group(1);
             String fixo = nome.startsWith("video") ? "videos" : nome.startsWith("jogo") ? "jogos" : nome;
             return Optional.of(new Rota(Acao.PAGINA, fixo)); // só um dos 4 nomes fixos, nunca o texto digitado
+        }
+        if (JORNAL.matcher(normal).lookingAt()) {
+            return Optional.of(new Rota(Acao.JORNAL, null));
         }
         if (RONDA.matcher(normal).lookingAt()) {
             return Optional.of(new Rota(Acao.RONDA, null));
