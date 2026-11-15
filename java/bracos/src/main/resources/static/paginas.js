@@ -204,6 +204,47 @@
     });
   }
 
+  // ---------- Ticket 064: Sala de Treino Cyber ----------
+  // O nome do ataque sai de uma lista fixa da tela; a API confere de novo (@Pattern). Resposta só em textContent.
+  const ATAQUES = { "csrf": "🌐 CSRF", "rebinding": "🔁 DNS rebinding", "sem-cracha": "🎫 Sem crachá", "token-falso": "🕵️ Token falso" };
+
+  async function simularAtaque(botao) {
+    const nome = botao.dataset.ataque;
+    if (!Object.hasOwn(ATAQUES, nome)) {
+      return;
+    }
+    const lista = el("treino-passos");
+    const passo = (texto, classe) => {
+      const li = document.createElement("li");
+      li.className = classe;
+      li.textContent = texto;
+      lista.appendChild(li);
+    };
+    lista.replaceChildren();
+    for (const b of document.querySelectorAll(".treino-bt")) b.disabled = true;
+    try {
+      passo(`1️⃣ Montando o ataque ${ATAQUES[nome]} (pedido de mentira, só na memória)…`, "nx");
+      const r = await enviar("/central/acoes/treino", { ataque: nome });
+      passo(`🎯 Cenário: ${String(r.cenario).slice(0, 200)}`, "fu");
+      passo(`📨 Alvo: ${String(r.alvo).slice(0, 60)}`, "fu");
+      if (r.barrado === true) {
+        passo(`2️⃣ 🚪 ${String(r.porteiro).slice(0, 40)} barrou com ${Number.isInteger(r.status) ? r.status : "?"}.`, "ok");
+        passo(`3️⃣ ✅ Por quê: ${String(r.explicacao).slice(0, 240)}`, "ok");
+      } else {
+        passo("2️⃣ 🚨 FALHA NA DEFESA: nenhum porteiro barrou!", "erro");
+        passo(String(r.explicacao).slice(0, 240), "erro");
+      }
+      document.dispatchEvent(new Event("jarvis:acao"));
+    } catch (e) {
+      passo(`⚠️ ${e instanceof Error ? e.message : "falhou"}`, "erro");
+    } finally {
+      for (const b of document.querySelectorAll(".treino-bt")) b.disabled = false;
+    }
+  }
+  for (const b of document.querySelectorAll(".treino-bt")) {
+    b.addEventListener("click", (e) => simularAtaque(e.currentTarget));
+  }
+
   // ---------- Ticket 061: botões dos super agentes ----------
   // 🛡️ Ronda: comando fixo no Java (sem corpo). A tela só mostra o que volta, em textContent.
   const ICONE_RONDA = { ok: "✅", atencao: "⚠️", alerta: "🚨", falha: "❔" };

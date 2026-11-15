@@ -1,5 +1,5 @@
 # 064 — Sala de Treino Cyber: "Simular ataque" 🥋
-**Status:** 📝 plano · ⏳ **precisa do OK do José** (mexe na segurança da API: pelo combinado de 15/11, risco alto espera OK) · seção 1/2 da lista mestra
+**Status:** ✅ construído com o OK do José ("Pode construir o 064", 15/11) e commitado no ramo · ⏳ teste no navegador · seção 1/2 da lista mestra
 
 ## Ideia
 Na página Cyber, uma "Sala de Treino" com botões **Simular ataque**:
@@ -29,5 +29,12 @@ A tela mostra, passo a passo: "ataque montado → porteiro X recusou com 403 →
 - Tela: página Cyber (4 botões + passos) · `escritorio.js` (sala 🥋 Treino).
 - Testes: `TreinoServiceTest` (4 ataques barrados + "porteiro desligado = falha detectada"), `CentralTreinoControllerTest` (enum inválido 400, sem crachá 401).
 
-## Pergunta para o José
-Posso construir assim (simulação em memória pelos porteiros de verdade, sem rede)?
+## Evidências (15/11)
+- **Java: 490 testes, 0 falhas** (+7). `TreinoServiceTest` (5): os 4 ataques barrados pelo porteiro certo
+  (CSRF → `CentralInterceptor`, rebinding → `HostInterceptor`, sem crachá → `CentralInterceptor`, token falso → `TokenInterceptor`);
+  **controle**: um pedido legítimo passa pelos mesmos porteiros (prova de que o "barrado" não é defeito do pedido falso);
+  **porteiro afrouxado** é detectado ("defesa falhou"); o pedido real não é mexido; nomes fora da lista recusados.
+  `CentralTreinoControllerTest` (2): ponta a ponta com os porteiros reais; `sqli` → 400; sem crachá → 401.
+- O log marca `aviso=simulacao_comeca` antes dos "negado" do treino, para a auditoria não confundir treino com ataque real.
+- Escritório: sala 🥋 Sala de Treino. gitleaks limpo.
+- ⏳ Falta: clicar nos 4 botões na página Cyber com a API de verdade (José).

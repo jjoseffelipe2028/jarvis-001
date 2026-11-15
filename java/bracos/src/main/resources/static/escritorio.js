@@ -541,6 +541,7 @@
     "cortes": { nome: "o Estúdio de cortes", fala: "Cortando a live ✂️", voz: "Pedido de cortes entregue. O produtor começou." }, // Ticket 048
     "brabo": { nome: "o apresentador", fala: "Gravando o vídeo 🎙️", voz: "Pedido de vídeo entregue. A dupla começou o roteiro." }, // Ticket 052
     "ronda": { nome: "a ronda do defensor", fala: "Ronda feita 🛡️", voz: "Ronda do defensor concluída." }, // Ticket 061
+    "treino": { nome: "o treino de ataque", fala: "Ataque simulado 🥋", voz: "Treino de ataque concluído. Veja o resultado na página Cyber." }, // Ticket 064
     "pedido001": { nome: "a caixa da 001", fala: "Pedido anotado 📬", voz: "Pedido anotado na caixa da 001." }, // Ticket 060
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
@@ -555,6 +556,7 @@
     { id: "apresentador", icone: "🎙️", nome: "Apresentador", acoes: ["brabo"] },
     { id: "estudio", icone: "🎮", nome: "Estúdio 001", acoes: ["estudio"] },
     { id: "caixa", icone: "📬", nome: "Caixa da 001", acoes: ["pedido001"] },
+    { id: "treino", icone: "🥋", nome: "Sala de Treino", acoes: ["treino"] }, // Ticket 064
   ];
   const elSalas = document.getElementById("esc-salas");
   const salas = {};

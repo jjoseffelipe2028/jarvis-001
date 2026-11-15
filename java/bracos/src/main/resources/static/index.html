@@ -266,6 +266,16 @@
   <p class="fu">Tudo aqui só lê e avisa. Quem decide e age é você.</p>
   <div class="pagina-grade">
     <article class="comando">
+      <div class="comando-topo"><b>🥋 SALA DE TREINO · SIMULAR ATAQUE</b> <span class="ok">em memória · sem rede · nada é escrito</span></div>
+      <div class="botoes">
+        <button type="button" class="treino-bt" data-ataque="csrf">🌐 CSRF</button>
+        <button type="button" class="treino-bt" data-ataque="rebinding">🔁 DNS rebinding</button>
+        <button type="button" class="treino-bt" data-ataque="sem-cracha">🎫 Sem crachá</button>
+        <button type="button" class="treino-bt" data-ataque="token-falso">🕵️ Token falso</button>
+      </div>
+      <ul id="treino-passos" class="saida" aria-live="polite"></ul>
+    </article>
+    <article class="comando">
       <div class="comando-topo"><b>🔎 VIGIAS</b></div>
       <div class="botoes">
         <button id="cy-portas" type="button">🛡️ Portas</button>
