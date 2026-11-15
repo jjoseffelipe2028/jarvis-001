@@ -97,7 +97,7 @@ class CentralChatControllerTest {
                         + "\"historico\":[{\"papel\":\"user\",\"texto\":\"oi\"},{\"papel\":\"assistant\",\"texto\":\"olá\"}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resposta").value("Brasília."));
-        assertTrue(saida.getOut().contains("cliente=central acao=chat resultado=ok letras=9"));
+        assertTrue(saida.getOut().contains("cliente=central acao=chat resultado=ok modelo=pequeno letras=9"));
         assertFalse(saida.getOut().contains("capital do Brasil") || saida.getOut().contains("Brasília"),
                 "a conversa não vai para o log");
         List<QuadroDeEventos.Evento> eventos = quadro.depois(0).eventos();
@@ -159,5 +159,29 @@ class CentralChatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.acao").value("ronda"));
         verify(conversa, never()).responder(any(), any());
+    }
+
+    // ---------- Ticket 065: seletor de modelo ----------
+
+    @Test
+    void modeloMaior_usaOutroCaminho_eNomeForaDaLista400() throws Exception {
+        Cookie cracha = entrar();
+        when(conversa.responder(eq("oi"), any(), eq(true))).thenReturn("Olá do maior.");
+        mockMvc.perform(chat(cracha, "{\"texto\":\"oi\",\"modelo\":\"maior\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resposta").value("Olá do maior."));
+        mockMvc.perform(chat(cracha, "{\"texto\":\"oi\",\"modelo\":\"llama3:70b\"}"))
+                .andExpect(status().isBadRequest()); // o nome do modelo nunca vem da tela
+        verify(conversa, never()).responder(any(), any());
+    }
+
+    @Test
+    void listaDeModelos_soDizSeEstaLigado() throws Exception {
+        when(conversa.temModeloMaior()).thenReturn(false);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/central/acoes/chat/modelos")
+                        .cookie(entrar()).header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pequeno").value(true))
+                .andExpect(jsonPath("$.maior").value(false));
     }
 }

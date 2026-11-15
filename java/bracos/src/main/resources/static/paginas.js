@@ -377,7 +377,8 @@
     mostrarFala("Você:", texto, "chat-eu");
     const espera = mostrarFala("Jarvis:", "pensando… (IA local, pode levar alguns segundos)", "fu");
     try {
-      const r = await enviar("/central/acoes/chat", { texto, historico });
+      const modelo = el("chat-modelo").value === "maior" ? "maior" : "pequeno"; // Ticket 065: só os 2 nomes fixos
+      const r = await enviar("/central/acoes/chat", { texto, historico, modelo });
       if (r && typeof r.acao === "string") {
         espera.remove();
         await fazerAcao(r); // ação não entra no histórico da IA
@@ -404,6 +405,17 @@
       campo.focus();
     }
   }
+
+  // Ticket 065: a opção "maior" só liga se o servidor tiver o modelo configurado (o nome nunca aparece aqui).
+  setTimeout(() => {
+    pedir("/central/acoes/chat/modelos").then((m) => {
+      const opcao = el("chat-modelo").querySelector('option[value="maior"]');
+      if (m && m.maior === true) {
+        opcao.disabled = false;
+        opcao.textContent = "🧠 Gemma maior (mais lento)";
+      }
+    }).catch(() => {});
+  }, 4500); // depois que a Central troca a chave pelo crachá
 
   el("bt-chat").addEventListener("click", (e) => conversar(e.currentTarget));
   campo.addEventListener("keydown", (e) => {

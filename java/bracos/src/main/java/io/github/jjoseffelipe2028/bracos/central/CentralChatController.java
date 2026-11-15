@@ -58,6 +58,12 @@ public class CentralChatController {
         this.relogio = relogio;
     }
 
+    /** GET /central/acoes/chat/modelos (Ticket 065): quais tamanhos estão ligados. Só nomes fixos, nunca o nome do modelo. */
+    @org.springframework.web.bind.annotation.GetMapping("/chat/modelos")
+    public Map<String, Boolean> modelos() {
+        return Map.of("pequeno", true, "maior", conversa.temModeloMaior());
+    }
+
     @PostMapping("/chat")
     public Map<String, String> chat(@Valid @RequestBody ChatRequest pedido) {
         Optional<RoteadorDoChat.Rota> rota = roteador.rotear(pedido.texto());
@@ -67,8 +73,11 @@ public class CentralChatController {
             return responderAcao(acao, rota.get().argumento());
         }
         try {
-            String resposta = conversa.responder(pedido.texto(), pedido.historico());
-            log.info("cliente=central acao=chat resultado=ok letras={}", resposta.length());
+            boolean maior = "maior".equals(pedido.modelo()); // Ticket 065: lista fechada, conferida pelo @Pattern
+            String resposta = maior
+                    ? conversa.responder(pedido.texto(), pedido.historico(), true)
+                    : conversa.responder(pedido.texto(), pedido.historico());
+            log.info("cliente=central acao=chat resultado=ok modelo={} letras={}", maior ? "maior" : "pequeno", resposta.length());
             return Map.of("resposta", resposta);
         } catch (RuntimeException e) {
             log.warn("cliente=central acao=chat resultado=erro motivo={}", e.getClass().getSimpleName());
