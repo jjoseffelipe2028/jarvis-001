@@ -13,7 +13,7 @@ from ouvido import carregar_ouvido, ouvir  # o nosso ouvido (ouvido.py)
 from boca import carregar_boca, falar      # a nossa boca (boca.py)
 from bracos import Bracos, ErroBraco       # ponte para a API Java (bracos.py)
 from intencoes import detectar, responder, seguro  # pedido de ação ou conversa? (intencoes.py)
-from rotinas import bom_dia                # "bom dia, Jarvis" (rotinas.py)
+from rotinas import bom_dia, aviso_do_alarme  # "bom dia, Jarvis" e alarme de tentativas (rotinas.py)
 
 MODELO = "gemma4:e2b"  # o modelo que baixamos (cabe na RTX 4050)
 
@@ -73,8 +73,15 @@ def main():
     boca = carregar_boca()      # liga a boca 1 vez só
 
     print("🤖 Jarvis: Olá, José! Digite, ou aperte Enter VAZIO para FALAR. ('sair' encerra)")
+    alarmes_vistos = 0  # Ticket 080: disparos do alarme de tentativas já avisados
 
     while True:
+        # Ticket 080: antes de cada pergunta, o alarme de tentativas disparou de novo? Avisa por voz.
+        aviso, alarmes_vistos = aviso_do_alarme(bracos, alarmes_vistos)
+        if aviso:
+            print(f"🚨 Jarvis: {aviso}")
+            falar(boca, aviso)
+
         pergunta = input("\nVocê: ").strip()
         veio_da_voz = False
 

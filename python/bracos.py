@@ -137,6 +137,10 @@ class Bracos:
         """Ticket 034: alguém tocou na isca (honeytoken)? Só lê o contador."""
         return self._pedir("GET", "/acoes/sentinela/isca")
 
+    def alarme(self):
+        """Ticket 080: o alarme de tentativas (5 pedidos negados em 1 minuto) disparou? Só lê os números."""
+        return self._pedir("GET", "/acoes/sentinela/alarme")
+
     def golpe(self, texto):
         """Ticket 023: essa mensagem tem cara de golpe? Manda só o TEXTO; o Java nunca abre o link."""
         texto = (texto or "").strip()

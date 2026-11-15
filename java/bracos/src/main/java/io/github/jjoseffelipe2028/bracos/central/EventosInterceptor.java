@@ -28,6 +28,7 @@ public class EventosInterceptor implements HandlerInterceptor {
             Map.entry("POST /acoes/sentinela/golpe", "golpe"), // Ticket 023: detector de golpe
             Map.entry("POST /acoes/sentinela/proposta", "proposta"), // Ticket 030: verificador de propostas
             Map.entry("GET /acoes/sentinela/isca", "isca"), // Ticket 034: a isca foi tocada?
+            Map.entry("GET /acoes/sentinela/alarme", "alarme"), // Ticket 080: alarme de tentativas
             Map.entry("POST /central/acoes/sentinela/proposta", "proposta"), // Ticket 039
             Map.entry("GET /central/acoes/sentinela/isca", "isca"), // Ticket 039
             Map.entry("POST /central/acoes/chat", "chat"), // Ticket 039: conversa com a IA local
