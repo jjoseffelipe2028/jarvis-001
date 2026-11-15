@@ -80,4 +80,31 @@ class RoteadorDoChatTest {
             assertEquals(texto.length(), RoteadorDoChat.semAcento(texto).length(), texto);
         }
     }
+
+    // ---------- Ticket 060: caixa de pedidos para a 001 ----------
+
+    @Test
+    void pedidoPara001_viraPedido_comOTextoOriginal() {
+        RoteadorDoChat.Rota r = roteador.rotear("pede pra 001: cria um mini jogo de cobrinha com placar").orElseThrow();
+        assertEquals(Acao.PEDIDO_001, r.acao());
+        assertEquals("cria um mini jogo de cobrinha com placar", r.argumento());
+        assertEquals("revisa a ação daily", roteador.rotear("Jarvis, peça para a 001: revisa a ação daily").orElseThrow().argumento());
+        assertEquals(Acao.PEDIDO_001, acao("anota pra 001 - estudar Spring Security"));
+        assertEquals(Acao.PEDIDO_001, acao("pede pra zero zero um: ver o README"));
+    }
+
+    @Test
+    void pedidoPara001_comPalavraProibida_eRecado_naoOrdem() {
+        // "instala" e "apaga" aqui são parte do recado para a 001, não ordem para o Jarvis
+        RoteadorDoChat.Rota r = roteador.rotear("pede pra 001: instala o gitleaks e apaga o log velho").orElseThrow();
+        assertEquals(Acao.PEDIDO_001, r.acao());
+        assertEquals("instala o gitleaks e apaga o log velho", r.argumento());
+    }
+
+    @Test
+    void falarDa001SemDoisPontos_naoViraPedido() {
+        assertTrue(roteador.rotear("o que a 001 faz?").isEmpty());
+        assertTrue(roteador.rotear("pede pra 001 cria um jogo").isEmpty()); // sem ":" não é pedido
+        assertEquals(Acao.PROIBIDA, acao("apaga o pedido pra 001: x")); // começa com "apaga": recusa
+    }
 }

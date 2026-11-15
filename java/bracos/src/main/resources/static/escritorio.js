@@ -540,6 +540,7 @@
     "estudio": { nome: "o Estúdio", fala: "Dupla trabalhando 🎮", voz: "Pedido entregue ao Estúdio. A dupla começou." }, // Ticket 047
     "cortes": { nome: "o Estúdio de cortes", fala: "Cortando a live ✂️", voz: "Pedido de cortes entregue. O produtor começou." }, // Ticket 048
     "brabo": { nome: "o apresentador", fala: "Gravando o vídeo 🎙️", voz: "Pedido de vídeo entregue. A dupla começou o roteiro." }, // Ticket 052
+    "pedido001": { nome: "a caixa da 001", fala: "Pedido anotado 📬", voz: "Pedido anotado na caixa da 001." }, // Ticket 060
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
   const elVivo = document.getElementById("esc-vivo");

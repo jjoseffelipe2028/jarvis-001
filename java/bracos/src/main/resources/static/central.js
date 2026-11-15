@@ -106,6 +106,7 @@ async function tratar(resposta) {
     const motivos = {
       400: "Texto inválido (vazio ou grande demais).",
       413: "Pedido grande demais.",
+      429: "Limite do dia atingido (30 pedidos). Tente amanhã.",
       503: "Ação desligada (pasta não configurada no .env).",
     };
     throw new Error(motivos[resposta.status] || "A API recusou o pedido.");

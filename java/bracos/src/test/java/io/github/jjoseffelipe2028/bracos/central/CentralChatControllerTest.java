@@ -137,4 +137,18 @@ class CentralChatControllerTest {
         when(conversa.responder(any(), any())).thenThrow(new AcaoIndisponivelException("ia local desligada"));
         mockMvc.perform(chat(entrar(), "{\"texto\":\"oi\"}")).andExpect(status().isServiceUnavailable());
     }
+
+    @Test
+    void pedidoPara001_soDevolveORevisar_naoGravaNem_chamaAIa(CapturedOutput saida) throws Exception {
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra 001: cria um jogo de nave\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("pedido001"))
+                .andExpect(jsonPath("$.texto").value("cria um jogo de nave"));
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra 001:   \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resposta").value(CentralChatController.PEDIDO_VAZIO));
+        verify(conversa, never()).responder(any(), any());
+        assertTrue(saida.getOut().contains("rota=pedido_001"));
+        assertFalse(saida.getOut().contains("jogo de nave"), "o pedido não vai para o log");
+    }
 }

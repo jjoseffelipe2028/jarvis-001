@@ -41,6 +41,7 @@ public class CentralChatController {
             + "O que muda o PC continua com você (ou com a 001, com o seu OK).";
     static final String RONDA = "🛡️ A ronda do defensor roda no terminal: python defensor.py "
             + "(o botão na Central vem no próximo lote).";
+    static final String PEDIDO_VAZIO = "Escreva o pedido depois dos dois pontos. Exemplo: pede pra 001: cria um mini jogo de cobrinha";
     static final String GOLPE_VAZIO = "Cole a mensagem depois dos dois pontos. Exemplo: isso é golpe: <mensagem>";
 
     private final ConversaService conversa;
@@ -85,6 +86,9 @@ public class CentralChatController {
             case GOLPE -> argumento == null || argumento.isBlank()
                     ? Map.of("resposta", GOLPE_VAZIO)
                     : Map.of("acao", "golpe", "texto", argumento); // a própria mensagem que o José colou
+            case PEDIDO_001 -> argumento == null || argumento.isBlank()
+                    ? Map.of("resposta", PEDIDO_VAZIO)
+                    : Map.of("acao", "pedido001", "texto", argumento); // só vira nota depois do Confirmar na tela
             case PAGINA -> Map.of("acao", "pagina", "pagina", argumento); // um dos 4 nomes fixos do roteador
             default -> Map.of("acao", acao.name().toLowerCase(Locale.ROOT));
         };

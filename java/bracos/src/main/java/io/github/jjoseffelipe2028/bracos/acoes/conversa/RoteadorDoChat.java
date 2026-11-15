@@ -22,9 +22,9 @@ import org.springframework.stereotype.Component;
 public class RoteadorDoChat {
 
     /** A lista fechada. Uma frase vira no máximo UMA destas. */
-    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PROIBIDA }
+    public enum Acao { PENDENCIAS, GIT_STATUS, PORTAS, INTEGRIDADE, ISCA, GOLPE, PAGINA, HORA, RONDA, PEDIDO_001, PROIBIDA }
 
-    /** O resultado: a ação e, só para GOLPE (a mensagem colada) e PAGINA (o nome da página), um argumento. */
+    /** O resultado: a ação e, só para GOLPE (a mensagem colada), PEDIDO_001 (o pedido) e PAGINA (o nome da página), um argumento. */
     public record Rota(Acao acao, String argumento) {
     }
 
@@ -37,6 +37,11 @@ public class RoteadorDoChat {
             + "|(?:verifica|verifique|confere|confira|analisa|analise|checa|cheque|ve|veja)\\s+(?:se\\s+)?"
             + "(?:essa|esta|a|esse|este|o)\\s+(?:mensagem|msg|sms|link|zap)(?:\\s+e\\s+golpe)?"
             + "|detector\\s+de\\s+golpe|golpe)\\s*[?:,\\-]\\s*");
+
+    // Ticket 060: "pede pra 001: ...", "pedido pra 001: ...", "anota pra 001: ..." (a 001 também pode ser "a zero zero um").
+    private static final Pattern PEDIDO_001 = Pattern.compile(JARVIS
+            + "(?:pede|peca|pedir|pedido|anota|anote|manda\\s+(?:um\\s+)?pedido)\\s+(?:para|pra|pro|a|ao)\\s+(?:a\\s+|o\\s+)?"
+            + "(?:001|zero\\s+zero\\s+um)\\s*[:,\\-]\\s*");
 
     private static final Pattern PAGINA = Pattern.compile(JARVIS
             + "(?:abre|abra|abrir|mostra|mostre|vai\\s+(?:para|pra)|ir\\s+(?:para|pra))\\s+(?:(?:a|o)\\s+)?(?:pagina\\s+)?(?:da\\s+|de\\s+|do\\s+)?"
@@ -89,6 +94,12 @@ public class RoteadorDoChat {
             // Antes da lista proibida: a mensagem colada pode ter "faz um pix", e isso NÃO é pedido do José.
             // Corta no ORIGINAL (mesmo tamanho), para os acentos da mensagem ficarem.
             return Optional.of(new Rota(Acao.GOLPE, frase.substring(golpe.end()).strip()));
+        }
+        Matcher pedido = PEDIDO_001.matcher(normal);
+        if (pedido.lookingAt()) {
+            // Também antes da lista proibida: "pede pra 001: instala o X" é recado para a 001, não ordem ao Jarvis.
+            // Nada é gravado aqui: a tela mostra Revisar → Confirmar.
+            return Optional.of(new Rota(Acao.PEDIDO_001, frase.substring(pedido.end()).strip()));
         }
         Matcher pagina = PAGINA.matcher(normal);
         if (pagina.lookingAt()) {

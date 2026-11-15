@@ -162,7 +162,53 @@
     falas.scrollTop = falas.scrollHeight;
   }
 
+  // Ticket 060: caixa de pedidos para a 001. O chat só MOSTRA o pedido (Revisar);
+  // a nota só nasce no clique em Confirmar. Texto em textContent (nunca HTML).
+  function revisarPedido001(texto) {
+    const pedido = String(texto || "").slice(0, 2000);
+    const li = mostrarFala("Jarvis:", "📬 Revise o pedido para a caixa da 001:", "chat-ia");
+    const cartao = document.createElement("div");
+    cartao.className = "cartao-texto";
+    cartao.textContent = pedido;
+    const confirmar = document.createElement("button");
+    confirmar.type = "button";
+    confirmar.className = "aceitar";
+    confirmar.textContent = "Confirmar";
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "recusar";
+    cancelar.textContent = "Cancelar";
+    const botoes = document.createElement("div");
+    botoes.className = "botoes";
+    botoes.append(confirmar, " ", cancelar);
+    li.append(cartao, botoes);
+    falas.scrollTop = falas.scrollHeight;
+    cancelar.addEventListener("click", () => {
+      botoes.remove();
+      mostrarFala("Jarvis:", "Pedido cancelado. Nada foi gravado.", "fu");
+    });
+    confirmar.addEventListener("click", async () => {
+      confirmar.disabled = true;
+      cancelar.disabled = true;
+      try {
+        const r = await enviar("/central/acoes/pedido-001", { texto: pedido }); // exatamente o que você revisou
+        botoes.remove();
+        mostrarFala("Jarvis:", `✅ Anotado na caixa da 001 (${String(r.arquivo || "").slice(0, 40)}). `
+          + "Quando abrir o Claude Code, ela lê e te mostra o plano antes de fazer.", "chat-ia");
+        document.dispatchEvent(new Event("jarvis:acao"));
+      } catch (e) {
+        confirmar.disabled = false;
+        cancelar.disabled = false;
+        mostrarFala("⚠️", e instanceof Error ? e.message : "falhou", "erro");
+      }
+    });
+  }
+
   async function fazerAcao(r) {
+    if (r.acao === "pedido001") {
+      revisarPedido001(r.texto);
+      return;
+    }
     if (r.acao === "pagina") {
       if (!Object.hasOwn(NOMES_DAS_PAGINAS, r.pagina)) {
         throw new Error("Página desconhecida.");
