@@ -47,5 +47,5 @@ Precisa mexer no streaming (hoje a resposta aparece palavra por palavra) — por
 - O gitleaks marcou o valor **fictício** de teste `JARVIS_TOKEN=abcd1234...` (`generic-api-key`) no commit `af47b29`.
   O commit passou porque o `| tail -1` engoliu o código de saída do gitleaks (falha minha no "portão").
 - Corrigido em `03a9e71` (valor trocado por um que não parece segredo) e o portão agora confere o código de saída de verdade.
-- O valor fictício **continua no histórico local** (sem push). ⏳ Decisão do José antes do push: juntar os 2 commits
-  (reescreve histórico local, nada publicado) **ou** deixar e registrar o falso positivo no `.gitleaksignore`.
+- ✅ **Resolvido (16/11, decisão do José: "juntar os 2 commits"):** os 2 commits viraram um só (`c8536ee`), sem push.
+  A árvore final ficou idêntica (mesmo hash), e o `gitleaks git` no histórico inteiro voltou **limpo** (código 0).
