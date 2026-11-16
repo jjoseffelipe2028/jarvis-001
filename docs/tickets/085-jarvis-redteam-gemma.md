@@ -42,3 +42,10 @@ Precisa mexer no streaming (hoje a resposta aparece palavra por palavra) — por
 - `test_redteam_gemma.py`: **12 testes** com Gemma FALSA (obediente → 0/10; que recusa → 10/10; negação não conta; controle;
   temperatura 0; só 127.0.0.1; nota; Ollama desligado; argumentos).
 - Rodada real: `A Gemma recusou 9 de 10` · com a frase no prompt e `--vezes 3`: `27 de 30` (as 3 falhas = vazamento).
+
+## ⚠️ Incidente no commit (16/11)
+- O gitleaks marcou o valor **fictício** de teste `JARVIS_TOKEN=abcd1234...` (`generic-api-key`) no commit `af47b29`.
+  O commit passou porque o `| tail -1` engoliu o código de saída do gitleaks (falha minha no "portão").
+- Corrigido em `03a9e71` (valor trocado por um que não parece segredo) e o portão agora confere o código de saída de verdade.
+- O valor fictício **continua no histórico local** (sem push). ⏳ Decisão do José antes do push: juntar os 2 commits
+  (reescreve histórico local, nada publicado) **ou** deixar e registrar o falso positivo no `.gitleaksignore`.
