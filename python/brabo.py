@@ -257,12 +257,13 @@ def gerar_ass(roteiro, tempos, duracao):
     return "\n".join(linhas) + "\n"
 
 
-# ---------------------------- voz (local: Kokoro no Brabo, Piper no Mestre) ----------------------------
+# ---------------------------- voz (local: Kokoro; Piper se o Kokoro não estiver no PC) ----------------------------
 
 # Ticket 053: o José escolheu de ouvido a voz "pm_alex" do Kokoro para o Brabo (15/11). Modelo fora do git.
 KOKORO = Path(__file__).parent / "vozes" / "kokoro-v1.0.onnx"
 KOKORO_VOZES = Path(__file__).parent / "vozes" / "voices-v1.0.bin"
 VOZ_BRABO = "pm_alex"
+VOZ_MESTRE = "pm_santa"        # 16/11: o Mestre também no Kokoro, com voz diferente da do Brabo (canais separados)
 
 
 class VozKokoro:
@@ -278,10 +279,10 @@ class VozKokoro:
 
 
 def carregar_voz(modo="ensino"):
-    """Brabo (gta) → Kokoro, se o modelo estiver em python/vozes/; senão (ou Mestre) → Piper."""
-    if modo == "gta" and KOKORO.is_file() and KOKORO_VOZES.is_file():
+    """Kokoro (Brabo = pm_alex, Mestre = pm_santa) se o modelo estiver em python/vozes/; senão → Piper."""
+    if KOKORO.is_file() and KOKORO_VOZES.is_file():
         from kokoro_onnx import Kokoro
-        return VozKokoro(Kokoro(str(KOKORO), str(KOKORO_VOZES)))
+        return VozKokoro(Kokoro(str(KOKORO), str(KOKORO_VOZES)), VOZ_BRABO if modo == "gta" else VOZ_MESTRE)
     from piper import PiperVoice
     if not VOZ.is_file():
         raise ErroBrabo("Voz do Piper não encontrada em python/vozes/.")
@@ -481,14 +482,35 @@ def bolinha_do_passo(lado=PASSO_LADO):
     return t.pronta()
 
 
-def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=None, fps=avatar.FPS):
+def ampliar(img, lado):
+    """Redimensiona um RGBA quadrado para lado x lado (bilinear)."""
+    import retratos
+    if img.shape[0] == lado:
+        return img
+    eixo = (np.arange(lado, dtype=np.float32) + 0.5) * img.shape[0] / lado - 0.5
+    ys, xs = np.meshgrid(eixo, eixo, indexing="ij")
+    return np.clip(retratos._amostrar(img.astype(np.float32), ys, xs) + 0.5, 0, 255).astype(np.uint8)
+
+
+def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=None, fps=avatar.FPS,
+                   ffmpeg=None, pasta_tmp=None):
     """Quadros 1080x1920 RGB do ensino: degradê + cartão do passo (com fade/slide) + passo + barra + Mestre."""
     cenas = cenas_da_tela(roteiro, tempos)
     if cartoes is None:
         cartoes = {nome: avatar.desenhar_cartao(nome, CARTAO_LADO) for nome in {c for _, c, _ in cenas}}
+    movimento = None
     if mestre is None:
-        mestre = {k: avatar.com_sombra(v) for k, v in
-                  avatar.sprites("mestre", fundo=False, lado=MESTRE_LADO).items()}
+        import retratos
+        fotos = retratos.retratos("mestre", MESTRE_LADO)
+        if fotos is not None and ffmpeg and pasta_tmp and boca_ia.ligado():
+            # Mestre 3D com a boca feita pela IA (MuseTalk); se ela falhar, boca_ia volta para a boca normal
+            movimento = boca_ia.quadros("mestre", trilha, taxa, False, ffmpeg, pasta_tmp, fps, lado=MESTRE_LADO)
+        elif fotos is not None:                     # Mestre 3D (Ticket 055): respira, balança, boca suave
+            movimento = avatar.quadros_retrato("mestre", fotos, trilha, taxa, fundo=False, fps=fps)
+        else:
+            mestre = {k: avatar.com_sombra(v) for k, v in
+                      avatar.sprites("mestre", fundo=False, lado=MESTRE_LADO, retrato=False).items()}
+    ultimo = None
     fundo = fundo_degrade()
     bolinha = bolinha_do_passo()
     parado = {}
@@ -520,10 +542,15 @@ def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=
             opac = 1.0 if igual else suave((t - ini) / SURGIR_PASSO)
             colar(q, bolinha, PASSO_X - PASSO_LADO // 2, PASSO_Y - PASSO_LADO // 2, opac)
         barra(q, t / duracao)
-        b = int(bocas[n]) if n < len(bocas) else 0
-        img = mestre[(b, bool(olhos[n]) if n < len(olhos) else False)]
-        if b:
-            img = np.roll(img, -3 * b, axis=0)                      # leve "subida" ao falar
+        if movimento is not None:
+            img = next(movimento, None)
+            ultimo = avatar.com_sombra(ampliar(img, MESTRE_LADO)) if img is not None else ultimo
+            img = ultimo
+        else:
+            b = int(bocas[n]) if n < len(bocas) else 0
+            img = mestre[(b, bool(olhos[n]) if n < len(olhos) else False)]
+            if b:
+                img = np.roll(img, -3 * b, axis=0)                  # leve "subida" ao falar
         colar(q, img, MESTRE_X, MESTRE_Y)
         yield q
 
@@ -590,7 +617,7 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
             gravar_wav(Path(tmp) / "sons.wav", sons_mod.trilha_de_sons(duracao, impactos, nota_em), sons_mod.TAXA)
         Path(tmp, "brabo.ass").write_text(gerar_ass(roteiro, tempos, duracao), encoding="utf-8")
         if roteiro["fundo"] == "cartoes":
-            quadros = quadros_ensino(roteiro, tempos, duracao, trilha, taxa)
+            quadros = quadros_ensino(roteiro, tempos, duracao, trilha, taxa, ffmpeg=ffmpeg, pasta_tmp=tmp)
         else:
             # Ticket 055: boca por IA (MuseTalk) quando instalada; senão, a boca antiga pelo volume
             quadros = boca_ia.quadros(m["personagem"], trilha, taxa, m["fundo_avatar"], ffmpeg, tmp)

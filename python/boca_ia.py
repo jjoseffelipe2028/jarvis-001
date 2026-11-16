@@ -138,8 +138,9 @@ def juntar(rgb_quadros, alfa_quadros):
         yield q
 
 
-def quadros(personagem, voz, taxa, fundo, ffmpeg, pasta_tmp, fps=avatar.FPS, avisar=print):
-    """Quadros RGBA (avatar.LADO) com a boca da IA; se não der, a boca antiga. Mesma interface de avatar.quadros."""
+def quadros(personagem, voz, taxa, fundo, ffmpeg, pasta_tmp, fps=avatar.FPS, avisar=print, lado=avatar.LADO):
+    """Quadros RGBA (lado x lado) com a boca da IA; se não der, a boca antiga (avatar.LADO). Mesma interface
+    de avatar.quadros. `lado` maior serve para o Mestre do ensino (640)."""
     import retratos
     if not ligado() or retratos.arquivos(personagem) is None:
         return avatar.quadros(personagem, voz, taxa, fundo=fundo, fps=fps)
@@ -153,9 +154,9 @@ def quadros(personagem, voz, taxa, fundo, ffmpeg, pasta_tmp, fps=avatar.FPS, avi
     except (ErroBocaIA, OSError, subprocess.SubprocessError) as e:
         avisar(f"⚠️ Boca por IA falhou ({e}). Vai com a boca normal.")
         return avatar.quadros(personagem, voz, taxa, fundo=fundo, fps=fps)
-    fotos = retratos.retratos(personagem, avatar.LADO)
+    fotos = retratos.retratos(personagem, lado)
     alfas = avatar.quadros_retrato(personagem, fotos, voz, taxa, fundo, fps, boca_fechada=True)
-    return juntar(ler_quadros(boca, avatar.LADO, ffmpeg), alfas)
+    return juntar(ler_quadros(boca, lado, ffmpeg), alfas)
 
 
 if __name__ == "__main__":
