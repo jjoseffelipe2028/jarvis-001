@@ -314,8 +314,9 @@ public class BraboService {
     }
 
     private String fazerVideo(String nomeRoteiro, List<String> passos) throws IOException, InterruptedException {
-        passo(passos, "video", "🎙️ Gravando a voz, animando o personagem e montando o vídeo…");
-        executor.rodar(List.of(python.toString(), "brabo.py", "fazer", nomeRoteiro), pastaPython, Duration.ofMinutes(20));
+        passo(passos, "video", "🎙️ Gravando a voz, animando o personagem (boca por IA) e montando o vídeo…");
+        // Ticket 055: a boca por IA (MuseTalk) leva alguns minutos a mais → limite de 35 min
+        executor.rodar(List.of(python.toString(), "brabo.py", "fazer", nomeRoteiro), pastaPython, Duration.ofMinutes(35));
         String base = nomeRoteiro.substring(0, nomeRoteiro.length() - ".json".length());
         String sufixo = base.endsWith(".mestre") ? "mestre" : "brabo";
         String video = base.substring(0, base.length() - sufixo.length() - 1) + "-" + sufixo + ".mp4";

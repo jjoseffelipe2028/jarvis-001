@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 import avatar
+import boca_ia
 import cortador
 import sons as sons_mod
 from cortador import ErroCorte, desarmar_ass
@@ -591,7 +592,8 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
         if roteiro["fundo"] == "cartoes":
             quadros = quadros_ensino(roteiro, tempos, duracao, trilha, taxa)
         else:
-            quadros = avatar.quadros(m["personagem"], trilha, taxa, fundo=m["fundo_avatar"])
+            # Ticket 055: boca por IA (MuseTalk) quando instalada; senão, a boca antiga pelo volume
+            quadros = boca_ia.quadros(m["personagem"], trilha, taxa, m["fundo_avatar"], ffmpeg, tmp)
         comando = comando_final(ffmpeg, roteiro, duracao, saida, corte, tem_audio, taxa=taxa,
                                 tom=1.0 if isinstance(voz, VozKokoro) else None,
                                 impactos=impactos if gta_corte else (), sons=gta_corte)
