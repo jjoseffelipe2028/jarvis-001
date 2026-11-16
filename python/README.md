@@ -15,6 +15,7 @@ Tudo roda **local**: nenhuma conversa ou áudio sai do PC. 🔒
 | `duelo.py` | ⚔️ Duelo Hacker × Sentinela (Ticket 035): `python duelo.py` liga uma cópia de teste da API (porta 8091, token falso, pastas temporárias), dispara 13 ataques e mostra o placar com as técnicas do MITRE. | ✅ |
 | `vigia_inicio.py` | 🚦 Vigia da inicialização (Ticket 083): `python vigia_inicio.py` lista o que liga com o Windows e marca o que é novo ou mudou de programa; `--lembrar` guarda os conhecidos. **Só lê**, nunca desativa nada. | ✅ |
 | `relatorio_semanal.py` | 📋 Relatório semanal de segurança (Ticket 084): ronda do defensor + gitleaks no histórico + números da semana numa nota do cofre (`JARVIS_PASTA_INCIDENTES`). Só lê; nunca sobrescreve. | ✅ |
+| `redteam_gemma.py` | 🟥🤖 jarvis-redteam (Ticket 085): `python redteam_gemma.py` dispara 10 ataques de prompt injection contra a Gemma local (com a personalidade do chat) e mede quantos ela recusa. Só 127.0.0.1. | ✅ |
 | `requirements.txt` | Lista de bibliotecas (`pip install -r requirements.txt`). | ✅ |
 
 ## Rodar
