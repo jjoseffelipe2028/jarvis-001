@@ -75,12 +75,29 @@
       <p>Um planeja, o outro contesta. José aprova.</p>
       <div class="mic">🎙️ "Bom dia, Jarvis"</div>
     </div>
+    <section class="comando agentes" aria-label="Super agentes">
+      <div class="comando-topo"><b>🦸 SUPER AGENTES</b> <span class="ok">comandos fixos · nada sai do PC</span></div>
+      <div class="botoes">
+        <button id="bt-ronda" type="button" class="aceitar">🛡️ Ronda do defensor</button>
+        <button id="bt-cortes" type="button">🎬 Produzir cortes</button>
+        <button id="bt-jornal" type="button">📰 Bom dia</button>
+      </div>
+      <div class="comando-topo espaco"><b>🤝 ÚLTIMA PALAVRA DA DUPLA</b> <button id="bt-dupla" type="button">↻ Ler</button></div>
+      <ul id="dupla-registros" class="saida" aria-live="polite"></ul>
+      <div id="jornal" class="jornal" hidden>
+        <div id="jornal-titulo" class="jornal-titulo"></div>
+        <dl id="jornal-manchetes"></dl>
+      </div>
+      <div id="ronda-geral" class="cartao-texto" hidden></div>
+      <ul id="ronda-vigias" class="saida" aria-live="polite"></ul>
+    </section>
     <section class="comando chat" aria-label="Conversa com a IA local">
       <div class="comando-topo"><b>💬 FALAR COM O JARVIS</b> <span class="ok">IA local · nada sai do PC</span></div>
       <ul id="chat-falas" class="chat-falas" aria-live="polite"></ul>
-      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ... Enter envia."></textarea>
+      <textarea id="chat-texto" maxlength="1000" rows="2" placeholder="Pergunte ou peça: pendências, status do git, portas, isca, abre a cyber, isso é golpe: ..., bom dia, faz a ronda, pede pra 001: ..., pede pra dupla: ... Enter envia."></textarea>
       <div class="daily-linha"><span class="fu">Conversa e pede ações da lista. Para criar um jogo, use o Estúdio abaixo.</span>
-        <span><button id="bt-chat-limpar" type="button">Limpar</button> <button id="bt-chat" type="button" class="aceitar">Enviar</button></span></div>
+        <span><select id="chat-modelo" aria-label="Tamanho da IA"><option value="pequeno">🧠 Gemma pequeno</option><option value="maior" disabled>🧠 Gemma maior (desligado)</option></select>
+        <button id="bt-chat-limpar" type="button">Limpar</button> <button id="bt-chat" type="button" class="aceitar">Enviar</button></span></div>
     </section>
     <section class="comando estudio" aria-label="Estúdio 001">
       <div class="comando-topo"><b>🎮 ESTÚDIO 001 · PEÇA UM JOGO</b> <span class="ok">001 planeja → 002 revisa → 001 constrói</span></div>
@@ -98,7 +115,7 @@
       <ul id="es-passos" class="saida" aria-live="polite"></ul>
       <div id="es-resumo" class="cartao-texto" hidden></div>
     </section>
-    <section class="comando estudio" aria-label="Estúdio de cortes">
+    <section id="ct-secao" class="comando estudio" aria-label="Estúdio de cortes">
       <div class="comando-topo"><b>✂️ ESTÚDIO DE CORTES · VÍDEO OU LINK</b> <span class="ok">produtor → 001 escolhe → 002 revisa</span></div>
       <div class="daily-linha"><select id="ct-video" aria-label="Vídeo da pasta de entrada"><option value="">— vídeo da pasta de entrada —</option></select>
         <button id="ct-atualizar" type="button" title="Atualizar a lista">↻</button></div>
@@ -235,6 +252,7 @@
     <div class="esc-scan"></div>
     <div class="esc-camada" id="esc-camada"></div>
   </div>
+  <div class="esc-salas" id="esc-salas" aria-label="Salas dos super agentes" aria-live="polite"></div>
   <div class="esc-grade" id="esc-skills"></div>
   <div class="esc-legenda">
     <span><span class="esc-st ar">no ar</span> funciona na Central</span>
@@ -249,6 +267,16 @@
   <h2>🛡️ CYBER · Sentinela</h2>
   <p class="fu">Tudo aqui só lê e avisa. Quem decide e age é você.</p>
   <div class="pagina-grade">
+    <article class="comando">
+      <div class="comando-topo"><b>🥋 SALA DE TREINO · SIMULAR ATAQUE</b> <span class="ok">em memória · sem rede · nada é escrito</span></div>
+      <div class="botoes">
+        <button type="button" class="treino-bt" data-ataque="csrf">🌐 CSRF</button>
+        <button type="button" class="treino-bt" data-ataque="rebinding">🔁 DNS rebinding</button>
+        <button type="button" class="treino-bt" data-ataque="sem-cracha">🎫 Sem crachá</button>
+        <button type="button" class="treino-bt" data-ataque="token-falso">🕵️ Token falso</button>
+      </div>
+      <ul id="treino-passos" class="saida" aria-live="polite"></ul>
+    </article>
     <article class="comando">
       <div class="comando-topo"><b>🔎 VIGIAS</b></div>
       <div class="botoes">

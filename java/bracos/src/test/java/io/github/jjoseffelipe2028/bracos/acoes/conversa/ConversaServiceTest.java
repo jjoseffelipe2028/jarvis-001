@@ -119,4 +119,24 @@ class ConversaServiceTest {
         assertTrue(ConversaService.INSTRUCOES.contains("só conversa"));
         assertFalse(ConversaService.INSTRUCOES.isBlank());
     }
+
+    // ---------- Ticket 065: seletor de modelo ----------
+
+    @Test
+    void maior_usaONomeDaConfiguracao_eSemConfiguracao503() {
+        java.util.List<String> pedidos = new java.util.ArrayList<>();
+        ConversaService s = new ConversaService("gemma4:e2b", "modelo-maior-de-teste", pedido -> {
+            pedidos.add(pedido);
+            return "{\"message\":{\"content\":\"ok\"}}";
+        });
+        assertTrue(s.temModeloMaior());
+        assertEquals("ok", s.responder("oi", null, true));
+        assertTrue(pedidos.get(0).contains("\"model\":\"modelo-maior-de-teste\""));
+        assertEquals("ok", s.responder("oi", null, false));
+        assertTrue(pedidos.get(1).contains("\"model\":\"gemma4:e2b\""));
+
+        ConversaService semMaior = new ConversaService("gemma4:e2b", pedido -> "{\"message\":{\"content\":\"ok\"}}");
+        assertFalse(semMaior.temModeloMaior());
+        assertThrows(AcaoIndisponivelException.class, () -> semMaior.responder("oi", null, true));
+    }
 }

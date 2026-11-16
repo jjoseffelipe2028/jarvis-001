@@ -391,8 +391,9 @@
       { ic: "🎓", nome: "Mentor Java + Cyber", st: "term", rodar: async () => prepararNuvem(A1, "001, qual a minha próxima micro-etapa de estudo (Java ou Cyber)?") },
     ] },
     { id: "002", papel: "Revisor e pesquisador · contesta tudo", onde: "🌐 nuvem · só com Aceitar", lista: [
-      { ic: "🥊", nome: "Contestar plano", st: "breve", rodar: async () => emBreve(A2, "O 002 contestando direto pela Central (Fase 7)") },
-      { ic: "🔍", nome: "Revisar código", st: "breve", rodar: async () => emBreve(A2, "O 002 revisando direto pela Central (Fase 7)") },
+      // Ticket 072: a 002 já funciona pelo /dupla no terminal. A Central só PREPARA o texto; quem aciona é o José.
+      { ic: "🥊", nome: "Contestar plano", st: "term", rodar: async () => prepararNuvem(A2, "/dupla plano") },
+      { ic: "🔍", nome: "Revisar código", st: "term", rodar: async () => prepararNuvem(A2, "/dupla codigo") },
       { ic: "📚", nome: "Pesquisar fontes", st: "breve", rodar: async () => emBreve(A2, "O 002 pesquisando direto pela Central (Fase 7)") },
     ] },
   ];
@@ -540,8 +541,55 @@
     "estudio": { nome: "o Estúdio", fala: "Dupla trabalhando 🎮", voz: "Pedido entregue ao Estúdio. A dupla começou." }, // Ticket 047
     "cortes": { nome: "o Estúdio de cortes", fala: "Cortando a live ✂️", voz: "Pedido de cortes entregue. O produtor começou." }, // Ticket 048
     "brabo": { nome: "o apresentador", fala: "Gravando o vídeo 🎙️", voz: "Pedido de vídeo entregue. A dupla começou o roteiro." }, // Ticket 052
+    "ronda": { nome: "a ronda do defensor", fala: "Ronda feita 🛡️", voz: "Ronda do defensor concluída." }, // Ticket 061
+    "treino": { nome: "o treino de ataque", fala: "Ataque simulado 🥋", voz: "Treino de ataque concluído. Veja o resultado na página Cyber." }, // Ticket 064
+    "pedido001": { nome: "a caixa da 001", fala: "Pedido anotado 📬", voz: "Pedido anotado na caixa da 001." }, // Ticket 060
   };
   const ORIGEM = { python: "pela voz/terminal", central: "pela Central", desconhecido: "sem identificação" };
+
+  // ---------- Ticket 063: salas dos super agentes ----------
+  // O escritório cresce: um super agente novo = uma linha aqui (e a ação dele no quadro de eventos).
+  // A sala acende quando chega um evento real daquele agente. Lista fixa: nome de fora não cria sala.
+  const SALAS = [
+    { id: "defensor", icone: "🛡️", nome: "Defensor", acoes: ["ronda"] },
+    { id: "sentinela", icone: "🗼", nome: "Sentinela", acoes: ["sentinela", "integridade", "isca", "golpe", "proposta"] },
+    { id: "produtor", icone: "✂️", nome: "Produtor de cortes", acoes: ["cortes"] },
+    { id: "apresentador", icone: "🎙️", nome: "Apresentador", acoes: ["brabo"] },
+    { id: "estudio", icone: "🎮", nome: "Estúdio 001", acoes: ["estudio"] },
+    { id: "caixa", icone: "📬", nome: "Caixa da 001", acoes: ["pedido001"] },
+    { id: "treino", icone: "🥋", nome: "Sala de Treino", acoes: ["treino"] }, // Ticket 064
+  ];
+  const elSalas = document.getElementById("esc-salas");
+  const salas = {};
+  if (elSalas) {
+    for (const s of SALAS) {
+      const div = document.createElement("div");
+      div.className = "esc-sala";
+      const titulo = document.createElement("b");
+      titulo.textContent = s.icone + " " + s.nome;
+      const estado = document.createElement("span");
+      estado.className = "fu";
+      estado.textContent = "porta fechada · sem trabalho hoje";
+      div.append(titulo, estado);
+      elSalas.appendChild(div);
+      salas[s.id] = { div, estado, apagar: 0 };
+    }
+  }
+  function acenderSala(acao, resultado) {
+    const s = SALAS.find((x) => x.acoes.includes(acao));
+    if (!s || !salas[s.id]) return;
+    const sala = salas[s.id];
+    const icone = resultado === "ok" ? "✅" : resultado === "recusado" ? "🚨" : "⚠️";
+    sala.estado.textContent = "luz acesa · " + hhmm() + " " + icone;
+    sala.div.classList.remove("acesa", "alerta");
+    sala.div.classList.add(resultado === "ok" ? "acesa" : "alerta");
+    clearTimeout(sala.apagar);
+    sala.apagar = setTimeout(() => {
+      sala.div.classList.remove("acesa", "alerta");
+      sala.estado.textContent = "última vez " + sala.estado.textContent.replace("luz acesa · ", "");
+    }, 8000);
+  }
+
   const elVivo = document.getElementById("esc-vivo");
   let ultimoEvento = -1; // -1 = ainda não leu: a 1ª leitura só marca o ponto de partida
 
@@ -554,6 +602,7 @@
     const acao = Object.hasOwn(ACOES, e.acao) ? ACOES[e.acao] : null;
     if (!acao) return;
     const origem = Object.hasOwn(ORIGEM, e.cliente) ? ORIGEM[e.cliente] : ORIGEM.desconhecido;
+    acenderSala(e.acao, e.resultado); // Ticket 063
     if (e.resultado === "ok") {
       tarefa(J, async () => {
         if (e.acao === "video-relatorio") {

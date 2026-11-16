@@ -42,26 +42,53 @@ public class ConversaService {
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final String modelo;
+    private final String modeloMaior; // Ticket 065: vazio = opção "maior" desligada (503)
     private final UnaryOperator<String> ollama; // JSON do pedido → JSON da resposta
     private final Semaphore umaPorVez = new Semaphore(1);
 
     @Autowired
-    public ConversaService(@Value("${jarvis.conversa.modelo:gemma4:e2b}") String modelo) {
-        this(modelo, ConversaService::chamarOllama);
+    public ConversaService(@Value("${jarvis.conversa.modelo:gemma4:e2b}") String modelo,
+                           @Value("${jarvis.conversa.modelo-maior:}") String modeloMaior) {
+        this(modelo, modeloMaior, ConversaService::chamarOllama);
     }
 
     /** Usado nos testes: o "Ollama" é uma função falsa. */
     ConversaService(String modelo, UnaryOperator<String> ollama) {
+        this(modelo, "", ollama);
+    }
+
+    ConversaService(String modelo, String modeloMaior, UnaryOperator<String> ollama) {
         this.modelo = modelo;
+        this.modeloMaior = modeloMaior == null ? "" : modeloMaior.strip();
         this.ollama = ollama;
     }
 
+    /** Ticket 065: o modelo maior está configurado? (a tela usa para ligar ou desligar a opção) */
+    public boolean temModeloMaior() {
+        return !modeloMaior.isEmpty();
+    }
+
+    /** Ticket 065: "maior" usa o modelo da configuração; sem configuração → 503 (falha fechada). */
+    public String responder(String texto, List<ChatRequest.Fala> historico, boolean maior) {
+        if (!maior) {
+            return responder(texto, historico);
+        }
+        if (modeloMaior.isEmpty()) {
+            throw new AcaoIndisponivelException("modelo maior nao configurado");
+        }
+        return responderCom(modeloMaior, texto, historico);
+    }
+
     public String responder(String texto, List<ChatRequest.Fala> historico) {
+        return responderCom(modelo, texto, historico);
+    }
+
+    private String responderCom(String qualModelo, String texto, List<ChatRequest.Fala> historico) {
         if (!umaPorVez.tryAcquire()) {
             throw new AcaoIndisponivelException("ia ocupada");
         }
         try {
-            String resposta = ollama.apply(montarPedido(texto, historico));
+            String resposta = ollama.apply(montarPedido(qualModelo, texto, historico));
             String limpa = limpar(lerResposta(resposta));
             if (limpa.isEmpty()) {
                 throw new AcaoIndisponivelException("ia sem resposta");
@@ -74,6 +101,10 @@ public class ConversaService {
 
     /** Instruções fixas primeiro; depois o histórico curto; por último a fala nova. */
     String montarPedido(String texto, List<ChatRequest.Fala> historico) {
+        return montarPedido(modelo, texto, historico);
+    }
+
+    String montarPedido(String qualModelo, String texto, List<ChatRequest.Fala> historico) {
         List<Map<String, String>> mensagens = new ArrayList<>();
         mensagens.add(Map.of("role", "system", "content", INSTRUCOES));
         if (historico != null) {
@@ -83,7 +114,7 @@ public class ConversaService {
             }
         }
         mensagens.add(Map.of("role", "user", "content", texto));
-        return JSON.writeValueAsString(Map.of("model", modelo, "stream", false, "messages", mensagens));
+        return JSON.writeValueAsString(Map.of("model", qualModelo, "stream", false, "messages", mensagens));
     }
 
     static String lerResposta(String json) {

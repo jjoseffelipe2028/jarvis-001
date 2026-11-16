@@ -162,7 +162,270 @@
     falas.scrollTop = falas.scrollHeight;
   }
 
+  // Ticket 060: caixa de pedidos para a 001. O chat só MOSTRA o pedido (Revisar);
+  // a nota só nasce no clique em Confirmar. Texto em textContent (nunca HTML).
+  // Ticket 072: o mesmo cartão serve para "pede pra dupla:" (para = "dupla", lista fechada).
+  function revisarPedido001(texto, para = "001") {
+    const destino = para === "dupla" ? "dupla" : "001";
+    const pedido = String(texto || "").slice(0, 2000);
+    const li = mostrarFala("Jarvis:", destino === "dupla"
+      ? "🤝 Revise a pergunta para a dupla (001 responde, 002 contesta):" : "📬 Revise o pedido para a caixa da 001:", "chat-ia");
+    const cartao = document.createElement("div");
+    cartao.className = "cartao-texto";
+    cartao.textContent = pedido;
+    const confirmar = document.createElement("button");
+    confirmar.type = "button";
+    confirmar.className = "aceitar";
+    confirmar.textContent = "Confirmar";
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "recusar";
+    cancelar.textContent = "Cancelar";
+    const botoes = document.createElement("div");
+    botoes.className = "botoes";
+    botoes.append(confirmar, " ", cancelar);
+    li.append(cartao, botoes);
+    falas.scrollTop = falas.scrollHeight;
+    cancelar.addEventListener("click", () => {
+      botoes.remove();
+      mostrarFala("Jarvis:", "Pedido cancelado. Nada foi gravado.", "fu");
+    });
+    confirmar.addEventListener("click", async () => {
+      confirmar.disabled = true;
+      cancelar.disabled = true;
+      try {
+        const r = await enviar("/central/acoes/pedido-001", { texto: pedido, para: destino }); // exatamente o que você revisou
+        botoes.remove();
+        mostrarFala("Jarvis:", `✅ Anotado na caixa ${destino === "dupla" ? "para a dupla" : "da 001"} (${String(r.arquivo || "").slice(0, 40)}). `
+          + (destino === "dupla" ? "No Claude Code, rode /dupla: a resposta aparece em 🤝 Última palavra da dupla."
+            : "Quando abrir o Claude Code, ela lê e te mostra o plano antes de fazer."), "chat-ia");
+        document.dispatchEvent(new Event("jarvis:acao"));
+      } catch (e) {
+        confirmar.disabled = false;
+        cancelar.disabled = false;
+        mostrarFala("⚠️", e instanceof Error ? e.message : "falhou", "erro");
+      }
+    });
+  }
+
+  // ---------- Ticket 072: painel "Última palavra da dupla" ----------
+  // Só data, título curto e veredito (enum). O texto da nota nunca chega aqui. Tudo em textContent.
+  const VEREDITO = { APROVO: "✅ aprovo", AJUSTES: "🔧 ajustes", NAO_APROVO: "❌ não aprovo", RESPONDIDO: "💬 respondido", EM_ANALISE: "⏳ em análise" };
+
+  async function lerDupla() {
+    const lista = el("dupla-registros");
+    lista.replaceChildren();
+    const linha = (texto, classe) => {
+      const li = document.createElement("li");
+      li.className = classe;
+      li.textContent = texto;
+      lista.appendChild(li);
+    };
+    try {
+      const r = await pedir("/central/acoes/dupla");
+      const registros = Array.isArray(r && r.registros) ? r.registros.slice(0, 5) : [];
+      if (!registros.length) {
+        linha("Nenhum registro da dupla ainda. Rode /dupla no Claude Code.", "fu");
+      }
+      for (const g of registros) {
+        const v = g && Object.hasOwn(VEREDITO, g.veredito) ? VEREDITO[g.veredito] : VEREDITO.EM_ANALISE;
+        const data = /^\d{4}-\d{2}-\d{2}$/.test(String(g && g.data)) ? g.data.split("-").reverse().slice(0, 2).join("/") : "--/--";
+        linha(`${data} · ${v} · ${String(g && g.titulo).slice(0, 80)}`, g && g.veredito === "NAO_APROVO" ? "erro" : "ok");
+      }
+    } catch (e) {
+      linha(`⚠️ ${e instanceof Error ? e.message : "falhou"}`, "erro");
+    }
+  }
+  el("bt-dupla").addEventListener("click", () => lerDupla());
+
+  // ---------- Ticket 064: Sala de Treino Cyber ----------
+  // O nome do ataque sai de uma lista fixa da tela; a API confere de novo (@Pattern). Resposta só em textContent.
+  const ATAQUES = { "csrf": "🌐 CSRF", "rebinding": "🔁 DNS rebinding", "sem-cracha": "🎫 Sem crachá", "token-falso": "🕵️ Token falso" };
+
+  async function simularAtaque(botao) {
+    const nome = botao.dataset.ataque;
+    if (!Object.hasOwn(ATAQUES, nome)) {
+      return;
+    }
+    const lista = el("treino-passos");
+    const passo = (texto, classe) => {
+      const li = document.createElement("li");
+      li.className = classe;
+      li.textContent = texto;
+      lista.appendChild(li);
+    };
+    lista.replaceChildren();
+    for (const b of document.querySelectorAll(".treino-bt")) b.disabled = true;
+    try {
+      passo(`1️⃣ Montando o ataque ${ATAQUES[nome]} (pedido de mentira, só na memória)…`, "nx");
+      const r = await enviar("/central/acoes/treino", { ataque: nome });
+      passo(`🎯 Cenário: ${String(r.cenario).slice(0, 200)}`, "fu");
+      passo(`📨 Alvo: ${String(r.alvo).slice(0, 60)}`, "fu");
+      if (r.barrado === true) {
+        passo(`2️⃣ 🚪 ${String(r.porteiro).slice(0, 40)} barrou com ${Number.isInteger(r.status) ? r.status : "?"}.`, "ok");
+        passo(`3️⃣ ✅ Por quê: ${String(r.explicacao).slice(0, 240)}`, "ok");
+      } else {
+        passo("2️⃣ 🚨 FALHA NA DEFESA: nenhum porteiro barrou!", "erro");
+        passo(String(r.explicacao).slice(0, 240), "erro");
+      }
+      document.dispatchEvent(new Event("jarvis:acao"));
+    } catch (e) {
+      passo(`⚠️ ${e instanceof Error ? e.message : "falhou"}`, "erro");
+    } finally {
+      for (const b of document.querySelectorAll(".treino-bt")) b.disabled = false;
+    }
+  }
+  for (const b of document.querySelectorAll(".treino-bt")) {
+    b.addEventListener("click", (e) => simularAtaque(e.currentTarget));
+  }
+
+  // ---------- Ticket 061: botões dos super agentes ----------
+  // 🛡️ Ronda: comando fixo no Java (sem corpo). A tela só mostra o que volta, em textContent.
+  const ICONE_RONDA = { ok: "✅", atencao: "⚠️", alerta: "🚨", falha: "❔" };
+  const NOME_RONDA = { ok: "tudo certo", atencao: "atenção", alerta: "ALERTA", falha: "não deu para conferir" };
+
+  function nivelRonda(n) {
+    return Object.hasOwn(ICONE_RONDA, n) ? n : "falha";
+  }
+
+  async function fazerRonda() {
+    const botao = el("bt-ronda");
+    const lista = el("ronda-vigias");
+    const geral = el("ronda-geral");
+    botao.disabled = true;
+    botao.textContent = "🛡️ Rondando… (uns 15 s)";
+    lista.replaceChildren();
+    geral.hidden = true;
+    try {
+      const r = await enviar("/central/acoes/ronda", {});
+      const vigias = Array.isArray(r && r.vigias) ? r.vigias.slice(0, 5) : [];
+      for (const v of vigias) {
+        const li = document.createElement("li");
+        const n = nivelRonda(v.nivel);
+        li.className = n === "ok" ? "ok" : n === "alerta" ? "erro" : "nx";
+        li.textContent = `${ICONE_RONDA[n]} ${String(v.vigia).slice(0, 20)}: ${String(v.frase).slice(0, 300)}`;
+        lista.appendChild(li);
+      }
+      const n = nivelRonda(r && r.geral);
+      geral.textContent = `${ICONE_RONDA[n]} ${NOME_RONDA[n]} · ${String((r && r.frase) || "").slice(0, 300)}`;
+      geral.hidden = false;
+      document.dispatchEvent(new Event("jarvis:acao"));
+      return { geral: n, frase: geral.textContent };
+    } finally {
+      botao.disabled = false;
+      botao.textContent = "🛡️ Ronda do defensor";
+    }
+  }
+
+  el("bt-ronda").addEventListener("click", () => {
+    fazerRonda().catch((e) => {
+      const li = document.createElement("li");
+      li.className = "erro";
+      li.textContent = `⚠️ ${e instanceof Error ? e.message : "falhou"}`;
+      el("ronda-vigias").replaceChildren(li);
+    });
+  });
+
+  // 🎬 Produzir cortes: atalho para o Estúdio de cortes (Ticket 048), que já chama o produtor.py por lista fixa.
+  el("bt-cortes").addEventListener("click", () => {
+    abrirPagina("inicio");
+    el("ct-secao").scrollIntoView({ behavior: "smooth", block: "center" });
+    el("ct-video").focus();
+  });
+
+  // ---------- Ticket 062: "Bom dia" como jornalzinho ----------
+  // Só LÊ: rotas GET que já existem + a última ronda guardada na API. Cada manchete falha sozinha.
+  // Texto das pendências vem do cofre (dado de fora): só textContent, cortado.
+  const VIGIA_DA_RONDA = { ok: "✅", atencao: "⚠️", alerta: "🚨", falha: "❔" };
+
+  async function manchete(funcao) {
+    try {
+      return await funcao();
+    } catch (e) {
+      return "❔ não consegui ler agora";
+    }
+  }
+
+  function daRonda(ultima, nome) {
+    if (!ultima || !ultima.resultado || !Array.isArray(ultima.resultado.vigias)) {
+      return "faça a ronda 🛡️ para ver";
+    }
+    const v = ultima.resultado.vigias.find((x) => x && x.vigia === nome);
+    if (!v) {
+      return "❔ a última ronda não trouxe";
+    }
+    const icone = Object.hasOwn(VIGIA_DA_RONDA, v.nivel) ? VIGIA_DA_RONDA[v.nivel] : "❔";
+    const quando = /^\d{2}:\d{2}$/.test(String(ultima.quando)) ? ultima.quando : "--:--";
+    return `${icone} ${String(v.frase).slice(0, 160)} (ronda das ${quando})`;
+  }
+
+  async function abrirJornal() {
+    const caixa = el("jornal");
+    const lista = el("jornal-manchetes");
+    const agora = new Date();
+    const h = agora.getHours();
+    const saudacao = h >= 5 && h < 12 ? "BOM DIA" : h < 18 && h >= 12 ? "BOA TARDE" : "BOA NOITE";
+    el("jornal-titulo").textContent = `📰 ${saudacao}, JOSÉ · `
+      + agora.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" })
+      + ` · ${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    lista.replaceChildren();
+    caixa.hidden = false;
+
+    const ultima = pedir("/central/acoes/ronda/ultima").catch(() => null);
+    const manchetes = await Promise.all([
+      manchete(async () => {
+        const r = await pedir("/central/acoes/pendencias");
+        const total = Number.isInteger(r && r.total) ? r.total : 0;
+        const primeira = Array.isArray(r && r.pendencias) && r.pendencias[0] ? String(r.pendencias[0].texto).slice(0, 120) : "";
+        return total === 0 ? "✅ nenhuma nos últimos 7 dias" : `${total} aberta(s) · 1ª: ${primeira}`;
+      }),
+      manchete(async () => formatarGit(await pedir("/central/acoes/git-status")).slice(0, 2).join(" · ")),
+      manchete(async () => {
+        const [p, i, s] = await Promise.all([pedir("/central/acoes/sentinela/portas"),
+          pedir("/central/acoes/sentinela/integridade"), pedir("/central/acoes/sentinela/isca")]);
+        return [formatarPortas(p)[0], formatarIntegridade(i)[0], formatarIsca(s)[0]].join(" · ");
+      }),
+      ultima.then((u) => daRonda(u, "Duelo")),
+      ultima.then((u) => daRonda(u, "Backup")),
+    ]);
+    const nomes = ["📝 Pendências", "🌿 Git", "🛡️ Sentinela", "⚔️ Duelo", "💾 Backup"];
+    nomes.forEach((nome, i) => {
+      const dt = document.createElement("dt");
+      dt.textContent = nome;
+      const dd = document.createElement("dd");
+      dd.textContent = String(manchetes[i]).slice(0, 400);
+      lista.append(dt, dd);
+    });
+    document.dispatchEvent(new Event("jarvis:acao"));
+  }
+
+  el("bt-jornal").addEventListener("click", (e) => {
+    const botao = e.currentTarget;
+    botao.disabled = true;
+    abrirJornal().finally(() => { botao.disabled = false; });
+  });
+
   async function fazerAcao(r) {
+    if (r.acao === "jornal") {
+      await abrirJornal();
+      mostrarFala("Jarvis:", "📰 Seu jornalzinho do dia está nos Super agentes.", "chat-ia");
+      return;
+    }
+    if (r.acao === "ronda") {
+      const espera = mostrarFala("Jarvis:", "🛡️ Fazendo a ronda do defensor (uns 15 s)…", "fu");
+      const resultado = await fazerRonda();
+      espera.remove();
+      mostrarFala("Jarvis:", `${resultado.frase} (detalhes nos Super agentes)`, resultado.geral === "alerta" ? "erro" : "chat-ia");
+      return;
+    }
+    if (r.acao === "pedido001") {
+      revisarPedido001(r.texto);
+      return;
+    }
+    if (r.acao === "pedidodupla") {
+      revisarPedido001(r.texto, "dupla"); // Ticket 072
+      return;
+    }
     if (r.acao === "pagina") {
       if (!Object.hasOwn(NOMES_DAS_PAGINAS, r.pagina)) {
         throw new Error("Página desconhecida.");
@@ -193,7 +456,8 @@
     mostrarFala("Você:", texto, "chat-eu");
     const espera = mostrarFala("Jarvis:", "pensando… (IA local, pode levar alguns segundos)", "fu");
     try {
-      const r = await enviar("/central/acoes/chat", { texto, historico });
+      const modelo = el("chat-modelo").value === "maior" ? "maior" : "pequeno"; // Ticket 065: só os 2 nomes fixos
+      const r = await enviar("/central/acoes/chat", { texto, historico, modelo });
       if (r && typeof r.acao === "string") {
         espera.remove();
         await fazerAcao(r); // ação não entra no histórico da IA
@@ -220,6 +484,17 @@
       campo.focus();
     }
   }
+
+  // Ticket 065: a opção "maior" só liga se o servidor tiver o modelo configurado (o nome nunca aparece aqui).
+  setTimeout(() => {
+    pedir("/central/acoes/chat/modelos").then((m) => {
+      const opcao = el("chat-modelo").querySelector('option[value="maior"]');
+      if (m && m.maior === true) {
+        opcao.disabled = false;
+        opcao.textContent = "🧠 Gemma maior (mais lento)";
+      }
+    }).catch(() => {});
+  }, 4500); // depois que a Central troca a chave pelo crachá
 
   el("bt-chat").addEventListener("click", (e) => conversar(e.currentTarget));
   campo.addEventListener("keydown", (e) => {

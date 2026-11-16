@@ -97,7 +97,7 @@ class CentralChatControllerTest {
                         + "\"historico\":[{\"papel\":\"user\",\"texto\":\"oi\"},{\"papel\":\"assistant\",\"texto\":\"olá\"}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resposta").value("Brasília."));
-        assertTrue(saida.getOut().contains("cliente=central acao=chat resultado=ok letras=9"));
+        assertTrue(saida.getOut().contains("cliente=central acao=chat resultado=ok modelo=pequeno letras=9"));
         assertFalse(saida.getOut().contains("capital do Brasil") || saida.getOut().contains("Brasília"),
                 "a conversa não vai para o log");
         List<QuadroDeEventos.Evento> eventos = quadro.depois(0).eventos();
@@ -136,5 +136,61 @@ class CentralChatControllerTest {
     void iaDesligadaOuOcupada_503() throws Exception {
         when(conversa.responder(any(), any())).thenThrow(new AcaoIndisponivelException("ia local desligada"));
         mockMvc.perform(chat(entrar(), "{\"texto\":\"oi\"}")).andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void pedidoPara001_soDevolveORevisar_naoGravaNem_chamaAIa(CapturedOutput saida) throws Exception {
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra 001: cria um jogo de nave\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("pedido001"))
+                .andExpect(jsonPath("$.texto").value("cria um jogo de nave"));
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra 001:   \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resposta").value(CentralChatController.PEDIDO_VAZIO));
+        verify(conversa, never()).responder(any(), any());
+        assertTrue(saida.getOut().contains("rota=pedido_001"));
+        assertFalse(saida.getOut().contains("jogo de nave"), "o pedido não vai para o log");
+    }
+
+    @Test
+    void fazARonda_viraAcaoRonda_semChamarAIa() throws Exception {
+        // Ticket 061: antes respondia "roda no terminal"; agora a tela chama o botão 🛡️
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"faz a ronda\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("ronda"));
+        verify(conversa, never()).responder(any(), any());
+    }
+
+    // ---------- Ticket 065: seletor de modelo ----------
+
+    @Test
+    void modeloMaior_usaOutroCaminho_eNomeForaDaLista400() throws Exception {
+        Cookie cracha = entrar();
+        when(conversa.responder(eq("oi"), any(), eq(true))).thenReturn("Olá do maior.");
+        mockMvc.perform(chat(cracha, "{\"texto\":\"oi\",\"modelo\":\"maior\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resposta").value("Olá do maior."));
+        mockMvc.perform(chat(cracha, "{\"texto\":\"oi\",\"modelo\":\"llama3:70b\"}"))
+                .andExpect(status().isBadRequest()); // o nome do modelo nunca vem da tela
+        verify(conversa, never()).responder(any(), any());
+    }
+
+    @Test
+    void listaDeModelos_soDizSeEstaLigado() throws Exception {
+        when(conversa.temModeloMaior()).thenReturn(false);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/central/acoes/chat/modelos")
+                        .cookie(entrar()).header(CentralInterceptor.CABECALHO, "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pequeno").value(true))
+                .andExpect(jsonPath("$.maior").value(false));
+    }
+
+    @Test
+    void pedidoParaDupla_soDevolveORevisar_semChamarAIa() throws Exception {
+        mockMvc.perform(chat(entrar(), "{\"texto\":\"pede pra dupla: vale usar records?\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acao").value("pedidodupla"))
+                .andExpect(jsonPath("$.texto").value("vale usar records?"));
+        verify(conversa, never()).responder(any(), any());
     }
 }
