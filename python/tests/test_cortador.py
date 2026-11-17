@@ -103,6 +103,16 @@ class TestNomeELegenda(unittest.TestCase):
         self.assertIn("-nostdin", cmd)
         self.assertTrue(cmd[cmd.index("-vf") + 1].endswith("subtitles=legenda.ass"))
 
+    def test_volume_padrao_dos_shorts(self):
+        # Ticket 090: -14 LUFS sem estourar, e o áudio volta para 48 kHz depois do loudnorm
+        cmd = comando_corte("ffmpeg", Path("C:/lives/a.mp4"), 60, 25, Path("C:/cortes/c.mp4"))
+        filtro = cmd[cmd.index("-af") + 1]
+        self.assertIn("loudnorm", filtro)
+        self.assertIn("I=-14", filtro)
+        self.assertIn("TP=-1.5", filtro)
+        self.assertEqual(cmd[cmd.index("-ar") + 1], "48000")
+        self.assertLess(cmd.index("-af"), cmd.index("-c:a"))
+
 
 class ExecutarFalso:
     def __init__(self, codigo=0):

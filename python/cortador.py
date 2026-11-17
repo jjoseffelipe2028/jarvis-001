@@ -37,6 +37,9 @@ ENV_DA_RAIZ = Path(__file__).resolve().parent.parent / ".env"
 # Corta o meio da imagem no formato em pé e deixa em 1080x1920. A legenda tem nome fixo.
 FILTRO = ("crop=w=min(iw\\,ih*9/16):h=min(ih\\,iw*16/9),"
           "scale=1080:1920,setsar=1,subtitles=legenda.ass")
+# Ticket 090: todo corte sai no volume padrão dos Shorts/TikTok (-14 LUFS, pico -1,5 dB),
+# o mesmo do brabo.py. Live baixa fica audível; grito alto não estoura.
+VOLUME = "loudnorm=I=-14:TP=-1.5:LRA=11"
 
 
 class ErroCorte(Exception):
@@ -192,6 +195,7 @@ def comando_corte(ffmpeg, entrada, inicio, duracao, saida):
     """Corta, deixa em pé (9:16) e grava a legenda. `file:` impede o nome de virar protocolo."""
     return [ffmpeg, *_BASE, "-ss", str(inicio), "-t", str(duracao), "-i", f"file:{entrada}",
             "-vf", FILTRO, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+            "-af", VOLUME, "-ar", "48000",  # o loudnorm sobe a taxa por dentro: volta para 48 kHz
             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f"file:{saida}"]
 
 
