@@ -12,7 +12,7 @@ from textos import ErroTextos
 TEXTOS = {
     "titulos": ["Pulou no helicóptero!", "A fuga mais insana", "Ninguém esperava"],
     "gancho": "ELE PULOU 😳",
-    "legenda": "A fuga mais doida da live.\n\n🎮 Live de @amigo",
+    "legenda": "A fuga mais doida da live.\n\n🎮 Gameplay: @amigo (autorizado)\n🤖 IA com roteiro humano",
     "hashtags": ["#gta6", "#cortes"],
 }
 
@@ -138,7 +138,7 @@ class PainelTest(unittest.TestCase):
         self.assertIn("## Momento 1 · 1:02:10 → 1:02:35 (+12.5 dB)", nota)
         self.assertIn("`c-01-gancho.mp4`", nota)
         self.assertIn("  1. Pulou no helicóptero!", nota)
-        self.assertIn("🎮 Live de @amigo", nota)
+        self.assertIn("🎮 Gameplay: @amigo (autorizado)", nota)
         self.assertIn("#gta6 #cortes", nota)
         self.assertEqual(nota.count("- [ ] Aprovado para postar"), 1)  # só o corte que saiu
         self.assertIn("⚠️ porteiro barrou: corte com menos de 13 s", nota)

@@ -34,8 +34,20 @@ class TestValidar(unittest.TestCase):
     def test_resposta_boa_e_credito_pelo_codigo(self):
         s = validar(json.dumps(BOA), "amigo_gta")
         self.assertEqual(len(s["titulos"]), 3)
-        self.assertTrue(s["legenda"].endswith("🎮 Live de @amigo_gta"))
-        self.assertEqual(s["hashtags"], ["#GTA6", "#gta", "#cortes", "#ps5", "#gameplay"])  # máx. 5, com #
+        self.assertTrue(s["legenda"].endswith("🎮 Gameplay: @amigo_gta (autorizado)\n🤖 IA com roteiro humano"))
+        self.assertEqual(s["hashtags"], ["#gta6", "#gta", "#cortes"])  # Ticket 091: #gta6 + 2 de nicho
+
+    def test_credito_e_hashtags_do_ticket_091(self):
+        # #gta6 sempre a 1ª (sem repetir em maiúscula), máx. 3; título acima de 50 letras é recusado
+        s = validar(json.dumps(dict(BOA, hashtags=["#GTA6", "#cortesgta"])), "amigo")
+        self.assertEqual(s["hashtags"], ["#gta6", "#cortesgta"])
+        self.assertEqual(s["legenda"].count("@amigo"), 1)
+        self.assertIn("IA com roteiro humano", s["legenda"])
+        with self.assertRaises(ErroTextos):
+            validar(json.dumps(dict(BOA, hashtags=["#gta6"])), "@amigo")  # só a fixa: falta nicho
+        with self.assertRaises(ErroTextos):
+            validar(json.dumps(dict(BOA, titulos=["A" * 51, "b titulo", "c titulo"])), "@amigo")
+        self.assertTrue(validar(json.dumps(dict(BOA, titulos=["A" * 50, "b", "c"])), "@amigo"))
 
     def test_link_e_recusado(self):
         for campo, valor in (("legenda", "veja em www.golpe.com"), ("gancho", "acesse bit.ly/x"),
@@ -100,7 +112,7 @@ class TestNotaEGancho(unittest.TestCase):
     def test_nota(self):
         nota = nota_markdown("corte-01.mp4", validar(json.dumps(BOA), "@amigo"))
         self.assertIn("## Títulos", nota)
-        self.assertIn("🎮 Live de @amigo", nota)
+        self.assertIn("🎮 Gameplay: @amigo (autorizado)", nota)
         self.assertIn("feito com IA", nota)
 
     def test_gancho_ass_e_comando(self):
