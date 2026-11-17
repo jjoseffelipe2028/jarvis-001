@@ -12,14 +12,20 @@ Regras:
 """
 
 import json
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 
 import cortador
-from cacador import ANTES, _desarmar, hms, janela_tiktok
+from cacador import ANTES, INICIO_SEGURO, _desarmar, hms, janela_tiktok
 from cortador import ErroCorte
 from textos import ErroTextos
 
 TOP_PADRAO = 8
+# Ticket 093: fala de violência nos 7 s iniciais (o YouTube tira o anúncio). Só AVISA, não bloqueia.
+VIOLENCIA = re.compile(
+    r"\b(?:tiros?|atir\w*|mat(?:ei|ou|a|aram)|morr\w*|sangue|bala|metralh\w*|atropel\w*|"
+    r"explod\w*|bomba|faca|esfaque\w*|degol\w*)\b", re.I)
+_TEMPO_SRT = re.compile(r"(\d+):(\d\d):(\d\d),(\d{3})\s*-->")
 
 
 @dataclass
@@ -35,15 +41,17 @@ class Item:
     pico: int = 0
     corte_tiktok: str = ""  # Ticket 089: versão de ~70 s ("" = não pedida ou não saiu)
     aviso_tiktok: str = ""
+    alertas_7s: list = field(default_factory=list)  # Ticket 093: tiro/sangue no começo do corte
 
 
 def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho,
-           top=TOP_PADRAO, avisar=print, tiktok=False):
+           top=TOP_PADRAO, avisar=print, tiktok=False, estouros=None):
     """Corta os `top` momentos mais fortes e prepara os textos e o gancho de cada um.
     `momentos`: lista de dicts da caçada (numero, inicio, fim, forca), já em ordem de força.
     `robo`, `sugerir` e `gravar_gancho` vêm de fora: nos testes são falsos.
     `tiktok=True` (Ticket 089): cada momento ganha também a versão de ~70 s. Se ela falhar,
-    o Short continua (o aviso vai separado)."""
+    o Short continua (o aviso vai separado).
+    `estouros(caminho)` (Ticket 093): segundos com estouro seco no começo do corte (None = só a fala)."""
     if not cortador.ARROBA.fullmatch(arroba or ""):
         raise ErroCorte("O @ do amigo é obrigatório e só aceita letras, números, _ e ponto.")
     if not isinstance(top, int) or not 1 <= top <= cortador.MAX_CORTES:
@@ -75,6 +83,9 @@ def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho
         item.corte = destino.name
         if tiktok:
             _cortar_tiktok(item, video, duracao, arroba, destino, robo, avisar)
+        item.alertas_7s = checar_7s(destino, estouros)
+        if item.corte_tiktok:
+            item.alertas_7s += [f"TikTok: {a}" for a in checar_7s(destino.with_name(item.corte_tiktok), estouros)]
 
         try:
             srt = destino.with_suffix(".srt").read_text(encoding="utf-8")
@@ -117,6 +128,41 @@ def _cortar_tiktok(item, video, duracao, arroba, destino, robo, avisar):
     item.corte_tiktok = alvo.name
 
 
+def falas_violentas(texto_srt, ate=INICIO_SEGURO):
+    """Palavras de violência nas falas que COMEÇAM nos `ate` s iniciais do .srt."""
+    achadas, comeco = [], None
+    for linha in str(texto_srt).splitlines():
+        t = _TEMPO_SRT.search(linha)
+        if t:
+            h, m, s, ms = (int(x) for x in t.groups())
+            comeco = h * 3600 + m * 60 + s + ms / 1000
+            continue
+        if comeco is not None and comeco < ate:
+            for p in VIOLENCIA.findall(linha):
+                if p.lower() not in achadas:
+                    achadas.append(p.lower())
+    return achadas
+
+
+def checar_7s(corte, estouros=None):
+    """Alertas dos 7 s iniciais de um corte: fala de violência (.srt) e estouro seco (áudio)."""
+    alertas = []
+    try:
+        palavras = falas_violentas(corte.with_suffix(".srt").read_text(encoding="utf-8"))
+    except OSError:
+        palavras = []
+    if palavras:
+        alertas.append("fala de violência: " + ", ".join(palavras[:4]))
+    if estouros:
+        try:
+            segundos = estouros(corte)
+        except Exception:  # áudio estranho: a checagem não derruba o pacote
+            segundos = []
+        if segundos:
+            alertas.append("estouro seco (tiro?) no segundo " + ", ".join(str(s) for s in segundos[:4]))
+    return alertas
+
+
 def painel_markdown(nome_video, arroba, itens):
     """A nota do cofre: um bloco por corte, com caixinhas para o José aprovar."""
     prontos = [i for i in itens if i.corte]
@@ -138,6 +184,8 @@ def painel_markdown(nome_video, arroba, itens):
             linhas.append(f"- 📱 Versão TikTok (> 1 min, a que paga): `{_desarmar(i.corte_tiktok)}`")
         elif i.aviso_tiktok:
             linhas.append(f"- 📱 Sem versão TikTok: {_desarmar(i.aviso_tiktok)}")
+        for alerta in i.alertas_7s:  # Ticket 093
+            linhas.append(f"- 🩸 Nos {INICIO_SEGURO} s iniciais: {_desarmar(alerta)}")
         if i.textos:
             t = i.textos
             linhas.append("- Títulos:")
@@ -147,6 +195,7 @@ def painel_markdown(nome_video, arroba, itens):
                        str(t["legenda"]).replace("`", "'"), "```", "",
                        "- Hashtags: " + " ".join(str(h).replace("`", "'") for h in t["hashtags"])]
         linhas += ["- [ ] Assisti o corte inteiro",
+                   f"- [ ] Sem tiro/sangue nos {INICIO_SEGURO} s iniciais e na thumb (senão: sem anúncio)",
                    "- [ ] Sem música da rádio do GTA",
                    "- [ ] Aprovado para postar", ""]
     linhas += ["---", "⚠️ Nada foi postado. Marque \"feito com IA\" se a plataforma pedir.", ""]

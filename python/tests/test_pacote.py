@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from cortador import ErroCorte
-from pacote import Item, montar, painel_markdown
+from pacote import Item, falas_violentas, montar, painel_markdown
 from textos import ErroTextos
 
 TEXTOS = {
@@ -201,6 +201,54 @@ class TiktokTest(unittest.TestCase):
         m = {"numero": 1, "inicio": 990, "fim": 1015, "forca": 9.0}  # sem "pico"
         self._montar([m], robo=robo, tiktok=True)
         self.assertEqual(robo.cortes[1], (955, 1025))  # pico estimado = início + 10
+
+
+class Checagem7sTest(unittest.TestCase):
+    """Ticket 093: tiro/sangue nos 7 s iniciais tira o anúncio do YouTube. Só AVISA."""
+    setUp = PacoteTest.setUp
+    tearDown = PacoteTest.tearDown
+    _gancho = PacoteTest._gancho
+    _montar = PacoteTest._montar
+
+    def test_fala_de_violencia_so_conta_nos_7_s(self):
+        srt = ("1\n00:00:01,000 --> 00:00:03,000\nMATEI o cara, sangue pra todo lado\n\n"
+               "2\n00:00:09,000 --> 00:00:11,000\natropelei a polícia\n")
+        self.assertEqual(falas_violentas(srt), ["matei", "sangue"])
+        self.assertEqual(falas_violentas("1\n00:00:01,000 --> 00:00:02,000\nolha o helicóptero\n"), [])
+        self.assertEqual(falas_violentas(""), [])
+
+    def test_alerta_vai_para_o_item_e_para_o_painel(self):
+        class RoboViolento(RoboFalso):
+            def cortar(self, video, inicio, fim, duracao, arroba, destino):
+                super().cortar(video, inicio, fim, duracao, arroba, destino)
+                destino.with_suffix(".srt").write_text(
+                    "1\n00:00:00,500 --> 00:00:02,000\nele atirou!\n", encoding="utf-8")
+        item = self._montar([momento(1, 100, 125)], robo=RoboViolento())[0]
+        self.assertEqual(item.alertas_7s, ["fala de violência: atirou"])
+        nota = painel_markdown("live.mp4", "@amigo", [item])
+        self.assertIn("🩸 Nos 7 s iniciais: fala de violência: atirou", nota)
+        self.assertIn("- [ ] Sem tiro/sangue nos 7 s iniciais", nota)
+        self.assertTrue(item.corte)  # só avisa, não bloqueia
+
+    def test_estouro_do_audio_e_falha_nao_derruba(self):
+        item = montar("live.mp4", 3600, [momento(1, 100, 125)], "@amigo", self.saida, RoboFalso(),
+                      lambda srt, arroba: dict(TEXTOS), self._gancho, avisar=lambda _: None,
+                      estouros=lambda corte: [2, 3])[0]
+        self.assertEqual(item.alertas_7s, ["estouro seco (tiro?) no segundo 2, 3"])
+
+        def quebrado(corte):
+            raise RuntimeError("áudio estranho")
+        item = montar("live.mp4", 3600, [momento(1, 100, 125)], "@amigo", self.saida, RoboFalso(),
+                      lambda srt, arroba: dict(TEXTOS), self._gancho, avisar=lambda _: None,
+                      estouros=quebrado)[0]
+        self.assertEqual(item.alertas_7s, [])
+        self.assertTrue(item.corte)
+
+    def test_tiktok_tambem_e_checado(self):
+        item = montar("live.mp4", 3600, [momento(1, 990, 1015)], "@amigo", self.saida, RoboFalso(),
+                      lambda srt, arroba: dict(TEXTOS), self._gancho, avisar=lambda _: None,
+                      tiktok=True, estouros=lambda corte: [1] if "tiktok" in corte.name else [])[0]
+        self.assertEqual(item.alertas_7s, ["TikTok: estouro seco (tiro?) no segundo 1"])
 
 
 if __name__ == "__main__":

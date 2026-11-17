@@ -77,8 +77,9 @@ def reordenar(momentos, ouvir, maximo=20, avisar=None):
     return [replace(m, numero=n) for n, m in enumerate(pontuados[:maximo], start=1)]
 
 
-def energia_por_segundo(caminho, progresso=None):
-    """Volume (dB) de cada segundo do áudio. Lê aos pedaços: serve para 24h sem estourar a memória."""
+def energia_por_segundo(caminho, progresso=None, bloco=TAXA, limite=None):
+    """Volume (dB) de cada segundo do áudio. Lê aos pedaços: serve para 24h sem estourar a memória.
+    Ticket 093: `bloco` em amostras (TAXA = 1 s; 400 = 50 ms) e `limite` = para depois de N blocos."""
     try:
         conteiner = av.open(str(caminho))
     except (av.FFmpegError, OSError) as e:
@@ -94,11 +95,11 @@ def energia_por_segundo(caminho, progresso=None):
             nonlocal soma, contagem
             pos = 0
             while pos < len(amostras):
-                pedaco = amostras[pos:pos + (TAXA - contagem)]
+                pedaco = amostras[pos:pos + (bloco - contagem)]
                 soma += float(np.dot(pedaco, pedaco))
                 contagem += len(pedaco)
                 pos += len(pedaco)
-                if contagem == TAXA:
+                if contagem == bloco:
                     energias.append(_db(soma, contagem))
                     soma, contagem = 0.0, 0
                     if progresso and len(energias) % 600 == 0:
@@ -108,13 +109,37 @@ def energia_por_segundo(caminho, progresso=None):
             for quadro in conteiner.decode(audio):
                 for q in reamostrar.resample(quadro):
                     somar(q.to_ndarray().astype(np.float64).ravel())
+                if limite and len(energias) >= limite:
+                    return energias[:limite]
             for q in reamostrar.resample(None):
                 somar(q.to_ndarray().astype(np.float64).ravel())
         except av.FFmpegError as e:
             raise ErroCacador("O áudio do vídeo está corrompido.") from e
-        if contagem >= TAXA // 2:  # sobra de meio segundo ou mais conta como 1 segundo
+        if contagem >= bloco // 2:  # sobra de meio bloco ou mais conta como 1 bloco
             energias.append(_db(soma, contagem))
-    return energias
+    return energias[:limite] if limite else energias
+
+
+# Ticket 093: tiro tem ataque SECO (o som pula de uma vez em 50 ms); grito e música sobem devagar.
+BLOCO_ESTOURO = TAXA // 20   # 50 ms
+SALTO_DB = 10.0              # pulo em relação aos 50 ms anteriores
+ACIMA_DB = 12.0              # e bem acima do normal do trecho
+INICIO_SEGURO = 7            # o YouTube tira o anúncio se a violência aparece nos 7 s iniciais
+
+
+def estouros(caminho, ate=INICIO_SEGURO):
+    """Segundos (arredondados para baixo) com estouro seco nos `ate` s iniciais. Só LÊ o arquivo."""
+    e = energia_por_segundo(caminho, bloco=BLOCO_ESTOURO, limite=ate * 20)
+    if len(e) < 2:
+        return []
+    normal = float(np.median(e))
+    achados = []
+    for i in range(1, len(e)):
+        if e[i] - e[i - 1] >= SALTO_DB and e[i] - normal >= ACIMA_DB:
+            segundo = i // 20
+            if segundo not in achados:
+                achados.append(segundo)
+    return achados
 
 
 def _db(soma, contagem):

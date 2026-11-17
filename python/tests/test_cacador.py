@@ -7,7 +7,7 @@ from pathlib import Path
 import av
 import numpy as np
 
-from cacador import (ErroCacador, Momento, achar_picos, energia_por_segundo, hms, janela_tiktok, ler_hms,
+from cacador import (ErroCacador, Momento, achar_picos, energia_por_segundo, estouros, hms, janela_tiktok, ler_hms,
                      nota_fala, nota_markdown, reordenar)
 
 
@@ -161,6 +161,37 @@ class TestFalas(unittest.TestCase):
     def test_nota_mostra_as_palavras(self):
         m = Momento(1, 90, 115, 100, 8.0, bonus=3.0, palavras=("clipa",))
         self.assertIn("🗣️ clipa", nota_markdown("live.mp4", [m], 3600))
+
+
+class TestEstouros(unittest.TestCase):
+    """Ticket 093: estouro seco (tiro) nos 7 s iniciais, com áudio de verdade gerado aqui."""
+
+    def _wav(self, pasta, estalos):
+        taxa = 8000
+        t = np.arange(10 * taxa) / taxa
+        som = 0.01 * np.sin(2 * np.pi * 220 * t)  # fundo baixinho
+        for s in estalos:  # 30 ms de estouro
+            ini = int(s * taxa)
+            som[ini:ini + 240] = 0.9 * np.sign(np.sin(2 * np.pi * 900 * t[ini:ini + 240]))
+        caminho = Path(pasta) / "corte.wav"
+        with av.open(str(caminho), "w") as c:
+            s = c.add_stream("pcm_s16le", rate=taxa, layout="mono")
+            q = av.AudioFrame.from_ndarray((som * 32767).astype(np.int16).reshape(1, -1),
+                                           format="s16", layout="mono")
+            q.sample_rate = taxa
+            for pacote in s.encode(q):
+                c.mux(pacote)
+            for pacote in s.encode(None):
+                c.mux(pacote)
+        return caminho
+
+    def test_acha_o_estalo_e_ignora_depois_dos_7_s(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(estouros(self._wav(d, [2.0, 8.5])), [2])
+
+    def test_som_constante_nao_e_tiro(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(estouros(self._wav(d, [])), [])
 
 
 if __name__ == "__main__":

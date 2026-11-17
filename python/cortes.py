@@ -103,7 +103,8 @@ def pacote(nome_video, arroba, top, tiktok=False):
     robo = cortador.Cortador(ffmpeg, cortador.transcritor_whisper())
     itens = p.montar(video, duracao, momentos, arroba, saida, robo, t.sugerir,
                      lambda corte, texto: cortador.gravar_gancho(ffmpeg, corte, texto),
-                     top=top, avisar=lambda m: print(m, flush=True), tiktok=tiktok)
+                     top=top, avisar=lambda m: print(m, flush=True), tiktok=tiktok,
+                     estouros=cacador.estouros)  # Ticket 093: avisa tiro nos 7 s iniciais
     nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-pacote.md"
     with open(nota, "x", encoding="utf-8") as f:
         f.write(p.painel_markdown(video.name, arroba, itens))
