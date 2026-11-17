@@ -56,3 +56,20 @@ truststore==0.10.5
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 uvicorn==0.54.0
+# Ticket 094: streamlink (cortes da live ao vivo) e o que ele puxa
+charset-normalizer==3.5.2
+isodate==0.7.2
+lxml==6.1.3
+outcome==1.3.0.post0
+pycountry==26.2.16
+pycryptodome==4.5.0
+PySocks==1.7.1
+requests==2.34.2
+sniffio==1.3.1
+sortedcontainers==2.4.0
+streamlink==8.6.3
+trio==0.35.0
+trio-websocket==0.12.2
+urllib3==2.8.0
+websocket-client==1.9.2
+wsproto==1.3.2
