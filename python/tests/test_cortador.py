@@ -147,6 +147,17 @@ class TestCortador(unittest.TestCase):
             self.assertIn("-t", cmd)
             self.assertEqual(cmd[cmd.index("-t") + 1], "25")
 
+    def test_ouvir_so_tira_audio_e_junta_a_fala(self):
+        # Ticket 092: nenhum vídeo é gerado, só o .wav temporário para o Whisper
+        execu = ExecutarFalso()
+        robo = Cortador("ffmpeg", lambda w: [(0, 1, "não acredito"), (1, 2, "kkkk")], executar=execu)
+        self.assertEqual(robo.ouvir(Path("live.mp4"), 90, 115), "não acredito kkkk")
+        self.assertEqual(len(execu.chamadas), 1)
+        cmd, kw = execu.chamadas[0]
+        self.assertEqual(cmd[-1], "file:audio.wav")
+        self.assertEqual(cmd[cmd.index("-t") + 1], "25")
+        self.assertIs(kw["shell"], False)
+
     def test_porteiro_barra_antes_de_rodar_qualquer_coisa(self):
         execu = ExecutarFalso()
         robo = Cortador("ffmpeg", lambda w: [], executar=execu)

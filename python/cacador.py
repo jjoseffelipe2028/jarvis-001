@@ -9,7 +9,8 @@ Não precisa do FFmpeg instalado para caçar.
 """
 
 import math
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 
 import av
 import numpy as np
@@ -24,6 +25,14 @@ ANTES, DEPOIS = 10, 15  # corte sugerido: 10 s antes do pico e 15 s depois (25 s
 # então a janela é de 70 s (45 antes do pico, 25 depois) e nunca sai com menos de 62 s.
 TIKTOK_ANTES, TIKTOK_DEPOIS = 45, 25
 TIKTOK_MINIMO = 62
+# Ticket 092: o volume acha os candidatos; a FALA desempata. O Whisper só ouve os candidatos
+# (CANDIDATOS x mais do que vai entregar), nunca a live inteira.
+PALAVRAS_FORTES = re.compile(
+    r"n[aã]o acredito|olha isso|clipa|que isso|caraca|meu deus|mano do c[eé]u|socorro|"
+    r"\bk{3,}\b|\b(?:ha){2,}h?\b|\b(?:rs){2,}\b|\brisos?\b", re.I)
+PESO_PALAVRA = 3.0   # cada palavra forte vale como +3 dB de volume
+MAX_PALAVRAS = 3     # no máximo +9 dB: a fala ajuda, mas não inventa momento do nada
+CANDIDATOS = 3
 
 
 class ErroCacador(Exception):
@@ -37,6 +46,35 @@ class Momento:
     fim: int        # segundo em que o corte termina
     pico: int       # segundo do pico
     forca: float    # quantos dB acima do normal
+    bonus: float = 0.0       # Ticket 092: pontos das palavras fortes na fala
+    palavras: tuple = ()     # as palavras fortes achadas (para o José ver o porquê)
+
+
+def nota_fala(texto):
+    """(bônus, palavras achadas) de uma fala. Cada palavra forte diferente vale PESO_PALAVRA."""
+    achadas = []
+    for m in PALAVRAS_FORTES.finditer(str(texto or "")):
+        palavra = m.group(0).lower()
+        if palavra not in achadas:
+            achadas.append(palavra)
+    achadas = achadas[:MAX_PALAVRAS]
+    return len(achadas) * PESO_PALAVRA, tuple(achadas)
+
+
+def reordenar(momentos, ouvir, maximo=20, avisar=None):
+    """Ouve cada candidato (`ouvir(momento)` → texto), soma o bônus da fala e reordena.
+    Candidato que falha ao ouvir fica só com o volume (não derruba a caçada)."""
+    pontuados = []
+    for m in momentos:
+        try:
+            bonus, palavras = nota_fala(ouvir(m))
+        except Exception as e:  # FFmpeg/Whisper falhou nesse trecho: segue sem bônus
+            if avisar:
+                avisar(f"   ⚠️ não consegui ouvir {hms(m.inicio)}: {str(e)[:80]}")
+            bonus, palavras = 0.0, ()
+        pontuados.append(replace(m, bonus=bonus, palavras=palavras))
+    pontuados.sort(key=lambda m: m.forca + m.bonus, reverse=True)  # estável: empate mantém a ordem
+    return [replace(m, numero=n) for n, m in enumerate(pontuados[:maximo], start=1)]
 
 
 def energia_por_segundo(caminho, progresso=None):
@@ -159,7 +197,8 @@ def nota_markdown(nome_video, momentos, duracao):
         "|---|---|---|---|",
     ]
     for m in momentos:
-        linhas.append(f"| {m.numero} | {hms(m.inicio)} → {hms(m.fim)} | {hms(m.pico)} | +{m.forca} dB |")
+        fala = f" · 🗣️ {_desarmar(', '.join(m.palavras))}" if m.palavras else ""  # Ticket 092
+        linhas.append(f"| {m.numero} | {hms(m.inicio)} → {hms(m.fim)} | {hms(m.pico)} | +{m.forca} dB{fala} |")
     if not momentos:
         linhas.append("| — | nenhum pico forte | — | — |")
     linhas += [

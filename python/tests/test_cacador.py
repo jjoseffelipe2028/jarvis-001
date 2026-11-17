@@ -7,7 +7,8 @@ from pathlib import Path
 import av
 import numpy as np
 
-from cacador import ErroCacador, achar_picos, energia_por_segundo, hms, janela_tiktok, ler_hms, nota_markdown
+from cacador import (ErroCacador, Momento, achar_picos, energia_por_segundo, hms, janela_tiktok, ler_hms,
+                     nota_fala, nota_markdown, reordenar)
 
 
 class TestJanelaTiktok(unittest.TestCase):
@@ -124,6 +125,42 @@ class TestTempoENota(unittest.TestCase):
         self.assertNotIn("](", nota)
         self.assertNotIn("<script>", nota)
         self.assertIn("rádio do GTA", nota)
+
+
+class TestFalas(unittest.TestCase):
+    """Ticket 092: a fala do candidato reordena a caçada (Whisper FALSO)."""
+
+    def test_nota_da_fala(self):
+        self.assertEqual(nota_fala("NÃO ACREDITO mano, kkkkk"), (6.0, ("não acredito", "kkkkk")))
+        self.assertEqual(nota_fala("clipa clipa clipa")[0], 3.0)  # repetida conta 1 vez
+        self.assertEqual(nota_fala("que isso, caraca, meu deus, socorro, hahaha")[0], 9.0)  # teto de 3
+        self.assertEqual(nota_fala("vamos pro banco")[0], 0.0)
+        self.assertEqual(nota_fala(None), (0.0, ()))
+        self.assertEqual(nota_fala("kk")[0], 0.0)  # "kk" é pouco para ser risada
+
+    def test_fala_forte_passa_na_frente_e_renumera(self):
+        a = Momento(1, 90, 115, 100, 12.0)
+        b = Momento(2, 490, 515, 500, 8.0)
+        falas = {100: "andando de carro", 500: "NÃO ACREDITO, clipa isso kkkk"}
+        r = reordenar([a, b], lambda m: falas[m.pico])
+        self.assertEqual([(m.numero, m.pico) for m in r], [(1, 500), (2, 100)])
+        self.assertEqual(r[0].bonus, 9.0)
+        self.assertEqual(r[0].forca, 8.0)  # o volume original fica guardado
+
+    def test_falha_ao_ouvir_nao_derruba_e_corta_no_maximo(self):
+        def ouvir(m):
+            if m.pico == 100:
+                raise RuntimeError("FFmpeg falhou")
+            return ""
+        avisos = []
+        ms = [Momento(n, n * 100 - 10, n * 100 + 15, n * 100, 20.0 - n) for n in range(1, 6)]
+        r = reordenar(ms, ouvir, maximo=3, avisar=avisos.append)
+        self.assertEqual([m.pico for m in r], [100, 200, 300])
+        self.assertEqual(len(avisos), 1)
+
+    def test_nota_mostra_as_palavras(self):
+        m = Momento(1, 90, 115, 100, 8.0, bonus=3.0, palavras=("clipa",))
+        self.assertIn("🗣️ clipa", nota_markdown("live.mp4", [m], 3600))
 
 
 if __name__ == "__main__":

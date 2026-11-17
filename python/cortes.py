@@ -1,8 +1,9 @@
 """
 Jarvis 001 — Comando do robô de cortes 🎬 (Ticket 025, V5)
 
-  python cortes.py cacar live.mp4
+  python cortes.py cacar live.mp4 [--falas]
       → acha os momentos e grava a nota no cofre (decisions/videos)
+        --falas (Ticket 092): o Whisper ouve os candidatos e sobe quem tem "não acredito", "clipa", "kkkk"...
   python cortes.py cortar live.mp4 3 7 12 --arroba @amigo
       → corta os momentos 3, 7 e 12 da última caçada
   python cortes.py cortar live.mp4 --trecho 1:02:10-1:02:40 --arroba @amigo
@@ -53,13 +54,20 @@ def _arquivo_momentos(saida, nome_video):
     return saida / f".momentos-{chave}.json"
 
 
-def cacar(nome_video):
+def cacar(nome_video, falas=False):
     entrada, saida, notas = _pastas()
     video = cortador.resolver_entrada(entrada, nome_video)
     print("🔎 Ouvindo o vídeo inteiro (uma live de 24h demora alguns minutos)...")
     energias = cacador.energia_por_segundo(
         video, progresso=lambda s: print(f"   ... {hms(s)} lidos", flush=True))
-    momentos = cacador.achar_picos(energias)
+    if falas:  # Ticket 092: volume acha os candidatos, a fala reordena
+        candidatos = cacador.achar_picos(energias, maximo=20 * cacador.CANDIDATOS)
+        print(f"🗣️  Ligando o Whisper para ouvir {len(candidatos)} candidatos (25 s cada)...")
+        robo = cortador.Cortador(cortador.achar_ffmpeg(), cortador.transcritor_whisper())
+        momentos = cacador.reordenar(candidatos, lambda m: robo.ouvir(video, m.inicio, m.fim),
+                                     maximo=20, avisar=lambda t: print(t, flush=True))
+    else:
+        momentos = cacador.achar_picos(energias)
     nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-momentos.md"
     with open(nota, "x", encoding="utf-8") as f:  # "x" = só cria; nunca sobrescreve
         f.write(cacador.nota_markdown(video.name, momentos, len(energias)))
@@ -209,6 +217,8 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("cacar", help="acha os momentos fortes")
     c.add_argument("video")
+    c.add_argument("--falas", action="store_true",
+                   help="Ticket 092: o Whisper ouve os candidatos e sobe quem tem palavra forte ou risada")
     k = sub.add_parser("cortar", help="corta os momentos escolhidos")
     k.add_argument("video")
     k.add_argument("numeros", nargs="*", type=int)
@@ -233,7 +243,7 @@ def main(argv=None):
             import autoteste_cortes
             return 0 if autoteste_cortes.rodar() else 1
         if a.cmd == "cacar":
-            cacar(a.video)
+            cacar(a.video, a.falas)
         elif a.cmd == "textos":
             textos(a.corte, a.arroba)
         elif a.cmd == "gancho":

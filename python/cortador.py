@@ -317,6 +317,12 @@ class Cortador:
             f.write(gerar_srt(falas, duracao))
         return Path(saida)
 
+    def ouvir(self, entrada, inicio, fim):
+        """Ticket 092: só a fala de um trecho (sem cortar vídeo). Usado pela caçada com --falas."""
+        with tempfile.TemporaryDirectory(prefix="jarvis-ouvir-") as tmp:
+            self._rodar(comando_audio(self._ffmpeg, entrada, inicio, fim - inicio), tmp)
+            return " ".join(texto for _, _, texto in self._transcrever(Path(tmp) / "audio.wav"))
+
     def _rodar(self, comando, pasta):
         try:
             r = self._executar(comando, cwd=pasta, stdin=subprocess.DEVNULL, capture_output=True,
