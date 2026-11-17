@@ -15,7 +15,7 @@ import json
 from dataclasses import dataclass
 
 import cortador
-from cacador import _desarmar, hms
+from cacador import ANTES, _desarmar, hms, janela_tiktok
 from cortador import ErroCorte
 from textos import ErroTextos
 
@@ -32,13 +32,18 @@ class Item:
     com_gancho: str = ""   # nome do arquivo com o gancho na tela
     textos: dict | None = None
     aviso: str = ""        # o que deu errado (se deu)
+    pico: int = 0
+    corte_tiktok: str = ""  # Ticket 089: versão de ~70 s ("" = não pedida ou não saiu)
+    aviso_tiktok: str = ""
 
 
 def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho,
-           top=TOP_PADRAO, avisar=print):
+           top=TOP_PADRAO, avisar=print, tiktok=False):
     """Corta os `top` momentos mais fortes e prepara os textos e o gancho de cada um.
     `momentos`: lista de dicts da caçada (numero, inicio, fim, forca), já em ordem de força.
-    `robo`, `sugerir` e `gravar_gancho` vêm de fora: nos testes são falsos."""
+    `robo`, `sugerir` e `gravar_gancho` vêm de fora: nos testes são falsos.
+    `tiktok=True` (Ticket 089): cada momento ganha também a versão de ~70 s. Se ela falhar,
+    o Short continua (o aviso vai separado)."""
     if not cortador.ARROBA.fullmatch(arroba or ""):
         raise ErroCorte("O @ do amigo é obrigatório e só aceita letras, números, _ e ponto.")
     if not isinstance(top, int) or not 1 <= top <= cortador.MAX_CORTES:
@@ -50,6 +55,7 @@ def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho
     for m in momentos[:top]:
         try:
             item = Item(int(m["numero"]), int(m["inicio"]), int(m["fim"]), float(m.get("forca", 0)))
+            item.pico = int(m.get("pico", item.inicio + ANTES))  # caçada antiga sem "pico": estima
         except (KeyError, TypeError, ValueError, AttributeError) as e:
             raise ErroCorte("A lista da caçada veio num formato estranho. Rode a caçada de novo.") from e
         itens.append(item)
@@ -67,6 +73,8 @@ def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho
             item.aviso = f"o corte falhou: {e}"
             continue
         item.corte = destino.name
+        if tiktok:
+            _cortar_tiktok(item, video, duracao, arroba, destino, robo, avisar)
 
         try:
             srt = destino.with_suffix(".srt").read_text(encoding="utf-8")
@@ -83,6 +91,30 @@ def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho
         except ErroCorte as e:
             item.aviso = f"sem gancho na tela: {e}"
     return itens
+
+
+def _cortar_tiktok(item, video, duracao, arroba, destino, robo, avisar):
+    """Versão longa do momento, ao lado do Short: <corte>-tiktok.mp4. Passa pelo mesmo porteiro."""
+    janela = janela_tiktok(item.pico, duracao)
+    if janela is None:
+        item.aviso_tiktok = "o vídeo é curto demais para uma versão de mais de 1 min"
+        return
+    inicio, fim = janela
+    ok, motivo = cortador.liberar(inicio, fim, duracao, arroba)
+    if not ok:
+        item.aviso_tiktok = f"porteiro barrou: {motivo}"
+        return
+    alvo = destino.with_name(f"{destino.stem}-tiktok.mp4")
+    if alvo.exists() or alvo.with_suffix(".srt").exists():
+        item.aviso_tiktok = "já existe um arquivo com esse nome (nada foi sobrescrito)"
+        return
+    avisar(f"📱 Momento {item.numero} (TikTok): {hms(inicio)} → {hms(fim)} ...")
+    try:
+        robo.cortar(video, inicio, fim, duracao, arroba, alvo)
+    except ErroCorte as e:
+        item.aviso_tiktok = f"a versão TikTok falhou: {e}"
+        return
+    item.corte_tiktok = alvo.name
 
 
 def painel_markdown(nome_video, arroba, itens):
@@ -102,6 +134,10 @@ def painel_markdown(nome_video, arroba, itens):
         linhas.append(f"- 🎬 Corte: `{_desarmar(i.corte)}`")
         if i.com_gancho:
             linhas.append(f"- 🪝 Com gancho na tela: `{_desarmar(i.com_gancho)}`")
+        if i.corte_tiktok:
+            linhas.append(f"- 📱 Versão TikTok (> 1 min, a que paga): `{_desarmar(i.corte_tiktok)}`")
+        elif i.aviso_tiktok:
+            linhas.append(f"- 📱 Sem versão TikTok: {_desarmar(i.aviso_tiktok)}")
         if i.textos:
             t = i.textos
             linhas.append("- Títulos:")

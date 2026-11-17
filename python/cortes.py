@@ -11,9 +11,10 @@ Jarvis 001 — Comando do robô de cortes 🎬 (Ticket 025, V5)
       → V6: a Gemma sugere 3 títulos, gancho, legenda e hashtags (nota no cofre)
   python cortes.py gancho 2026-11-12-...-corte-01.mp4 [--texto "MEU GANCHO"]
       → V6: vídeo novo com o gancho na tela nos 3 primeiros segundos
-  python cortes.py pacote live.mp4 --arroba @amigo [--top 8]
+  python cortes.py pacote live.mp4 --arroba @amigo [--top 8] [--tiktok]
       → Ticket 028: caça (se ainda não caçou), corta os mais fortes, pede os textos,
         grava o gancho e monta o PAINEL no cofre para você aprovar um por um
+        --tiktok (Ticket 089): também gera a versão de ~70 s de cada momento (TikTok só paga > 1 min)
   python cortes.py autoteste
       → confere o robô inteiro numa pasta temporária (não precisa do .env)
 
@@ -71,7 +72,7 @@ def cacar(nome_video):
     return lista
 
 
-def pacote(nome_video, arroba, top):
+def pacote(nome_video, arroba, top, tiktok=False):
     """Ticket 028: a fila inteira num comando só. O painel vai para o cofre."""
     import pacote as p
     import textos as t
@@ -94,7 +95,7 @@ def pacote(nome_video, arroba, top):
     robo = cortador.Cortador(ffmpeg, cortador.transcritor_whisper())
     itens = p.montar(video, duracao, momentos, arroba, saida, robo, t.sugerir,
                      lambda corte, texto: cortador.gravar_gancho(ffmpeg, corte, texto),
-                     top=top, avisar=lambda m: print(m, flush=True))
+                     top=top, avisar=lambda m: print(m, flush=True), tiktok=tiktok)
     nota = notas / f"{datetime.now():%Y-%m-%d-%H%M%S}-pacote.md"
     with open(nota, "x", encoding="utf-8") as f:
         f.write(p.painel_markdown(video.name, arroba, itens))
@@ -218,6 +219,8 @@ def main(argv=None):
     pc.add_argument("video")
     pc.add_argument("--arroba", required=True, help="@ do amigo (crédito em todo corte)")
     pc.add_argument("--top", type=int, default=8, help="quantos momentos cortar (1 a 20; padrão 8)")
+    pc.add_argument("--tiktok", action="store_true",
+                    help="Ticket 089: também gera a versão de ~70 s (o TikTok só paga vídeo com mais de 1 min)")
     x = sub.add_parser("textos", help="V6: a Gemma sugere título, gancho, legenda e hashtags")
     x.add_argument("corte", help="nome do corte na pasta de saída")
     x.add_argument("--arroba", required=True)
@@ -236,7 +239,7 @@ def main(argv=None):
         elif a.cmd == "gancho":
             gancho(a.corte, a.texto)
         elif a.cmd == "pacote":
-            pacote(a.video, a.arroba, a.top)
+            pacote(a.video, a.arroba, a.top, a.tiktok)
         else:
             cortar(a.video, a.numeros, a.trecho, a.arroba)
     except (ErroCorte, ErroCacador, FileExistsError) as e:

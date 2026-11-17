@@ -49,10 +49,10 @@ class PacoteTest(unittest.TestCase):
         self.ganchos.append(texto)
         return corte.with_name(f"{corte.stem}-gancho.mp4")
 
-    def _montar(self, momentos, robo=None, sugerir=None, arroba="@amigo", top=8, duracao=3600):
+    def _montar(self, momentos, robo=None, sugerir=None, arroba="@amigo", top=8, duracao=3600, tiktok=False):
         return montar("live.mp4", duracao, momentos, arroba, self.saida, robo or RoboFalso(),
                       sugerir or (lambda srt, arroba: dict(TEXTOS)), self._gancho,
-                      top=top, avisar=lambda _: None)
+                      top=top, avisar=lambda _: None, tiktok=tiktok)
 
     def test_fila_inteira_corte_textos_e_gancho(self):
         robo = RoboFalso()
@@ -153,6 +153,54 @@ class PainelTest(unittest.TestCase):
         self.assertNotIn("[x](y)", nota)
         self.assertEqual(nota.count("```"), 2)  # só o bloco da legenda, aberto e fechado
         self.assertNotIn("#a`b", nota)
+
+
+class TiktokTest(unittest.TestCase):
+    """Ticket 089: versão de ~70 s ao lado do Short (o TikTok só paga vídeo com mais de 1 min)."""
+    setUp = PacoteTest.setUp
+    tearDown = PacoteTest.tearDown
+    _gancho = PacoteTest._gancho
+    _montar = PacoteTest._montar
+
+    def test_tiktok_gera_versao_longa_ao_lado_do_short(self):
+        # Ticket 089: o mesmo momento sai em 25 s (Short) e 70 s (TikTok), com o pico dentro
+        robo = RoboFalso()
+        itens = self._montar([momento(1, 990, 1015)], robo=robo, tiktok=True)
+        self.assertEqual(robo.cortes, [(990, 1015), (955, 1025)])
+        item = itens[0]
+        self.assertTrue(item.corte_tiktok.endswith("-tiktok.mp4"))
+        self.assertTrue((self.saida / item.corte_tiktok).is_file())
+        self.assertEqual(item.aviso_tiktok, "")
+        self.assertEqual(item.textos["gancho"], "ELE PULOU 😳")  # o Short segue igual
+        nota = painel_markdown("live.mp4", "@amigo", itens)
+        self.assertIn("📱 Versão TikTok", nota)
+
+    def test_sem_flag_nao_gera_tiktok(self):
+        robo = RoboFalso()
+        itens = self._montar([momento(1, 990, 1015)], robo=robo)
+        self.assertEqual(robo.cortes, [(990, 1015)])
+        self.assertEqual(itens[0].corte_tiktok, "")
+        self.assertNotIn("📱", painel_markdown("live.mp4", "@amigo", itens))
+
+    def test_tiktok_que_falha_nao_derruba_o_short(self):
+        robo = RoboFalso(falha_no=955)
+        item = self._montar([momento(1, 990, 1015)], robo=robo, tiktok=True)[0]
+        self.assertEqual(item.corte_tiktok, "")
+        self.assertIn("versão TikTok falhou", item.aviso_tiktok)
+        self.assertTrue(item.corte)
+        self.assertEqual(item.aviso, "")
+        self.assertIn("Sem versão TikTok", painel_markdown("live.mp4", "@amigo", [item]))
+
+    def test_video_curto_avisa_sem_tiktok(self):
+        item = self._montar([momento(1, 10, 35)], tiktok=True, duracao=50)[0]
+        self.assertTrue(item.corte)
+        self.assertIn("curto demais", item.aviso_tiktok)
+
+    def test_caçada_antiga_sem_pico_usa_estimativa(self):
+        robo = RoboFalso()
+        m = {"numero": 1, "inicio": 990, "fim": 1015, "forca": 9.0}  # sem "pico"
+        self._montar([m], robo=robo, tiktok=True)
+        self.assertEqual(robo.cortes[1], (955, 1025))  # pico estimado = início + 10
 
 
 if __name__ == "__main__":

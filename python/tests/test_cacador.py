@@ -7,7 +7,31 @@ from pathlib import Path
 import av
 import numpy as np
 
-from cacador import ErroCacador, achar_picos, energia_por_segundo, hms, ler_hms, nota_markdown
+from cacador import ErroCacador, achar_picos, energia_por_segundo, hms, janela_tiktok, ler_hms, nota_markdown
+
+
+class TestJanelaTiktok(unittest.TestCase):
+    """Ticket 089: a versão TikTok tem que passar de 1 min, senão o Creator Rewards não paga."""
+
+    def test_meio_do_video_70_s_com_pico_dentro(self):
+        self.assertEqual(janela_tiktok(1000, 3600), (955, 1025))
+
+    def test_perto_do_comeco_escorrega_para_frente(self):
+        self.assertEqual(janela_tiktok(5, 3600), (0, 70))
+
+    def test_perto_do_fim_escorrega_para_tras(self):
+        self.assertEqual(janela_tiktok(3595, 3600), (3530, 3600))
+
+    def test_video_curto_nao_tem_versao(self):
+        self.assertIsNone(janela_tiktok(20, 50))
+        self.assertEqual(janela_tiktok(30, 62), (0, 62))  # exatamente o mínimo ainda vale
+
+    def test_nunca_passa_do_fim_nem_fica_negativa(self):
+        for pico in (0, 1, 44, 45, 3555, 3599, 3600):
+            inicio, fim = janela_tiktok(pico, 3600)
+            self.assertGreaterEqual(inicio, 0)
+            self.assertLessEqual(fim, 3600)
+            self.assertGreater(fim - inicio, 60)
 
 
 def gravar_wav(caminho, segundos, gritos=(), taxa=8000):
