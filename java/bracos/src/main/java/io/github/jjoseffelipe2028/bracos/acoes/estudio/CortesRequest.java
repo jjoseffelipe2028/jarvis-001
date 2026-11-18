@@ -17,7 +17,8 @@ public record CortesRequest(
         @NotBlank @Size(max = 31) String arroba,
         @Min(1) @Max(20) Integer top,
         @Size(max = 2) String idioma,
-        Boolean dupla
+        Boolean dupla,
+        @Size(max = 10) String apresentador  // Ticket 097: "" (nenhum) ou "brabo"
 ) {
     public int quantos() {
         return top == null ? 8 : top;

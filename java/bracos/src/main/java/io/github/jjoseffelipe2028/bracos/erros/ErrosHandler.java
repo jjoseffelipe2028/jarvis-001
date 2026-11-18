@@ -18,10 +18,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ErrosHandler {
 
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
-            EntradaInvalidaException.class, org.springframework.beans.TypeMismatchException.class,
+            org.springframework.beans.TypeMismatchException.class,
             jakarta.validation.ConstraintViolationException.class})
     public ResponseEntity<Map<String, String>> entradaInvalida(Exception e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("erro", "entrada invalida"));
+    }
+
+    /**
+     * Ticket 097: o motivo de uma {@link EntradaInvalidaException} vai junto, para a tela explicar o erro.
+     * Seguro: essas mensagens são frases FIXAS escritas no código (nunca repetem o que o usuário digitou).
+     */
+    @ExceptionHandler(EntradaInvalidaException.class)
+    public ResponseEntity<Map<String, String>> entradaInvalidaComMotivo(EntradaInvalidaException e) {
+        String motivo = e.getMessage() == null ? "" : e.getMessage();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("erro", "entrada invalida", "motivo", motivo.substring(0, Math.min(200, motivo.length()))));
     }
 
     /** Ação desligada por configuração (ex.: pasta não configurada) → 503. */

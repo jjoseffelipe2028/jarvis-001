@@ -109,7 +109,17 @@ async function tratar(resposta) {
       429: "Limite atingido: já tem uma ronda rodando ou acabaram os pedidos do dia.",
       503: "Ação desligada (pasta não configurada no .env).",
     };
-    throw new Error(motivos[resposta.status] || "A API recusou o pedido.");
+    // Ticket 097: o servidor manda o motivo real (frase fixa do código) quando sabe; senão, o texto genérico
+    let motivo = "";
+    if (resposta.status === 400) {
+      try {
+        const corpo = await resposta.json();
+        motivo = corpo && typeof corpo.motivo === "string" ? corpo.motivo.slice(0, 200) : "";
+      } catch {
+        motivo = "";
+      }
+    }
+    throw new Error(motivo || motivos[resposta.status] || "A API recusou o pedido.");
   }
   if (resposta.status === 204) {
     return null; // Ticket 062: "ainda não tem nada" (ex.: nenhuma ronda feita)

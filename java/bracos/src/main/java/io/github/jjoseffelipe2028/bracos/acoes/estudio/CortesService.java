@@ -55,6 +55,17 @@ public class CortesService {
     static final Set<String> EXTENSOES = Set.of(".mp4", ".mkv", ".mov", ".flv", ".ts", ".webm", ".m4v");
     static final Set<String> IDIOMAS = Set.of("en", "es");
     static final Pattern ARROBA = Pattern.compile("@?[A-Za-z0-9_.]{1,30}");
+    /** Ticket 097: quem comenta os cortes no fim (lista fechada). A Capi entra quando tiver voz própria. */
+    static final Set<String> APRESENTADORES = Set.of("brabo");
+    static final String TEMA_BRABO = "Comente a jogada deste corte de GTA: julgue a jogada, nunca a pessoa.";
+
+    /** Ticket 097: o apresentador que comenta os cortes novos (na Central, é o {@link BraboService}). */
+    public interface Apresentador {
+        List<String> cortes();
+
+        void comentar(List<String> cortes, String arroba, boolean dupla);
+    }
+
     private static final Pattern LINK = Pattern.compile(
             "https://(?:(?:www\\.|m\\.)?youtube\\.com/(?:watch\\?v=|live/|shorts/)|youtu\\.be/)([A-Za-z0-9_-]{11})(?:[?&#][A-Za-z0-9_=&.%-]*)?");
     static final int MAXIMO_LISTA = 30;
@@ -76,6 +87,7 @@ public class CortesService {
     private final String agy;
     private final EstudioService.Executor executor;
     private final Clock relogio;
+    private final Apresentador apresentador;
     private final AtomicBoolean ocupado = new AtomicBoolean(false);
     private volatile Estado estado = new Estado("parado", List.of(), List.of(), "", true, true);
 
@@ -85,12 +97,30 @@ public class CortesService {
                          @Value("${jarvis.cortes.python:}") String python,
                          @Value("${jarvis.cortes.yt-dlp:yt-dlp}") String ytDlp,
                          @Value("${jarvis.estudio.claude:claude}") String claude,
-                         @Value("${jarvis.estudio.agy:agy}") String agy) {
-        this(entrada, saida, python, ytDlp, claude, agy, CortesService::rodarDeVerdade, Clock.systemDefaultZone());
+                         @Value("${jarvis.estudio.agy:agy}") String agy,
+                         BraboService brabo) {
+        this(entrada, saida, python, ytDlp, claude, agy, CortesService::rodarDeVerdade, Clock.systemDefaultZone(),
+                new Apresentador() {
+                    @Override
+                    public List<String> cortes() {
+                        return brabo.cortes();
+                    }
+
+                    @Override
+                    public void comentar(List<String> cortes, String arroba, boolean dupla) {
+                        brabo.iniciar("brabo", TEMA_BRABO, cortes, arroba, dupla);
+                    }
+                });
     }
 
     CortesService(String entrada, String saida, String python, String ytDlp, String claude, String agy,
                   EstudioService.Executor executor, Clock relogio) {
+        this(entrada, saida, python, ytDlp, claude, agy, executor, relogio, null);
+    }
+
+    CortesService(String entrada, String saida, String python, String ytDlp, String claude, String agy,
+                  EstudioService.Executor executor, Clock relogio, Apresentador apresentador) {
+        this.apresentador = apresentador;
         this.entrada = pasta(entrada);
         this.saida = pasta(saida);
         Path pastaDoPython = Path.of(System.getProperty("user.dir")).resolve("../../python").toAbsolutePath().normalize();
@@ -169,7 +199,26 @@ public class CortesService {
      * Começa o trabalho. {@code video} (nome da lista) OU {@code link} (YouTube, com autorização).
      */
     public Estado iniciar(String video, String link, boolean autorizado, String arroba, int top, String idioma, boolean dupla) {
+        return iniciar(video, link, autorizado, arroba, top, idioma, dupla, "");
+    }
+
+    /** Ticket 097: o apresentador do log, sem nunca repetir o que veio de fora. */
+    public static String apresentadorLimpo(String valor) {
+        String v = valor == null ? "" : valor.strip().toLowerCase(Locale.ROOT);
+        return v.isEmpty() ? "nenhum" : APRESENTADORES.contains(v) ? v : "invalido";
+    }
+
+    /** Ticket 097: {@code quemComenta} = "" (só os cortes) ou "brabo" (o Brabo comenta os cortes novos no fim). */
+    public Estado iniciar(String video, String link, boolean autorizado, String arroba, int top, String idioma, boolean dupla,
+                          String quemComenta) {
         exigirPastas();
+        String comenta = quemComenta == null ? "" : quemComenta.strip().toLowerCase(Locale.ROOT);
+        if (comenta.equals("capi")) {
+            throw new EntradaInvalidaException("A Capi ainda não tem voz: por enquanto, escolha o Brabo ou nenhum.");
+        }
+        if (!comenta.isEmpty() && (!APRESENTADORES.contains(comenta) || apresentador == null)) {
+            throw new EntradaInvalidaException("Apresentador: nenhum ou Brabo.");
+        }
         String arrobaLimpo = arroba == null ? "" : arroba.strip();
         if (!ARROBA.matcher(arrobaLimpo).matches()) {
             throw new EntradaInvalidaException("@ do dono do vídeo: só letras, números, _ e ponto.");
@@ -207,14 +256,17 @@ public class CortesService {
         String nomeVideo = temVideo ? video : null;
         String endereco = url.orElse(null);
         Thread.ofVirtual().name("cortes").start(
-                () -> ciclo(nomeVideo, endereco, arrobaLimpo.startsWith("@") ? arrobaLimpo : "@" + arrobaLimpo, top, lingua, dupla, passos));
+                () -> ciclo(nomeVideo, endereco, arrobaLimpo.startsWith("@") ? arrobaLimpo : "@" + arrobaLimpo, top, lingua, dupla,
+                        comenta, passos));
         return estado;
     }
 
-    private void ciclo(String video, String url, String arroba, int top, String idioma, boolean dupla, List<String> passos) {
+    private void ciclo(String video, String url, String arroba, int top, String idioma, boolean dupla, String comenta,
+                       List<String> passos) {
         List<String> ultimas = List.of();
         try {
             Instant comeco = Instant.now(relogio);
+            List<String> cortesAntes = comenta.isEmpty() ? List.of() : apresentador.cortes();
             String nome = video;
             if (url != null) {
                 passo(passos, "baixando", "⬇️ Baixando o vídeo do link…");
@@ -236,6 +288,9 @@ public class CortesService {
             if (dupla) {
                 nota = revisaoDaDupla(comeco, passos);
             }
+            if (!comenta.isEmpty()) {
+                chamarApresentador(cortesAntes, arroba, dupla, passos);
+            }
             passos.add("🎬 Pronto! Aprove corte por corte no painel do cofre. Nada foi postado.");
             estado = new Estado("pronto", List.copyOf(passos), ultimas, nota, true, true);
             log.info("cliente=central acao=cortes resultado=ok dupla={} link={}", dupla, url != null);
@@ -248,6 +303,30 @@ public class CortesService {
             falhou(passos, ultimas, e.getClass().getSimpleName());
         } finally {
             ocupado.set(false);
+        }
+    }
+
+    /**
+     * Ticket 097: o Brabo comenta os cortes NOVOS (os que não estavam na pasta antes), os mais fortes primeiro
+     * (corte-01, 02…), até {@link BraboService#MAXIMO_LOTE}. Gancho e versão TikTok ficam de fora.
+     * Se o Brabo estiver ocupado ou falhar, os cortes continuam prontos: só avisa.
+     */
+    private void chamarApresentador(List<String> antes, String arroba, boolean dupla, List<String> passos) {
+        List<String> novos = apresentador.cortes().stream()
+                .filter(n -> !antes.contains(n) && !n.endsWith("-gancho.mp4") && !n.endsWith("-tiktok.mp4"))
+                .sorted()
+                .limit(BraboService.MAXIMO_LOTE)
+                .toList();
+        if (novos.isEmpty()) {
+            passos.add("⚠️ O Brabo não achou cortes novos para comentar.");
+            return;
+        }
+        try {
+            apresentador.comentar(novos, arroba, dupla);
+            passos.add("🎙️ O Brabo começou a comentar " + novos.size() + " corte(s). Acompanhe no Estúdio do apresentador.");
+        } catch (RuntimeException e) {
+            passos.add("⚠️ O Brabo não pôde começar (ocupado ou sem pasta). Os cortes estão prontos; peça no Estúdio do apresentador.");
+            log.warn("cliente=central acao=cortes apresentador=falhou tipo={}", e.getClass().getSimpleName());
         }
     }
 

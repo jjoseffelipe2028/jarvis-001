@@ -140,6 +140,82 @@ class CortesServiceTest {
         s.iniciar("live.mp4", null, false, "amigo", 3, "", false); // liberou
     }
 
+    /** Ticket 097: apresentador FALSO que guarda o que pediram para ele comentar. */
+    private static final class ApresentadorFalso implements CortesService.Apresentador {
+        final List<String> pasta = new ArrayList<>(List.of("2026-01-01-000000-corte-01.mp4"));  // corte antigo
+        final List<List<String>> pedidos = new ArrayList<>();
+        String arroba = "";
+        boolean ocupado;
+
+        @Override
+        public List<String> cortes() {
+            return List.copyOf(pasta);
+        }
+
+        @Override
+        public void comentar(List<String> cortes, String arroba, boolean dupla) {
+            if (ocupado) {
+                throw new AcaoIndisponivelException("apresentador ocupado");
+            }
+            pedidos.add(cortes);
+            this.arroba = arroba;
+        }
+    }
+
+    private CortesService comApresentador(ApresentadorFalso brabo) {
+        return new CortesService(entrada.toString(), saida.toString(), "", "yt-dlp", "claude", "agy",
+                (comando, pasta, limite) -> {
+                    if (comando.contains("produtor.py")) {  // o produtor "cria" 2 cortes, o gancho e a versão TikTok
+                        brabo.pasta.addAll(List.of("2026-11-17-200000-corte-02.mp4", "2026-11-17-200000-corte-01.mp4",
+                                "2026-11-17-200000-corte-01-gancho.mp4", "2026-11-17-200000-corte-01-tiktok.mp4"));
+                    }
+                    return "";
+                }, RELOGIO, brabo);
+    }
+
+    @Test
+    void brabo_comentaSoOsCortesNovos_emOrdem_semGanchoNemTiktok() throws Exception {
+        ApresentadorFalso brabo = new ApresentadorFalso();
+        CortesService s = comApresentador(brabo);
+        s.iniciar("live.mp4", null, false, "amigo", 3, "", false, "brabo");
+        CortesService.Estado fim = esperarFim(s);
+        assertTrue(fim.ok(), fim.passos().toString());
+        assertEquals(List.of(List.of("2026-11-17-200000-corte-01.mp4", "2026-11-17-200000-corte-02.mp4")), brabo.pedidos);
+        assertEquals("@amigo", brabo.arroba);
+        assertTrue(fim.passos().stream().anyMatch(p -> p.contains("O Brabo começou a comentar 2")), fim.passos().toString());
+    }
+
+    @Test
+    void semApresentador_ninguemComenta_eBraboOcupadoNaoDerrubaOsCortes() throws Exception {
+        ApresentadorFalso brabo = new ApresentadorFalso();
+        CortesService s = comApresentador(brabo);
+        s.iniciar("live.mp4", null, false, "amigo", 3, "", false);
+        assertTrue(esperarFim(s).ok());
+        assertTrue(brabo.pedidos.isEmpty());
+
+        ApresentadorFalso ocupado = new ApresentadorFalso();
+        ocupado.ocupado = true;
+        CortesService s2 = comApresentador(ocupado);
+        s2.iniciar("live.mp4", null, false, "amigo", 3, "", false, "brabo");
+        CortesService.Estado fim = esperarFim(s2);
+        assertTrue(fim.ok(), "os cortes continuam prontos");
+        assertTrue(fim.passos().stream().anyMatch(p -> p.contains("não pôde começar")), fim.passos().toString());
+    }
+
+    @Test
+    void apresentadorRuim_400_antesDeRodar() {
+        CortesService s = comApresentador(new ApresentadorFalso());
+        EntradaInvalidaException capi = assertThrows(EntradaInvalidaException.class,
+                () -> s.iniciar("live.mp4", null, false, "amigo", 3, "", false, "capi"));
+        assertTrue(capi.getMessage().contains("Capi"));
+        assertThrows(EntradaInvalidaException.class, () -> s.iniciar("live.mp4", null, false, "amigo", 3, "", false, "mestre"));
+        assertThrows(EntradaInvalidaException.class, () -> servico().iniciar("live.mp4", null, false, "amigo", 3, "", false, "brabo"),
+                "sem apresentador ligado");
+        assertEquals("invalido", CortesService.apresentadorLimpo("<script>"));
+        assertEquals("nenhum", CortesService.apresentadorLimpo(null));
+        assertEquals("brabo", CortesService.apresentadorLimpo(" Brabo "));
+    }
+
     @Test
     void semPastas_503() {
         CortesService s = new CortesService("", "", "", "yt-dlp", "claude", "agy", (c, p, l) -> "", RELOGIO);

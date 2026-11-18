@@ -94,10 +94,10 @@ class CentralCortesControllerTest {
         when(cortes.videos()).thenReturn(List.of(new CortesService.Video("live-secreta.mp4", 12)));
         mockMvc.perform(get("/central/acoes/cortes/videos").cookie(cracha).header(CentralInterceptor.CABECALHO, "1"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.videos[0].nome").value("live-secreta.mp4"));
-        when(cortes.iniciar(eq(null), eq("https://youtu.be/dQw4w9WgXcQ"), eq(true), eq("@amigo"), eq(5), eq("en"), eq(true)))
+        when(cortes.iniciar(eq(null), eq("https://youtu.be/dQw4w9WgXcQ"), eq(true), eq("@amigo"), eq(5), eq("en"), eq(true), eq("brabo")))
                 .thenReturn(new CortesService.Estado("comecando", List.of("📥"), List.of(), "", false, false));
         mockMvc.perform(pedido(cracha, "{\"link\":\"https://youtu.be/dQw4w9WgXcQ\",\"autorizado\":true,\"arroba\":\"@amigo\","
-                        + "\"top\":5,\"idioma\":\"en\"}"))
+                        + "\"top\":5,\"idioma\":\"en\",\"apresentador\":\"brabo\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.etapa").value("comecando"));
         assertTrue(saida.getOut().contains("cliente=central acao=cortes resultado=iniciado link=true dupla=true"));
         assertFalse(saida.getOut().contains("dQw4w9WgXcQ") || saida.getOut().contains("live-secreta"));
@@ -110,7 +110,7 @@ class CentralCortesControllerTest {
         mockMvc.perform(get("/central/acoes/cortes/videos").header(CentralInterceptor.CABECALHO, "1")).andExpect(status().isUnauthorized());
         mockMvc.perform(post("/central/acoes/cortes").cookie(entrar()).header(CentralInterceptor.CABECALHO, "1")
                 .contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isForbidden());
-        verify(cortes, never()).iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean());
+        verify(cortes, never()).iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean(), any());
     }
 
     @Test
@@ -120,9 +120,22 @@ class CentralCortesControllerTest {
                 "{\"video\":\"live.mp4\",\"arroba\":\"a\",\"top\":0}", "{\"video\":\"live.mp4\",\"arroba\":\"a\",\"idioma\":\"fra\"}")) {
             mockMvc.perform(pedido(cracha, corpo)).andExpect(status().isBadRequest());
         }
-        verify(cortes, never()).iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean());
-        when(cortes.iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean()))
+        verify(cortes, never()).iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean(), any());
+        when(cortes.iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean(), any()))
                 .thenThrow(new AcaoIndisponivelException("cortes ocupado"));
         mockMvc.perform(pedido(cracha, "{\"video\":\"live.mp4\",\"arroba\":\"a\"}")).andExpect(status().isServiceUnavailable());
+    }
+
+    /** Ticket 097: link de canal → 400 com o MOTIVO (frase fixa do serviço), para a tela explicar o erro. */
+    @Test
+    void entradaInvalida_400_levaOMotivo() throws Exception {
+        Cookie cracha = entrar();
+        when(cortes.iniciar(any(), any(), anyBoolean(), any(), anyInt(), any(), anyBoolean(), any()))
+                .thenThrow(new io.github.jjoseffelipe2028.bracos.erros.EntradaInvalidaException(
+                        "Só link do YouTube (https://www.youtube.com/... ou https://youtu.be/...)."));
+        mockMvc.perform(pedido(cracha, "{\"link\":\"https://youtube.com/@canal\",\"autorizado\":true,\"arroba\":\"a\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value("entrada invalida"))
+                .andExpect(jsonPath("$.motivo").value("Só link do YouTube (https://www.youtube.com/... ou https://youtu.be/...)."));
     }
 }

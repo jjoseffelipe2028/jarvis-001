@@ -44,8 +44,9 @@ public class CentralCortesController {
         boolean porLink = pedido.link() != null && !pedido.link().isBlank();
         boolean dupla = pedido.comDupla();
         CortesService.Estado estado = cortes.iniciar(pedido.video(), pedido.link(), pedido.comAutorizacao(), pedido.arroba(),
-                pedido.quantos(), pedido.idioma(), dupla);
-        log.info("cliente=central acao=cortes resultado=iniciado link={} dupla={}", porLink, dupla);
+                pedido.quantos(), pedido.idioma(), dupla, pedido.apresentador());
+        log.info("cliente=central acao=cortes resultado=iniciado link={} dupla={} apresentador={}", porLink, dupla,
+                CortesService.apresentadorLimpo(pedido.apresentador()));
         return estado;
     }
 

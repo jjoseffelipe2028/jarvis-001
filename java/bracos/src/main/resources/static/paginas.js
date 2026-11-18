@@ -615,6 +615,12 @@
       escreverEm(ctPassos, ["✍️ Escolha um vídeo da lista OU cole um link (só um dos dois)."], "nx");
       return;
     }
+    // Ticket 097: link de CANAL (youtube.com/@...) não é vídeo. Avisa antes de mandar.
+    if (link && !/^https:\/\/(?:(?:www\.|m\.)?youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)[A-Za-z0-9_-]{11}/.test(link)) {
+      escreverEm(ctPassos, ["🔗 Esse link não é de um VÍDEO (link de canal não serve). Abra o vídeo e copie o link dele: "
+        + "youtube.com/watch?v=..., youtu.be/..., /live/... ou /shorts/..."], "nx");
+      return;
+    }
     if (link && !el("ct-autorizado").checked) {
       escreverEm(ctPassos, ["✋ Marque que tem autorização do dono do vídeo."], "nx");
       return;
@@ -627,7 +633,8 @@
       escreverEm(ctPassos, ["✍️ Quantidade de cortes: de 1 a 20."], "nx");
       return;
     }
-    ctPedido = { arroba, top, idioma, dupla: el("ct-dupla").checked };
+    const apresentador = el("ct-apresentador").value === "brabo" ? "brabo" : "";
+    ctPedido = { arroba, top, idioma, dupla: el("ct-dupla").checked, apresentador };
     if (video) {
       ctPedido.video = video;
     } else {
@@ -635,7 +642,8 @@
       ctPedido.autorizado = true;
     }
     el("ct-cartao-texto").textContent = `${video ? "Vídeo: " + video : "Link: " + link} · crédito ${arroba} · ${top} cortes · `
-      + `${IDIOMA[idioma] || ""} · ${ctPedido.dupla ? "001 + 002 escolhem os melhores" : "sem revisão da dupla"}`;
+      + `${IDIOMA[idioma] || ""} · ${ctPedido.dupla ? "001 + 002 escolhem os melhores" : "sem revisão da dupla"}`
+      + ` · ${apresentador ? "o Brabo comenta os cortes (até 8)" : "sem apresentador"}`;
     ctCartao.hidden = false;
   }
 
@@ -691,7 +699,7 @@
   el("ct-revisar").addEventListener("click", revisarCortes);
   el("ct-confirmar").addEventListener("click", (e) => confirmarCortes(e.currentTarget));
   el("ct-cancelar").addEventListener("click", () => { ctCartao.hidden = true; });
-  for (const id of ["ct-video", "ct-link", "ct-arroba", "ct-top", "ct-idioma", "ct-dupla", "ct-autorizado"]) {
+  for (const id of ["ct-video", "ct-link", "ct-arroba", "ct-top", "ct-idioma", "ct-dupla", "ct-autorizado", "ct-apresentador"]) {
     el(id).addEventListener("input", () => { ctCartao.hidden = true; });
   }
   ctVideo.addEventListener("focus", () => { if (ctVideo.options.length <= 1) carregarVideos(); });
