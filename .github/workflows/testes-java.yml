@@ -13,10 +13,16 @@ permissions:
 
 jobs:
   testes:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Linux E Windows: o Jarvis roda no Windows, então testes "só Windows" (ex.: caminho com \) também rodam aqui
+    strategy:
+      fail-fast: false # se um sistema falhar, o outro termina e mostra o resultado
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     defaults:
       run:
+        shell: bash # Git Bash no Windows: o mesmo comando ./mvnw nos dois sistemas
         working-directory: java/bracos
     steps:
       - name: Baixar o código
@@ -33,6 +39,7 @@ jobs:
           cache-dependency-path: java/bracos/pom.xml
 
       - name: Dar permissão de execução ao mvnw
+        if: runner.os != 'Windows'
         run: chmod +x mvnw
 
       - name: Rodar os testes
