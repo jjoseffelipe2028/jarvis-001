@@ -51,7 +51,12 @@ class ArquiteturaGuardaTest {
             "GET /central/acoes/estudio", "POST /central/acoes/estudio",
             "GET /central/acoes/cortes", "POST /central/acoes/cortes", "GET /central/acoes/cortes/videos",
             "GET /central/acoes/brabo", "POST /central/acoes/brabo", "GET /central/acoes/brabo/cortes",
-            "GET /central/acoes/brabo/video/{nome}");
+            "GET /central/acoes/brabo/video/{nome}",
+            // Vindas do main (jarvis-central), revisadas em 17/11: todas atrás do crachá da Central,
+            // POSTs com @Valid e nenhuma executa comando novo
+            "GET /central/acoes/chat/modelos", "GET /central/acoes/dupla",
+            "GET /central/acoes/ronda/ultima", "POST /central/acoes/ronda",
+            "POST /central/acoes/pedido-001", "POST /central/acoes/treino");
 
     /** Única variável de caminho aceita: o nome do vídeo é conferido contra a lista da pasta (Ticket 052). */
     static final Set<String> COM_VARIAVEL = Set.of("GET /central/acoes/brabo/video/{nome}");
