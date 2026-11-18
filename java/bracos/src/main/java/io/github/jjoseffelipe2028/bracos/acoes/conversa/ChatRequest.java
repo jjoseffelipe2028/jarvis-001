@@ -14,7 +14,10 @@ import jakarta.validation.constraints.Size;
  */
 public record ChatRequest(
         @NotBlank @Size(max = 1000) String texto,
-        @Size(max = 8) List<@Valid Fala> historico
+        @Size(max = 8) List<@Valid Fala> historico,
+        // Ticket 065: seletor de modelo. Só "pequeno" ou "maior" (lista fechada); vazio = pequeno.
+        // O NOME do modelo nunca vem da tela: quem decide é a configuração do servidor.
+        @Pattern(regexp = "pequeno|maior") String modelo
 ) {
     public record Fala(
             @NotBlank @Pattern(regexp = "user|assistant") String papel,

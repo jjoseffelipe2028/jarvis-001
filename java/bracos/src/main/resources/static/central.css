@@ -139,6 +139,7 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 .menu button[aria-current="page"] { background: #155e75; border-color: var(--ciano); box-shadow: 0 0 10px #22d3ee55; }
 .clicavel { cursor: pointer; } .clicavel:hover { text-shadow: 0 0 10px currentColor; }
 .chat { margin-bottom: 4px; }
+.agentes { margin-bottom: 4px; } .agentes .botoes button { flex: 1; } /* Ticket 061 */
 .chat-falas { list-style: none; max-height: 220px; overflow-y: auto; font-size: 14px; margin-bottom: 8px; }
 .chat-falas li { padding: 4px 0; border-bottom: 1px dashed #1e293b; white-space: pre-wrap; word-break: break-word; }
 .chat-eu { color: #e9d5ff; } .chat-ia { color: var(--texto); }
@@ -155,3 +156,14 @@ textarea { font: inherit; font-size: 14px; color: var(--texto); background: #030
 .saida-grande { max-height: 340px; }
 @media (max-width: 1000px) { .menu, .pagina { padding-left: 16px; padding-right: 16px; } }
 .br-player { width: 100%; max-width: 270px; aspect-ratio: 9 / 16; margin: 10px auto 6px; display: block; background: #000; border-radius: 8px; } /* Ticket 052 */
+/* Ticket 062: jornalzinho do "Bom dia" */
+.jornal { margin-top: 8px; border: 1px solid #22d3ee55; border-radius: 10px; padding: 8px 10px; background: #071226; }
+.jornal-titulo { font-size: 12px; letter-spacing: 1px; color: var(--verde); margin-bottom: 6px; }
+.jornal dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; margin: 0; }
+.jornal dt { font-weight: bold; white-space: nowrap; }
+.jornal dd { margin: 0; word-break: break-word; }
+/* Ticket 063: salas dos super agentes (a ala nova do escritório) */
+.esc-salas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 8px 0; }
+.esc-sala { display: flex; flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 8px; border: 1px solid #22406b; border-radius: 8px; background: #070d1a; transition: box-shadow .4s, border-color .4s; }
+.esc-sala.acesa { border-color: var(--verde); box-shadow: 0 0 14px #3ddc8455; }
+.esc-sala.alerta { border-color: #f87171; box-shadow: 0 0 14px #f8717155; }

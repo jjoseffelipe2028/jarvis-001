@@ -41,7 +41,6 @@ Os passos também rodam soltos:
 - **Golpes**: subidas fortes de volume, como batida, impacto ou efeito sonoro (whoosh, ding).
 - **BPM**: batida da música, com confiança de 0 a 1. Abaixo de 0.3, trate como palpite.
 - **Cortes na batida**: quantos cortes caem a até 80 ms de um golpe. Acima de 50% = edição no ritmo da música.
-- Golpe no segundo 0 não é contado (não tem nada antes para comparar).
 
 ## 2. Olhar o vídeo
 - **Leia as folhas e a `onda.png` com a ferramenta Read.** Abra uma cena sozinha (`cenas/cena_007.jpg`) só quando tiver dúvida.

@@ -22,7 +22,7 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 |---|---|
 | ☕ **API REST em Java 21 + Spring Boot 4** | 11 ações reais + 9 rotas da Central, cada uma em camadas (`Controller` → `Service`), com validação e erros padronizados |
 | 🔒 **Segurança como requisito** | Pedidos assinados com HMAC (o segredo nunca viaja), anti replay, anti CSRF, anti DNS rebinding, anti Path Traversal, anti injeção de comando, anti log injection |
-| 🧪 **408 testes Java + 268 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
+| 🧪 **447 testes Java + 336 Python** | JUnit 5, unittest + MockMvc + servidor real. Os testes **atacam** a API (truques de URL, `../`, Unicode malicioso, config de git maliciosa) |
 | ⚙️ **CI/CD no GitHub** | 4 robôs a cada push: testes Java, testes Python, CodeQL e gitleaks (segredos). Dependabot vigia Maven, pip e Actions |
 | 🧠 **IA 100% local** | Ollama + Gemma, faster-whisper e Piper: o áudio nunca sai do PC. **Chat com a IA direto na Central** |
 | 🦸 **Super agentes** | **Super defensor** (ronda com 5 vigias e nota geral) e **super produtor de vídeos** (da live ao pacote de cortes legendados num comando) |
@@ -30,6 +30,7 @@ A regra central: **a IA nunca executa nada direto no computador.** Ela só *pede
 | 🛡️ **Sentinela (só avisa)** | Vigia de portas, de integridade (SHA-256 das travas), de **processos** (minerador escondido) e da **rede** (aparelho novo); **isca (honeytoken)**; **detector de golpe brasileiro** (nunca abre o link) |
 | ⚔️ **Red Team próprio** | **Duelo Hacker × Sentinela** (ataques reais contra uma cópia de teste, com placar), Red Team dos cortes (63 pedidos maliciosos) e **auditor de skills** com MITRE ATT&CK |
 | 📋 **Processo de engenharia** | Cada entrega tem ticket, plano aprovado, revisão de segurança e evidências → [`docs/tickets/`](docs/tickets/) |
+| 📐 **Decisões explicadas** | Cada escolha de arquitetura vira um ADR com alternativas e custo → [`docs/adr/`](docs/adr/). A 002 (Gemini) contesta os planos da 001 (Claude) antes de construir → [`docs/reviews/`](docs/reviews/) |
 
 ## 🏗️ Como funciona
 
@@ -151,7 +152,7 @@ Revisões de segurança registradas: [`docs/reviews/`](docs/reviews/) e nas fich
 **API Java** (precisa de Java 21):
 ```bash
 cd java/bracos
-./mvnw test              # 408 testes
+./mvnw test              # 447 testes
 ./iniciar.sh             # carrega o .env e sobe em 127.0.0.1:8080
 ```
 
@@ -164,7 +165,7 @@ python -m venv .venv
 source .venv/Scripts/activate   # Git Bash
 pip install -r requirements.txt
 python chat.py
-python -m unittest discover -s tests   # 268 testes
+python -m unittest discover -s tests   # 331 testes
 python defensor.py      # ronda do super defensor
 ```
 
@@ -182,7 +183,8 @@ python defensor.py      # ronda do super defensor
 - [x] **Central v4**: chat com a IA local e páginas por área
 - [x] **Super agentes**: defensor e produtor de vídeos
 - [ ] Botões dos super agentes na Central · dublagem com voz local · estúdio de jogos · biblioteca offline
-- [ ] Dupla 001 + 002 em loop com GitHub Issues
+- [x] **Dupla 001 + 002**: `/dupla` (a 002 contesta plano e código), ADRs das decisões e simulador de entrevista por voz
+- [ ] Dupla em loop com GitHub Issues e PR
 - [x] Revisão OWASP Top 10 + gitleaks + portas testadas pela rede
 - [ ] Spring Security
 

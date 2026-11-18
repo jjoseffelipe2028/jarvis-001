@@ -20,7 +20,7 @@ import numpy as np
 LADO = 400          # o desenho final é LADO x LADO (RGBA)
 SUPER = 3           # desenha 3x maior e reduz → borda lisa (antisserrilhado)
 FPS = 30
-PERSONAGENS = ("brabo", "mestre")
+PERSONAGENS = ("brabo", "mestre", "capi")
 
 
 def _cor(hexa, alfa=255):
@@ -204,6 +204,44 @@ def desenhar_mestre(boca=0, piscando=False, fundo=True, braco=True, lado=LADO):
     _boca(t, boca, cy=268)
     t.elipse(176, 252, 30, 11, "#6b4a2a", girar=8)                      # bigode
     t.elipse(224, 252, 30, 11, "#6b4a2a", girar=-8)
+    return t.pronta()
+
+
+def desenhar_capi(boca=0, piscando=False, fundo=True):
+    """Capi: capivara gamer (Ticket 055), personagem de outro canal. Tranquilona, de fone rosa e microfone."""
+    t = Tela()
+    if fundo:
+        t.retangulo(0, 0, 400, 400, "#121a2c", raio=36)
+        t.anel(200, 200, 197, 184, "#18e0c8")
+    for x in (118, 282):                                               # orelhas
+        t.elipse(x, 110, 26, 22, "#70482a")
+        t.elipse(x, 112, 13, 11, "#50321c")
+    t.retangulo(80, 100, 320, 362, "#9c683c", raio=112)                # cabeça
+    t.elipse(200, 290, 102, 64, "#ba8658")                             # focinho
+    for x0, x1 in ((186, 176), (200, 200), (214, 224)):                # topete
+        t.linha(x0, 108, x1, 80, 7, "#6e4626")
+    for x in (148, 252):                                               # olhos sonolentos
+        if piscando:
+            t.retangulo(x - 18, 198, x + 18, 205, "#140e0a", raio=3)
+        else:
+            t.elipse(x, 202, 17, 19, "#140e0a")
+            t.elipse(x + 6, 195, 5, 5, "#ffffff")
+            t.retangulo(x - 24, 176, x + 24, 192, "#9c683c")
+    for x in (165, 235):                                               # narinas
+        t.elipse(x, 262, 12, 8, "#3c2414")
+    if boca == 0:
+        t.linha(176, 304, 200, 312, 6, "#3c1e12")
+        t.linha(200, 312, 224, 304, 6, "#3c1e12")
+    else:
+        h = 26 if boca == 1 else 44
+        t.retangulo(168, 300, 232, 300 + h, "#46141a", raio=12)
+        t.elipse(200, 300 + h * 0.78, 22, max(4, h * 0.3), "#eb6478")
+        t.retangulo(186, 300, 214, 310, "#faf9f5", raio=2)              # dentões
+    t.anel(200, 218, 142, 128, "#1e1e26", so_cima=True)                # fone
+    t.retangulo(50, 170, 88, 252, "#ff3b6b", raio=15)
+    t.retangulo(312, 170, 350, 252, "#ff3b6b", raio=15)
+    t.linha(332, 246, 252, 318, 8, "#1e1e26")                          # microfone
+    t.elipse(248, 320, 10, 10, "#18e0c8")
     return t.pronta()
 
 
@@ -414,12 +452,52 @@ def com_sombra(img, dx=14, dy=10, raio=10, forca=0.35):
     return np.concatenate([cor, alfa[..., None] * 255.0], axis=-1).clip(0, 255).astype(np.uint8)
 
 
-def sprites(personagem, fundo=True, lado=LADO):
-    """{(boca, piscando): imagem} — os 6 desenhos de um personagem, feitos uma vez só."""
+MOLDURAS = {"brabo": ("#14141a", "#ff7a00"), "mestre": ("#eef3f8", "#1f6fd1"), "capi": ("#121a2c", "#18e0c8")}
+
+
+def _sobre(baixo, cima):
+    """Põe a imagem RGBA `cima` por cima de `baixo` (mesmo tamanho)."""
+    a = cima[..., 3:4].astype(np.float32) / 255.0
+    b = baixo[..., 3:4].astype(np.float32) / 255.0
+    sai_a = a + b * (1 - a)
+    cor = (cima[..., :3] * a + baixo[..., :3] * b * (1 - a)) / np.maximum(sai_a, 1e-6)
+    return np.clip(np.concatenate([cor, sai_a * 255.0], axis=-1) + 0.5, 0, 255).astype(np.uint8)
+
+
+def moldura(personagem, lado):
+    """Quadradinho arredondado + anel colorido do personagem (fica ATRÁS do retrato 3D)."""
+    fundo, anel = MOLDURAS[personagem]
+    t = Tela(lado=lado)
+    t.retangulo(0, 0, 400, 400, fundo, raio=36)
+    t.anel(200, 200, 197, 184, anel)
+    return t.pronta()
+
+
+def emoldurar(personagem, retrato, base=None):
+    """Retrato 3D por cima do anel (efeito 3D 'saindo' da moldura), sem passar do quadradinho."""
+    base = moldura(personagem, retrato.shape[0]) if base is None else base
+    img = _sobre(base, retrato)
+    img[..., 3] = np.minimum(img[..., 3], base[..., 3])
+    return img
+
+
+def sprites(personagem, fundo=True, lado=LADO, retrato=True):
+    """{(boca, piscando): imagem} — os 6 desenhos de um personagem, feitos uma vez só.
+    Ticket 055: se existirem as 3 imagens 3D do personagem (retratos.py), usa elas no lugar do desenho.
+    As imagens não têm olho fechado, então o retrato não pisca."""
     if personagem not in PERSONAGENS:
         raise ValueError("personagem desconhecido")
+    if retrato:
+        import retratos
+        fotos = retratos.retratos(personagem, lado)
+        if fotos is not None:
+            if fundo:
+                fotos = [emoldurar(personagem, f) for f in fotos]
+            return {(b, p): fotos[b] for b in (0, 1, 2) for p in (False, True)}
     if personagem == "brabo":
         return {(b, p): desenhar_brabo(b, p, fundo=fundo) for b in (0, 1, 2) for p in (False, True)}
+    if personagem == "capi":
+        return {(b, p): desenhar_capi(b, p, fundo=fundo) for b in (0, 1, 2) for p in (False, True)}
     return {(b, p): desenhar_mestre(b, p, fundo=fundo, lado=lado) for b in (0, 1, 2) for p in (False, True)}
 
 
@@ -458,8 +536,80 @@ def piscadas(quadros, fps=FPS, semente=7):
     return marca
 
 
+def nivel_da_voz(voz, taxa, fps=FPS):
+    """Volume da voz por quadro, 0..1 (1 = fala forte)."""
+    voz = np.asarray(voz, dtype=np.float32)
+    passo = taxa / fps
+    n = int(np.ceil(len(voz) / passo)) if len(voz) else 0
+    rms = np.zeros(n, dtype=np.float32)
+    for i in range(n):
+        trecho = voz[int(i * passo):int((i + 1) * passo)]
+        if trecho.size:
+            rms[i] = float(np.sqrt(np.mean(trecho ** 2)))
+    topo = float(np.percentile(rms[rms > 0], 90)) if np.any(rms > 0) else 0.0
+    return np.clip(rms / topo, 0, 1) if topo > 0 else np.zeros(n, dtype=np.float32)
+
+
+def movimento(bocas, nivel, fps=FPS):
+    """Ticket 055: o que deixa o retrato 3D vivo, quadro a quadro → lista de (boca, ângulo, escala, dy).
+    - boca: passa de uma imagem para a outra em ~2 quadros (número fracionário: 0.5 = metade fechada/metade meia);
+    - respira (sobe/desce devagar) e balança a cabeça de leve, mais quando fala;
+    - 'tranco': zoom rápido quando a voz dá um pico (começo de palavra forte)."""
+    saida = []
+    boca = energia = tranco = 0.0
+    anterior = 0.0
+    for i, (b, v) in enumerate(zip(bocas, nivel)):
+        t = i / fps
+        boca += (float(b) - boca) * 0.6
+        energia += (float(v) - energia) * (0.5 if v > energia else 0.12)
+        tranco = max(tranco * 0.78, max(0.0, float(v) - anterior - 0.25) * 1.6)
+        anterior = float(v)
+        angulo = 1.1 * np.sin(2 * np.pi * t / 4.3) + 1.8 * energia * np.sin(2 * np.pi * t / 1.6)
+        escala = 1.035 + 0.008 * np.sin(2 * np.pi * t / 3.4) + 0.05 * min(tranco, 1.0)
+        dy = 2.5 * np.sin(2 * np.pi * t / 3.4) - 5.0 * energia
+        saida.append((min(boca, 2.0), float(angulo), float(escala), float(dy)))
+    return saida
+
+
+def _mexer(img, angulo, escala, dy):
+    """Gira (graus), aumenta e sobe/desce o retrato em volta do pescoço. Embaixo nunca abre buraco."""
+    import retratos
+    n = img.shape[0]
+    px, py = n * 0.5, n * 0.78                         # pivô: pescoço
+    a = np.deg2rad(angulo)
+    c, s = np.cos(a), np.sin(a)
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
+    x = (xx - px) / escala
+    y = (yy - py - dy * n / 400.0) / escala
+    xs = c * x + s * y + px
+    ys = -s * x + c * y + py
+    ys = np.minimum(ys, n - 1)                         # o corpo continua até a borda de baixo
+    return np.clip(retratos._amostrar(img, ys, xs) + 0.5, 0, 255).astype(np.uint8)
+
+
+def quadros_retrato(personagem, fotos, voz, taxa, fundo=True, fps=FPS, boca_fechada=False):
+    """Quadros do retrato 3D: boca suave + respiração + balanço + tranco (e moldura atrás, se `fundo`).
+    `boca_fechada`: mexe a cabeça pela voz mas deixa a boca parada — entrada da IA de boca (boca_ia.py)."""
+    fotos = [f.astype(np.float32) for f in fotos]
+    base = moldura(personagem, fotos[0].shape[0]) if fundo else None
+    bocas = bocas_pela_voz(voz, taxa, fps)
+    if boca_fechada:
+        bocas = np.zeros_like(bocas)
+    for boca, angulo, escala, dy in movimento(bocas, nivel_da_voz(voz, taxa, fps)[:len(bocas)], fps):
+        i = min(int(boca), 1)
+        f = boca - i
+        img = fotos[i] * (1 - f) + fotos[i + 1] * f    # mistura das 2 bocas vizinhas
+        img = _mexer(img, angulo, escala, dy)
+        yield emoldurar(personagem, img, base) if fundo else img
+
+
 def quadros(personagem, voz, taxa, fundo=True, fps=FPS):
     """Gera os quadros (RGBA uint8) um por um, com a cabeça balançando de leve quando fala."""
+    import retratos
+    fotos = retratos.retratos(personagem, LADO)
+    if fotos is not None:
+        yield from quadros_retrato(personagem, fotos, voz, taxa, fundo, fps)
+        return
     imgs = sprites(personagem, fundo=fundo)
     bocas = bocas_pela_voz(voz, taxa, fps)
     olhos = piscadas(len(bocas), fps)

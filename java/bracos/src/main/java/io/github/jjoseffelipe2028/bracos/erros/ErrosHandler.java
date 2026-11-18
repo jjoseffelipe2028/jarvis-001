@@ -30,6 +30,12 @@ public class ErrosHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("erro", e.getMessage()));
     }
 
+    /** Limite de uso atingido (ex.: pedidos demais no dia, Ticket 060) → 429. */
+    @ExceptionHandler(LimiteAtingidoException.class)
+    public ResponseEntity<Map<String, String>> limite(LimiteAtingidoException e) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("erro", e.getMessage()));
+    }
+
     /** Falha de disco: a mensagem real (com caminho) NÃO vai para o cliente. */
     @ExceptionHandler(UncheckedIOException.class)
     public ResponseEntity<Map<String, String>> falhaAoGravar(UncheckedIOException e) {

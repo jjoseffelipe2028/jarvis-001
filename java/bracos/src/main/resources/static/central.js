@@ -106,9 +106,13 @@ async function tratar(resposta) {
     const motivos = {
       400: "Texto inválido (vazio ou grande demais).",
       413: "Pedido grande demais.",
+      429: "Limite atingido: já tem uma ronda rodando ou acabaram os pedidos do dia.",
       503: "Ação desligada (pasta não configurada no .env).",
     };
     throw new Error(motivos[resposta.status] || "A API recusou o pedido.");
+  }
+  if (resposta.status === 204) {
+    return null; // Ticket 062: "ainda não tem nada" (ex.: nenhuma ronda feita)
   }
   return resposta.json();
 }
