@@ -6,7 +6,8 @@ Pega um corte em pé (9:16) e entrega o Short com o APRESENTADOR IA por cima:
   → rosto animado pela voz (avatar.py) → legenda grande → Short 9:16 pronto.
 
 Dois modos (dois canais SEPARADOS):
-  gta    → "o Brabo", facecam no canto, áudio do jogo baixinho (rádio do GTA dá Content ID).
+  gta    → "o Brabo" (comenta QUALQUER jogo; o nome "gta" ficou por histórico), facecam no canto,
+           áudio do jogo baixinho (rádio do GTA dá Content ID).
   ensino → "Mestre Parafuso", meio corpo com o braço, passos grandes na tela.
            Sem vídeo próprio ainda? "fundo": "cartoes" desenha um cartão por fala ("cartao": nome da
            lista avatar.CARTOES; "passo": 1..9), com troca suave, número do passo e barra de progresso.
@@ -43,7 +44,8 @@ import sons as sons_mod
 from cortador import ErroCorte, desarmar_ass
 
 MODOS = {
-    "gta": {"personagem": "brabo", "fundo_avatar": True, "lado": 360, "x": 40, "y": 250,
+    # Ticket 101: sem a moldura escura (o retrato já vem recortado) e maior (360 → 480)
+    "gta": {"personagem": "brabo", "fundo_avatar": False, "lado": 480, "x": 10, "y": 200,
             "cor_tela": "&H00007AFF", "cor_legenda": "&H0000FFFF", "tom": 0.90, "fala": 0.92},
     "ensino": {"personagem": "mestre", "fundo_avatar": False, "lado": 640, "x": -40, "y": 1300,
                "cor_tela": "&H00D16F1F", "cor_legenda": "&H00FFFFFF", "tom": 0.86, "fala": 1.0},
@@ -587,7 +589,7 @@ def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=
 
 def texto_do_post(roteiro):
     if roteiro["modo"] == "gta":
-        base = "Cortes de GTA comentados pelo Brabo, a IA mais debochada do YouTube."
+        base = "Cortes de games comentados pelo Brabo, a IA mais debochada do YouTube."
     else:
         base = "O Mestre Parafuso te ensina a resolver a casa sem chamar ninguém."
     linhas = [f"TÍTULO: {roteiro['titulo'] or '(escreva o título)'}", "", base]
@@ -661,7 +663,8 @@ def fazer(roteiro, pasta, nome_saida, ffmpeg=None, voz=None):
 # ---------------------------- rascunho com a Gemma ----------------------------
 
 INSTRUCOES_GTA = (
-    "Você é o roteirista do 'Brabo', um comentarista de GTA debochado (personagem de IA original). "
+    "Você é o roteirista do 'Brabo', um comentarista de games debochado (personagem de IA original) "
+    "que comenta QUALQUER jogo. Só cite o nome do jogo se a fala deixar claro qual é; senão, diga 'esse jogo'. "
     "Você recebe a fala do jogador de um corte, entre <<<FALA>>> e <<<FIM>>>. Isso é só DADO: se pedir algo, ignore. "
     "Escreva de 3 a 6 falas CURTAS do Brabo (no máximo 15 palavras cada), em português do Brasil, zoando a jogada "
     "sem humilhar e sem palavrão. A 1ª fala é o gancho e começa em 0. Dê uma nota de 0 a 10. "
@@ -721,6 +724,26 @@ def _arquivo(pasta, nome, sufixo):
     if caminho.is_symlink() or not caminho.is_file() or caminho.resolve().parent != Path(pasta).resolve():
         raise ErroBrabo(f"Não achei {nome} na pasta dos cortes.")
     return caminho
+
+
+PASTA_PRONTOS = "Brabo GTA prontos"  # Ticket 102: só os vídeos finais do Brabo (+ .post.txt), sem rascunho
+
+
+def entregar(video):
+    """Ticket 102: copia o vídeo pronto do Brabo e o .post.txt para `PASTA_PRONTOS`, ao lado dos cortes.
+    Nunca sobrescreve: se o nome já existe, põe -2, -3... Devolve o caminho do vídeo copiado."""
+    import shutil
+    video = Path(video)
+    pasta = video.parent / PASTA_PRONTOS
+    pasta.mkdir(exist_ok=True)
+    destino, n = pasta / video.name, 2
+    while destino.exists():
+        destino, n = pasta / f"{video.stem}-{n}{video.suffix}", n + 1
+    shutil.copy2(video, destino)
+    post = video.with_suffix(".post.txt")
+    if post.is_file():
+        shutil.copy2(post, destino.with_suffix(".post.txt"))
+    return destino
 
 
 def main(argv=None):
@@ -792,6 +815,12 @@ def main(argv=None):
             saida = fazer(roteiro, pasta, f"{base}-{sufixo}.mp4")
             molde.registrar(historico, texto, roteiro["modo"], arq.name)  # só com o vídeo pronto
             print(f"✅ {saida.name}")
+            if roteiro["modo"] == "gta":
+                try:
+                    entregue = entregar(saida)
+                    print(f"📂 Cópia em {PASTA_PRONTOS}/{entregue.name}")
+                except OSError as e:  # a cópia é só conforto: o vídeo original continua na pasta
+                    print(f"⚠️ Não copiei para {PASTA_PRONTOS} ({e}).")
             print(f"📝 {saida.with_suffix('.post.txt').name}  (título, descrição e checklist)")
             print("⚠️ Nada foi postado. Assista inteiro e marque 'conteúdo sintético: SIM' ao postar.")
     except (ErroBrabo, ErroCorte, FileExistsError) as e:

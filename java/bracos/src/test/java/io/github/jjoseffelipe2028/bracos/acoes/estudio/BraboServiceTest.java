@@ -192,4 +192,15 @@ class BraboServiceTest {
         assertEquals("trocar-a-resistencia", BraboService.apelido("Trocar a resistência!"));
         assertEquals("video", BraboService.apelido("🔧🔧"));
     }
+
+    /** Ticket 098: o Brabo comenta qualquer jogo — descobre pelas fotos e não inventa nome; a 002 confere o jogo. */
+    @Test
+    void brabo_comentaQualquerJogo() {
+        String roteiro = BraboService.promptRoteiro("brabo", "PEDIDO.md");
+        assertTrue(roteiro.contains("QUALQUER jogo") && roteiro.contains("nunca invente um nome"));
+        assertFalse(roteiro.contains("GTA 6"));
+        assertTrue(BraboService.promptRevisao("brabo", "P.md", "R.json").contains("se o jogo citado e mesmo o das fotos"));
+        assertTrue(BraboService.textoDoPedido("brabo", "t", null).contains("canal de games"));
+        assertFalse(CortesService.TEMA_BRABO.contains("GTA"));
+    }
 }

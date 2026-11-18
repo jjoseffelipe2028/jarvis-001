@@ -200,7 +200,7 @@ class TiktokTest(unittest.TestCase):
         robo = RoboFalso()
         m = {"numero": 1, "inicio": 990, "fim": 1015, "forca": 9.0}  # sem "pico"
         self._montar([m], robo=robo, tiktok=True)
-        self.assertEqual(robo.cortes[1], (955, 1025))  # pico estimado = início + 10
+        self.assertEqual(robo.cortes[1], (957, 1027))  # pico estimado = início + ANTES (12, Ticket 101)
 
 
 class Checagem7sTest(unittest.TestCase):

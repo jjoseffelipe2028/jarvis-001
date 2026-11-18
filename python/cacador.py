@@ -20,7 +20,7 @@ PISO_DB = -90.0      # silêncio total vira -90 dB (em vez de -infinito)
 BLOCO_BASE = 300     # o "normal" de cada trecho = mediana de 5 min
 LIMIAR_DB = 6.0      # pico precisa estar 6 dB acima do normal (som ~2x mais forte)
 DISTANCIA_MIN = 45   # dois momentos a menos de 45 s viram um só
-ANTES, DEPOIS = 10, 15  # corte sugerido: 10 s antes do pico e 15 s depois (25 s)
+ANTES, DEPOIS = 12, 23  # corte sugerido: 12 s antes do pico e 23 s depois (35 s; Ticket 101, era 25 s)
 # Ticket 089: versão TikTok. O Creator Rewards só paga vídeo com MAIS de 1 min,
 # então a janela é de 70 s (45 antes do pico, 25 depois) e nunca sai com menos de 62 s.
 TIKTOK_ANTES, TIKTOK_DEPOIS = 45, 25

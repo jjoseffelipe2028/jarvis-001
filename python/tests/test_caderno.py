@@ -71,6 +71,12 @@ class TestRascunhoComTempero(unittest.TestCase):
         brabo.rascunho(self.SRT, "c.mp4", lambda m: vistas.append(m) or self.RESP)
         self.assertEqual(vistas[0][0]["content"], brabo.INSTRUCOES_GTA)
 
+    def test_brabo_comenta_qualquer_jogo(self):
+        # Ticket 098: nada preso ao GTA; nome do jogo só se a fala deixar claro
+        self.assertIn("QUALQUER jogo", brabo.INSTRUCOES_GTA)
+        self.assertNotIn("comentarista de GTA", brabo.INSTRUCOES_GTA)
+        self.assertIn("'esse jogo'", brabo.INSTRUCOES_GTA)
+
 
 if __name__ == "__main__":
     unittest.main()

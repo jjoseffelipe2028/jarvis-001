@@ -57,7 +57,7 @@ public class CortesService {
     static final Pattern ARROBA = Pattern.compile("@?[A-Za-z0-9_.]{1,30}");
     /** Ticket 097: quem comenta os cortes no fim (lista fechada). A Capi entra quando tiver voz própria. */
     static final Set<String> APRESENTADORES = Set.of("brabo");
-    static final String TEMA_BRABO = "Comente a jogada deste corte de GTA: julgue a jogada, nunca a pessoa.";
+    static final String TEMA_BRABO = "Comente a jogada deste corte (qualquer jogo: veja nas fotos qual e): julgue a jogada, nunca a pessoa.";
 
     /** Ticket 097: o apresentador que comenta os cortes novos (na Central, é o {@link BraboService}). */
     public interface Apresentador {
