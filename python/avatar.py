@@ -517,16 +517,87 @@ def _c_chave(t, p=0.0):
     t.poligono([(86, 62), (100, 96), (70, 92)], AZUL)
 
 
+# --- "contar a história" (17/11): UMA torneira grande que é desmontada e montada ao longo dos passos.
+# Cada parte começa exatamente onde a anterior terminou (p=1 de uma == p=0 da próxima).
+
+_CRUZETA_NO_LUGAR, _CRUZETA_GUARDADA = (200, 114), (88, 66)
+_REPARO_NO_LUGAR, _REPARO_VELHO_GUARDADO, _REPARO_NOVO_COMECO = (200, 190), (322, 150), (200, 78)
+
+
+def _entre(a, b, k):
+    return (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
+
+
+def _historia(t, cruzeta, velho=None, novo=None, chave=None, check=False):
+    t.retangulo(30, 60, 70, 360, "#e6ebf0", raio=6)                   # parede
+    t.retangulo(66, 236, 160, 262, METAL, raio=6)                      # cano
+    if velho:                                                          # reparos ANTES do corpo:
+        _reparo(t, velho[0], velho[1], cor="#8a939d")                  # a parte dentro da torneira fica escondida
+    if novo:
+        _reparo(t, novo[0], novo[1], cor="#e3e8ee")
+    t.retangulo(150, 216, 250, 288, "#b8c0c9", raio=14)                # corpo
+    t.elipse(200, 218, 30, 8, "#3a4450")                               # a boca de cima (onde o reparo entra)
+    t.retangulo(240, 240, 330, 262, METAL, raio=6)                     # bica
+    t.retangulo(308, 250, 330, 322, METAL, raio=6)
+    if chave is not None:                                              # pano + chave no sextavado
+        t.retangulo(160, 152, 240, 204, "#f2e6c9", raio=10)
+        a = np.deg2rad(-27 + chave)
+        t.linha(200, 178, 200 + 170 * np.cos(a), 178 + 170 * np.sin(a), 20, "#5f6873")
+        t.elipse(200, 178, 30, 30, "#5f6873")
+        t.elipse(200, 178, 15, 15, "#f2e6c9")
+    cx, cy = cruzeta
+    t.retangulo(cx - 52, cy - 10, cx + 52, cy + 10, "#7d8794", raio=8)  # cruzeta (a manopla)
+    t.elipse(cx, cy, 16, 16, "#5f6873")
+    if check:
+        _check(t, 120, 330, 30)
+
+
+def _c_historia_cruzeta(t, p=1.0):
+    """Passo: tira a cruzeta — ela sobe e vai para o canto."""
+    sobe, vai = _suave(p * 2), _suave(p * 2 - 1)
+    x, y = _entre(_CRUZETA_NO_LUGAR, _CRUZETA_GUARDADA, vai)
+    _historia(t, (x, y - 50 * sobe * (1 - vai)), velho=_REPARO_NO_LUGAR)
+
+
+def _c_historia_solta(t, p=1.0):
+    """Passo: pano + chave para a esquerda, e o reparo velho sobe e sai."""
+    chave = -32 * (0.5 - 0.5 * np.cos(4 * np.pi * p / 0.5)) if 0.02 < p < 0.5 else None
+    sobe, vai = _suave((p - 0.5) / 0.25), _suave((p - 0.75) / 0.25)
+    x, y = _REPARO_NO_LUGAR
+    y -= 112 * sobe
+    x, y = _entre((x, y), _REPARO_VELHO_GUARDADO, vai)
+    _historia(t, _CRUZETA_GUARDADA, velho=(x, y), chave=chave)
+
+
+def _c_historia_novo(t, p=1.0):
+    """Passo: o reparo novo desce e entra (rosqueia com a mão)."""
+    novo = _entre(_REPARO_NOVO_COMECO, _REPARO_NO_LUGAR, _suave(p)) if p > 0.02 else None
+    if p >= 1.0:
+        novo = _REPARO_NO_LUGAR
+    _historia(t, _CRUZETA_GUARDADA, velho=_REPARO_VELHO_GUARDADO, novo=novo)
+
+
+def _c_historia_monta(t, p=1.0):
+    """Passo: a cruzeta volta para o lugar. Pronto."""
+    cruzeta = _entre(_CRUZETA_GUARDADA, _CRUZETA_NO_LUGAR, _suave(p))
+    _historia(t, cruzeta, velho=_REPARO_VELHO_GUARDADO, novo=_REPARO_NO_LUGAR, check=p >= 1.0)
+
+
 CARTOES = {"tomada": _tomada, "disjuntor": _c_disjuntor, "gelado": _c_gelado, "chuveiro": _c_chuveiro,
            "resistencia": _c_resistencia, "pecas": _c_pecas, "encaixe": _c_encaixe, "agua": _c_agua,
            "perigo": _c_perigo, "ok": _c_ok, "torneira": _c_torneira, "registro": _c_registro,
-           "abre_registro": _c_abre_registro, "reparo": _c_reparo, "chave": _c_chave}
+           "abre_registro": _c_abre_registro, "reparo": _c_reparo, "chave": _c_chave,
+           "historia_cruzeta": _c_historia_cruzeta, "historia_solta": _c_historia_solta,
+           "historia_novo": _c_historia_novo, "historia_monta": _c_historia_monta}
 
 # Cartões que mexem (17/11): "laco" repete sem parar; "uma_vez" faz o movimento e para no fim.
 ANIMADOS = {"torneira": "laco", "gelado": "laco", "agua": "laco", "perigo": "laco", "chave": "laco",
             "disjuntor": "uma_vez", "registro": "uma_vez", "abre_registro": "uma_vez", "encaixe": "uma_vez",
-            "ok": "uma_vez"}
+            "ok": "uma_vez", "historia_cruzeta": "uma_vez", "historia_solta": "uma_vez",
+            "historia_novo": "uma_vez", "historia_monta": "uma_vez"}
 QUADROS_ANIMACAO = 12
+# a história anda mais devagar (quadros de desenho; a 12 por segundo → 1,5 s, 4 s, 2 s, 1,5 s)
+QUADROS_POR_CARTAO = {"historia_cruzeta": 18, "historia_solta": 48, "historia_novo": 24, "historia_monta": 18}
 
 
 def desenhar_cartao(nome, lado=760, p=None):
@@ -546,8 +617,9 @@ def desenhar_cartao(nome, lado=760, p=None):
     return t.pronta()
 
 
-def quadros_cartao(nome, lado=760, n=QUADROS_ANIMACAO):
+def quadros_cartao(nome, lado=760, n=None):
     """([imagens], modo). Cartão parado → 1 imagem e modo "fixo"."""
+    n = n or QUADROS_POR_CARTAO.get(nome, QUADROS_ANIMACAO)
     modo = ANIMADOS.get(nome)
     if modo is None:
         return [desenhar_cartao(nome, lado)], "fixo"

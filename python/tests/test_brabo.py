@@ -281,6 +281,16 @@ class TestCenarioEnsino(unittest.TestCase):
         img, fixo = brabo.imagem_do_cartao(quadros[2], 7.0)            # imagem solta = parado
         self.assertEqual((int(img[0, 0, 0]), fixo), (2, True))
 
+    def test_historia_cada_parte_comeca_onde_a_outra_parou(self):
+        partes = ["historia_cruzeta", "historia_solta", "historia_novo", "historia_monta"]
+        for antes, depois in zip(partes, partes[1:]):
+            fim = avatar.desenhar_cartao(antes, lado=80, p=1.0)
+            comeco = avatar.desenhar_cartao(depois, lado=80, p=0.0)
+            self.assertTrue(np.array_equal(fim, comeco), f"{antes} → {depois} pula")
+            self.assertTrue(brabo.continua(antes, depois))
+        self.assertFalse(brabo.continua("torneira", "historia_cruzeta"))   # fora da história: slide normal
+        self.assertGreater(len(avatar.quadros_cartao("historia_solta", lado=40)[0]), 12)   # anda mais devagar
+
     def test_sombra_aparece_fora_do_desenho(self):
         img = np.zeros((60, 60, 4), np.uint8)
         img[10:30, 10:30] = (255, 0, 0, 255)
