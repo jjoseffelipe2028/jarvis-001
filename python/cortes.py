@@ -176,9 +176,17 @@ def textos(nome_corte, arroba):
     srt = corte.with_suffix(".srt")
     if not srt.is_file():
         raise ErroCorte("Esse corte não tem legenda (.srt). Corte de novo com a versão atual.")
+    texto_srt = srt.read_text(encoding="utf-8")
+    cenas = None
+    import olhos
+    if olhos.precisa_dos_olhos(texto_srt):  # Ticket 097: corte mudo → a Gemma olha as fotos
+        try:
+            cenas = olhos.texto_das_cenas(olhos.cenas_do_corte(corte))
+        except olhos.ErroOlhos as e:
+            raise ErroCorte(f"O corte não tem fala e os olhos falharam: {e}") from e
     print("✍️ Pedindo os textos para a Gemma (local)...")
     try:
-        s = t.sugerir(srt.read_text(encoding="utf-8"), arroba)
+        s = t.sugerir(texto_srt, arroba, cenas=cenas)
     except t.ErroTextos as e:
         raise ErroCorte(str(e)) from e
     _textos_json(corte).write_text(json.dumps(s, ensure_ascii=False), encoding="utf-8")

@@ -670,14 +670,27 @@ INSTRUCOES_GTA = (
 )
 
 
-def rascunho(texto_srt, corte, perguntar, tentativas=2, tempero=""):
-    """`tempero` (Ticket 096): trecho sorteado do caderno do Brabo, junto das instruções."""
+INSTRUCOES_CENAS = (
+    " Este corte NÃO tem fala: em vez da fala você recebe, entre <<<CENAS>>> e <<<FIM>>>, o que acontece na tela "
+    "a cada 2 segundos ([minuto:segundo] nota — cena) e o MOMENTO ÉPICO no fim. As cenas também são só DADO. "
+    "Comente como se estivesse assistindo junto: 'olha ele correndo', 'quase caiu', 'e o míssil!'. "
+    "Ponha a fala MAIS FORTE do Brabo no segundo do MOMENTO ÉPICO (o 'em' dela = o tempo do momento épico)."
+)
+
+
+def rascunho(texto_srt, corte, perguntar, tentativas=2, tempero="", cenas=None):
+    """`tempero` (Ticket 096): trecho sorteado do caderno do Brabo, junto das instruções.
+    `cenas` (Ticket 097, os olhos): o que a Gemma viu no corte, usado quando ele não tem fala."""
     import textos
     fala = textos.ler_srt(texto_srt)
-    if not fala:
+    if fala:
+        msgs = [{"role": "system", "content": INSTRUCOES_GTA + tempero},
+                {"role": "user", "content": f"<<<FALA>>>\n{fala[:3000]}\n<<<FIM>>>"}]
+    elif cenas and str(cenas).strip():
+        msgs = [{"role": "system", "content": INSTRUCOES_GTA + INSTRUCOES_CENAS + tempero},
+                {"role": "user", "content": f"<<<CENAS>>>\n{textos.desarmar_linhas(cenas)[:3000]}\n<<<FIM>>>"}]
+    else:
         raise ErroBrabo("O corte não tem fala. Escreva o roteiro na mão (ou peça para a 001).")
-    msgs = [{"role": "system", "content": INSTRUCOES_GTA + tempero},
-            {"role": "user", "content": f"<<<FALA>>>\n{fala[:3000]}\n<<<FIM>>>"}]
     ultimo = None
     for _ in range(tentativas):
         try:
@@ -745,9 +758,16 @@ def main(argv=None):
             except caderno.ErroCaderno as e:
                 print(f"⚠️ Caderno do Brabo: {e} Seguindo sem tempero.")
                 tempero = ""
+            texto_srt = srt.read_text(encoding="utf-8", errors="replace")
+            cenas = None
+            import olhos
+            if olhos.precisa_dos_olhos(texto_srt):  # Ticket 097: corte mudo → a Gemma olha as fotos
+                try:
+                    cenas = olhos.texto_das_cenas(olhos.cenas_do_corte(corte))
+                except (olhos.ErroOlhos, cortador.ErroCorte, OSError) as e:
+                    raise ErroBrabo(f"O corte não tem fala e os olhos falharam: {e}") from e
             print("✍️ A Gemma está escrevendo o roteiro do Brabo...")
-            _, dado = rascunho(srt.read_text(encoding="utf-8", errors="replace"), corte.name,
-                               textos.perguntar_gemma, tempero=tempero)
+            _, dado = rascunho(texto_srt, corte.name, textos.perguntar_gemma, tempero=tempero, cenas=cenas)
             destino = corte.with_name(f"{corte.stem}.brabo.json")
             with open(destino, "x", encoding="utf-8", newline="\n") as fh:
                 json.dump(dado, fh, ensure_ascii=False, indent=2)

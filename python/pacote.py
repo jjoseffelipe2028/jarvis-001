@@ -16,6 +16,7 @@ import re
 from dataclasses import dataclass, field
 
 import cortador
+import olhos
 from cacador import ANTES, INICIO_SEGURO, _desarmar, hms, janela_tiktok
 from cortador import ErroCorte
 from textos import ErroTextos
@@ -89,7 +90,13 @@ def montar(video, duracao, momentos, arroba, saida, robo, sugerir, gravar_gancho
 
         try:
             srt = destino.with_suffix(".srt").read_text(encoding="utf-8")
-            item.textos = sugerir(srt, arroba)
+            cenas = None
+            if olhos.precisa_dos_olhos(srt):  # Ticket 097: corte mudo → a Gemma olha as fotos
+                try:
+                    cenas = olhos.texto_das_cenas(olhos.cenas_do_corte(destino, avisar=avisar))
+                except (olhos.ErroOlhos, ErroCorte, OSError) as e:
+                    avisar(f"👀 Os olhos falharam ({e}); seguindo só com a legenda.")
+            item.textos = sugerir(srt, arroba, cenas=cenas) if cenas else sugerir(srt, arroba)
         except (ErroTextos, OSError) as e:
             item.aviso = f"sem textos: {e}"
             continue

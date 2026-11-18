@@ -91,8 +91,11 @@ def rascunho_gta(pasta, corte, perguntar=None):
     srt = caminho.with_suffix(".srt")
     if not srt.is_file() or srt.is_symlink():
         raise ErroBrabo("Esse corte não tem legenda (.srt).")
+    import olhos
+    cenas = olhos.ler_cenas(caminho)  # Ticket 097: só o que os olhos já viram (olhar demora uns minutos)
     _, dado = brabo.rascunho(srt.read_text(encoding="utf-8", errors="replace"), caminho.name,
-                             perguntar or textos.perguntar_gemma)
+                             perguntar or textos.perguntar_gemma,
+                             cenas=olhos.texto_das_cenas(cenas) if cenas else None)
     return dado
 
 
