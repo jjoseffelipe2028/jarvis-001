@@ -38,6 +38,7 @@ import numpy as np
 import avatar
 import boca_ia
 import cortador
+import molde
 import sons as sons_mod
 from cortador import ErroCorte, desarmar_ass
 
@@ -724,10 +725,18 @@ def main(argv=None):
             except ValueError as e:
                 raise ErroBrabo("O roteiro não é um JSON válido.") from e
             roteiro = validar_roteiro(dado)
+            # Ticket 095: anti-molde. Abertura repetida ou roteiro parecido demais → barra antes de gravar.
+            historico = Path(pasta) / molde.NOME_HISTORICO
+            texto = molde.texto_do_roteiro(roteiro)
+            try:
+                molde.conferir(texto, roteiro["modo"], molde.ler_historico(historico), arq.name)
+            except molde.ErroMolde as e:
+                raise ErroBrabo(f"Anti-molde: {e}") from e
             sufixo = "brabo" if roteiro["modo"] == "gta" else "mestre"
             base = arq.name[:-len(".json")].removesuffix(".brabo").removesuffix(".mestre")
             print(f"🎙️ Gravando a voz e animando o {'Brabo' if sufixo == 'brabo' else 'Mestre Parafuso'}...")
             saida = fazer(roteiro, pasta, f"{base}-{sufixo}.mp4")
+            molde.registrar(historico, texto, roteiro["modo"], arq.name)  # só com o vídeo pronto
             print(f"✅ {saida.name}")
             print(f"📝 {saida.with_suffix('.post.txt').name}  (título, descrição e checklist)")
             print("⚠️ Nada foi postado. Assista inteiro e marque 'conteúdo sintético: SIM' ao postar.")
