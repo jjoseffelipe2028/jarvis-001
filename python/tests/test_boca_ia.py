@@ -66,13 +66,26 @@ class TestBocaIA(unittest.TestCase):
 
     def test_erro_na_ia_volta_para_a_boca_normal(self):
         avisos = []
-        with mock.patch.object(boca_ia, "ligado", return_value=True), \
+        with mock.patch.dict(os.environ, {"JARVIS_BOCA_IA_MODO": "normal"}), \
+                mock.patch.object(boca_ia, "ligado", return_value=True), \
                 mock.patch("retratos.arquivos", return_value=["a", "b", "c"]), \
                 mock.patch.object(boca_ia, "gravar_entrada", side_effect=boca_ia.ErroBocaIA("x")), \
                 mock.patch.object(avatar, "quadros", return_value="boca-normal") as normal:
             r = boca_ia.quadros("brabo", np.zeros(100, np.float32), 22050, True, "ffmpeg", "tmp", avisar=avisos.append)
         self.assertEqual(r, "boca-normal")
         normal.assert_called_once()
+        self.assertTrue(any("falhou" in a for a in avisos))
+
+    def test_modo_rapido_e_o_padrao_e_erro_vira_boca_normal(self):
+        avisos = []
+        with mock.patch.dict(os.environ, {"JARVIS_BOCA_IA_MODO": "rapida"}), \
+                mock.patch.object(boca_ia, "ligado", return_value=True), \
+                mock.patch("retratos.arquivos", return_value=["a", "b", "c"]), \
+                mock.patch("retratos.retratos", side_effect=ValueError("imagem quebrada")), \
+                mock.patch.object(avatar, "quadros", return_value="boca-normal"):
+            r = boca_ia.quadros("brabo", np.zeros(100, np.float32), 22050, True, "ffmpeg", "tmp", avisar=avisos.append)
+        self.assertEqual(r, "boca-normal")
+        self.assertTrue(any("rápida" in a for a in avisos))
         self.assertTrue(any("falhou" in a for a in avisos))
 
     def test_wav(self):

@@ -35,3 +35,16 @@ com os truques da nota de edição sozinho, sem a 001 reinventar a cada vídeo.
 ### Evidências (Parte 2)
 - `test_retratos` (6) e `test_boca_ia` (6); suíte Python: 344 OK; Java Brabo: 13 OK.
 - Amostra: `Videos/cortes/amostra-boca-ia-brabo.mp4` (15 s, Brabo 3D com boca por IA). José: "Ficou melhor".
+
+## Parte 3 — boca por IA rápida (18/11)
+- **`musetalk_rapido.py`** (novo, roda no venv da MuseTalk): acha e recorta o rosto **uma vez só** (cache pela impressão
+  digital da imagem) e só desenha a boca nos quadros com voz. Solta a memória que a Whisper reservou (5 GB presos
+  faziam a placa emprestar RAM e ficar 10x mais lenta).
+- **`boca_rapida.py`** (novo): manda a imagem parada para a IA, devolve só a diferença (a boca) por cima da imagem 3D
+  e depois aplica balanço, tranco e moldura. Qualquer erro → boca antiga.
+- **Trava da placa:** uma MuseTalk por vez (duas juntas quase param; trava de processo morto é solta). Vale também
+  para o modo normal. `JARVIS_BOCA_IA_MODO=normal` volta ao modo antigo.
+
+### Evidências (Parte 3)
+- `test_boca_rapida` (8) + 1 novo em `test_boca_ia`; suíte Python: 433 OK.
+- Short de 15 s: **2m53s** (antes 8 min). Amostra: `Videos/cortes/amostra-boca-rapida-brabo.mp4`.

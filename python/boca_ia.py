@@ -7,6 +7,7 @@ instalada À PARTE em C:\\Users\\jjose\\ferramentas\\musetalk (venv próprio, Py
   2. a MuseTalk redesenha só a boca, som a som (boca.mp4);
   3. aqui os quadros voltam para o brabo.py com a transparência certa (moldura arredondada ou recorte).
 
+Padrão: modo rápido (boca_rapida.py, ~3x). JARVIS_BOCA_IA_MODO=normal volta ao modo abaixo. Uma IA por vez na placa (trava).
 Se a MuseTalk não estiver instalada, estiver desligada (JARVIS_BOCA_IA=0) ou der erro, o vídeo sai com a boca
 antiga (3 imagens pelo volume): nunca trava o Brabo por causa disso.
 Tudo local: nada é baixado nem enviado.
@@ -95,7 +96,8 @@ def sincronizar(entrada, wav, pasta_tmp, ffmpeg, pasta_mt=None, rodar=subprocess
         encoding="utf-8")
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     env["PATH"] = str(Path(ffmpeg).parent) + os.pathsep + env.get("PATH", "")
-    with open(pasta_tmp / "musetalk.log", "wb") as log:
+    import boca_rapida      # a trava: uma IA por vez na placa de vídeo (duas juntas = as duas quase param)
+    with boca_rapida.Trava(pasta_mt / ".jarvis-gpu.trava"), open(pasta_tmp / "musetalk.log", "wb") as log:
         try:
             rodar(comando_musetalk(pasta_mt, pasta_tmp, ffmpeg), cwd=pasta_mt, env=env, stdout=log, stderr=log,
                   timeout=TEMPO_LIMITE, check=False)
@@ -142,6 +144,9 @@ def quadros(personagem, voz, taxa, fundo, ffmpeg, pasta_tmp, fps=avatar.FPS, avi
     """Quadros RGBA (lado x lado) com a boca da IA; se não der, a boca antiga (avatar.LADO). Mesma interface
     de avatar.quadros. `lado` maior serve para o Mestre do ensino (640)."""
     import retratos
+    if os.environ.get("JARVIS_BOCA_IA_MODO", "rapida") == "rapida":   # Parte 3: rosto em cache, ~3x mais rápida
+        import boca_rapida
+        return boca_rapida.quadros(personagem, voz, taxa, fundo, ffmpeg, pasta_tmp, fps, avisar, lado)
     if not ligado() or retratos.arquivos(personagem) is None:
         return avatar.quadros(personagem, voz, taxa, fundo=fundo, fps=fps)
     try:
