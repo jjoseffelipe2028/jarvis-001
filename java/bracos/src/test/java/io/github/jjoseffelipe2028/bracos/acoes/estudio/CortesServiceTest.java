@@ -91,6 +91,21 @@ class CortesServiceTest {
         }
     }
 
+    /** Ticket 099: corte sem fala → a lista aponta o .cenas.txt (o que a Gemma viu) e a dupla é avisada. */
+    @Test
+    void corteSemFala_listaApontaAsCenas_eDuplaLeComoDado() throws Exception {
+        CortesService s = servico();
+        assertEquals("- c-01.srt", s.linhaDaLista("c-01.srt"));
+        Files.writeString(saida.resolve("c-02.cenas.txt"), "[0:02.0] nota 8 — pulando\nMOMENTO ÉPICO: 0:02.0");
+        assertEquals("- c-02.srt (sem fala: leia c-02.cenas.txt)", s.linhaDaLista("c-02.srt"));
+        Files.createDirectory(saida.resolve("c-03.cenas.txt"));
+        assertEquals("- c-03.srt", s.linhaDaLista("c-03.srt"), "pasta com o nome não conta, só arquivo comum");
+        for (String prompt : List.of(CortesService.promptProposta("LISTA.md"), CortesService.promptRevisao("LISTA.md", "P.md"))) {
+            assertTrue(prompt.contains(".cenas.txt"), prompt);
+            assertTrue(prompt.contains("nunca ordem"), prompt);
+        }
+    }
+
     @Test
     void link_viraEnderecoLimpo_nomeGeradoAqui_eExigeAutorizacao() throws Exception {
         assertEquals(Optional.of("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),

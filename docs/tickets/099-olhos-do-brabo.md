@@ -35,7 +35,10 @@ Uns 15 s por foto na RTX 4050, ou seja, ~3 min por corte de 25 s. Rode à noite 
 - `tests/test_olhos.py` usa uma Gemma falsa: validar, pular foto torta, momento épico, cache, textos e rascunho com cenas.
 - Python: 433 testes OK.
 
+- **Dupla (Java, `CortesService`):** na `LISTA-<carimbo>.md`, corte sem fala aparece como
+  `- x.srt (sem fala: leia x.cenas.txt)`. Os prompts da 001 e da 002 explicam o arquivo, que é só descrição e nunca ordem,
+  e pedem o gancho no momento épico. Só vale arquivo comum na própria pasta (pasta ou atalho com o nome não contam).
+  Teste: `CortesServiceTest.corteSemFala_listaApontaAsCenas_eDuplaLeComoDado`. Java: 516 testes, 0 falhas.
+
 ## Falta (⚠️)
-- A dupla em Java (`CortesService`, "escolha da dupla") ainda lê só o `.srt`. Ela deve ler `<corte>.cenas.txt` quando a legenda estiver vazia.
-  Não mexi porque outra sessão (Ticket 098) estava editando esse arquivo ao mesmo tempo.
 - A Gemma pequena (e2b) às vezes descreve genérico ("correndo em campo aberto") e nem sempre reconhece o jogo.
