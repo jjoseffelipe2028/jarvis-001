@@ -71,6 +71,7 @@ MESTRE_LADO, MESTRE_X, MESTRE_Y = 640, -40, 1300
 PASSO_LADO, PASSO_X, PASSO_Y = 180, 205, 320         # bolinha amarela do número do passo (centro)
 BARRA = (44, 60, 60, 1020)                             # y0, y1, x0, x1 da barra de progresso
 TRANSICAO, DESLIZE, SURGIR_PASSO = 0.4, 160, 0.25      # troca de cartão (s), slide (px), fade do passo (s)
+ANIM_FPS = 12                                          # velocidade dos cartões animados (quadros de desenho por s)
 _LINK = re.compile(r"https?://|www\.|\b[\w-]+\.(?:com|net|org|br|ly|io|me|gg|tv|xyz|top)\b", re.I)
 _PALAVRAO = re.compile(r"\b(?:porra|caralho|merda|puta|fdp|buceta|cacete|foda)\w*", re.I)
 
@@ -493,12 +494,32 @@ def ampliar(img, lado):
     return np.clip(retratos._amostrar(img.astype(np.float32), ys, xs) + 0.5, 0, 255).astype(np.uint8)
 
 
+def continua(antes, depois):
+    """Duas partes da mesma história ("historia_…"): uma começa onde a outra parou → corte seco, sem slide."""
+    return antes.startswith("historia_") and depois.startswith("historia_")
+
+
+def imagem_do_cartao(cartao, t_cartao, fps=ANIM_FPS):
+    """(imagem, parado?) do cartão no instante t_cartao (s desde que ele entrou na tela).
+    `cartao` é uma imagem (parado) ou ([imagens], modo) de avatar.quadros_cartao."""
+    if isinstance(cartao, np.ndarray):
+        return cartao, True
+    imagens, modo = cartao
+    if len(imagens) == 1:
+        return imagens[0], True
+    i = int(max(t_cartao, 0.0) * fps)
+    if modo == "laco":
+        return imagens[i % len(imagens)], False
+    i = min(i, len(imagens) - 1)                    # "uma_vez": faz o movimento e fica parado no fim
+    return imagens[i], i == len(imagens) - 1
+
+
 def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=None, fps=avatar.FPS,
                    ffmpeg=None, pasta_tmp=None):
     """Quadros 1080x1920 RGB do ensino: degradê + cartão do passo (com fade/slide) + passo + barra + Mestre."""
     cenas = cenas_da_tela(roteiro, tempos)
     if cartoes is None:
-        cartoes = {nome: avatar.desenhar_cartao(nome, CARTAO_LADO) for nome in {c for _, c, _ in cenas}}
+        cartoes = {nome: avatar.quadros_cartao(nome, CARTAO_LADO) for nome in {c for _, c, _ in cenas}}
     movimento = None
     if mestre is None:
         import retratos
@@ -516,13 +537,18 @@ def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=
     bolinha = bolinha_do_passo()
     parado = {}
 
-    def cenario(nome, dx=0):
-        if dx == 0 and nome in parado:
+    def cenario(nome, t_cartao, dx=0):
+        img, fixo = imagem_do_cartao(cartoes[nome], t_cartao)
+        if fixo and dx == 0 and nome in parado:
             return parado[nome]
-        q = colar(fundo.copy(), cartoes[nome], CARTAO_X + dx, CARTAO_Y)
-        if dx == 0:
+        q = colar(fundo.copy(), img, CARTAO_X + dx, CARTAO_Y)
+        if fixo and dx == 0:
             parado[nome] = q
         return q
+
+    entrou = []                                     # quando cada cartão ENTROU na tela (falas seguidas = 1 só)
+    for k, (ini, nome, _) in enumerate(cenas):
+        entrou.append(entrou[-1] if k and cenas[k - 1][1] == nome else ini)
 
     bocas = avatar.bocas_pela_voz(trilha, taxa, fps)
     olhos = avatar.piscadas(len(bocas), fps)
@@ -533,11 +559,12 @@ def quadros_ensino(roteiro, tempos, duracao, trilha, taxa, cartoes=None, mestre=
         ini, nome, passo = cenas[k]
         anterior = cenas[k - 1] if k else None
         p = (t - ini) / TRANSICAO
-        if anterior and anterior[1] != nome and p < 1:              # troca de cartão: fade + slide
+        if anterior and anterior[1] != nome and p < 1 and not continua(anterior[1], nome):  # troca: fade + slide
             p = suave(p)
-            q = misturar(cenario(anterior[1]), cenario(nome, int((1 - p) * DESLIZE)), p)
+            q = misturar(cenario(anterior[1], t - entrou[k - 1]),
+                         cenario(nome, t - entrou[k], int((1 - p) * DESLIZE)), p)
         else:
-            q = cenario(nome).copy()
+            q = cenario(nome, t - entrou[k]).copy()
         if passo:
             igual = anterior is not None and anterior[2] == passo
             opac = 1.0 if igual else suave((t - ini) / SURGIR_PASSO)
