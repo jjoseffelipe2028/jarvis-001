@@ -53,7 +53,7 @@ starlette==1.10.0
 tokenizers==0.23.3
 tqdm==4.70.1
 truststore==0.10.5
-typing-inspection==0.4.4
+typing-inspection==0.4.5
 typing_extensions==4.16.0
 uvicorn==0.54.0
 # Ticket 094: streamlink (cortes da live ao vivo) e o que ele puxa
