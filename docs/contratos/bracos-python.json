@@ -1,0 +1,87 @@
+{
+  "_leia": "Ticket 081: contrato entre a API Java (bracos) e o cliente Python (python/bracos.py). Conferido pelos DOIS lados: ContratoPythonTest (Java) e tests/test_contrato.py (Python). Mudou um lado? Mude aqui e nos dois testes passa. 'pedido' = campos que o Python manda (max = tamanho maximo). 'resposta' = EXEMPLO com os campos que o Python le (lista = lista de objetos). So valores ficticios.",
+  "rotas": [
+    {
+      "metodoPython": "_conferir_servidor",
+      "metodo": "GET",
+      "rota": "/acoes/prova",
+      "pedido": {},
+      "resposta": {"prova": "74442c56"}
+    },
+    {
+      "metodoPython": "hora",
+      "metodo": "GET",
+      "rota": "/acoes/hora",
+      "pedido": {},
+      "resposta": {"hora": "08:00", "data": "15/11/2026"}
+    },
+    {
+      "metodoPython": "registrar_daily",
+      "metodo": "POST",
+      "rota": "/acoes/daily",
+      "pedido": {"texto": {"obrigatorio": true, "max": 2000}},
+      "resposta": {"arquivo": "2026-11-15.md", "resultado": "ok"}
+    },
+    {
+      "metodoPython": "pendencias",
+      "metodo": "GET",
+      "rota": "/acoes/pendencias",
+      "pedido": {},
+      "resposta": {"pendencias": [{"dia": "2026-11-15", "texto": "estudar Cyber"}], "total": 1, "ignorados": 0}
+    },
+    {
+      "metodoPython": "git_status",
+      "metodo": "GET",
+      "rota": "/acoes/git-status",
+      "pedido": {},
+      "resposta": {"branch": "main", "limpo": false, "alterados": 2, "novos": 1}
+    },
+    {
+      "metodoPython": "portas",
+      "metodo": "GET",
+      "rota": "/acoes/sentinela/portas",
+      "pedido": {},
+      "resposta": {"abertasParaARede": 1, "alertas": 1, "jarvisSoNoPc": true,
+                   "portas": [{"porta": 445, "risco": "alto", "nota": "SMB"}]}
+    },
+    {
+      "metodoPython": "integridade",
+      "metodo": "GET",
+      "rota": "/acoes/sentinela/integridade",
+      "pedido": {},
+      "resposta": {"vigiados": 5, "alterados": 1, "desde": "15/11 08:00",
+                   "arquivos": [{"nome": "CLAUDE.md", "estado": "mudou"}]}
+    },
+    {
+      "metodoPython": "isca",
+      "metodo": "GET",
+      "rota": "/acoes/sentinela/isca",
+      "pedido": {},
+      "resposta": {"ligada": true, "toques": 1, "arquivo": "mexido"}
+    },
+    {
+      "metodoPython": "alarme",
+      "metodo": "GET",
+      "rota": "/acoes/sentinela/alarme",
+      "pedido": {},
+      "resposta": {"disparos": 1}
+    },
+    {
+      "metodoPython": "golpe",
+      "metodo": "POST",
+      "rota": "/acoes/sentinela/golpe",
+      "pedido": {"texto": {"obrigatorio": true, "max": 4000}},
+      "resposta": {"nivel": "alto", "conselho": "Nao clique.", "motivos": ["link encurtado"]}
+    },
+    {
+      "metodoPython": "proposta",
+      "metodo": "POST",
+      "rota": "/acoes/sentinela/proposta",
+      "pedido": {"texto": {"obrigatorio": true, "max": 4000},
+                 "remetente": {"obrigatorio": false, "max": 254},
+                 "marca": {"obrigatorio": false, "max": 60}},
+      "resposta": {"nivel": "alto", "conselho": "Confira o dominio.", "motivos": ["dominio gratuito"],
+                   "passos": ["Ligue para a marca."]}
+    }
+  ]
+}

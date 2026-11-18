@@ -79,6 +79,14 @@ class PedidoServiceTest {
     void pathTraversal_eRecusado() throws Exception {
         Path base = pasta.toRealPath();
         assertThrows(IllegalStateException.class, () -> PastaSegura.dentroDaPasta(base, "../fora.md"));
+    }
+
+    // Só no Windows a barra invertida separa pastas. No Linux (robô do CI) "..\..\x" é um nome de arquivo
+    // esquisito, mas DENTRO da pasta: não há fuga, e o teste não teria o que provar.
+    @Test
+    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    void pathTraversalComBarraInvertida_eRecusadoNoWindows() throws Exception {
+        Path base = pasta.toRealPath();
         assertThrows(IllegalStateException.class, () -> PastaSegura.dentroDaPasta(base, "..\\..\\Windows\\win.ini"));
     }
 

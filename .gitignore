@@ -41,3 +41,5 @@ python/vozes/
 
 # Ticket 041: aparelhos conhecidos da rede (dado so deste PC)
 .rede-conhecida.json
+# Ticket 083: programas que abrem com o Windows ja conhecidos (dado so deste PC)
+.inicio-conhecido.json
