@@ -643,12 +643,13 @@ INSTRUCOES_GTA = (
 )
 
 
-def rascunho(texto_srt, corte, perguntar, tentativas=2):
+def rascunho(texto_srt, corte, perguntar, tentativas=2, tempero=""):
+    """`tempero` (Ticket 096): trecho sorteado do caderno do Brabo, junto das instruções."""
     import textos
     fala = textos.ler_srt(texto_srt)
     if not fala:
         raise ErroBrabo("O corte não tem fala. Escreva o roteiro na mão (ou peça para a 001).")
-    msgs = [{"role": "system", "content": INSTRUCOES_GTA},
+    msgs = [{"role": "system", "content": INSTRUCOES_GTA + tempero},
             {"role": "user", "content": f"<<<FALA>>>\n{fala[:3000]}\n<<<FIM>>>"}]
     ultimo = None
     for _ in range(tentativas):
@@ -711,9 +712,15 @@ def main(argv=None):
             srt = corte.with_suffix(".srt")
             if not srt.is_file() or srt.is_symlink():
                 raise ErroBrabo("Esse corte não tem legenda (.srt).")
+            import caderno
+            try:  # Ticket 096: tempero sorteado do caderno. Caderno com problema → segue sem tempero
+                tempero = caderno.tempero(caderno.sortear(caderno.carregar()))
+            except caderno.ErroCaderno as e:
+                print(f"⚠️ Caderno do Brabo: {e} Seguindo sem tempero.")
+                tempero = ""
             print("✍️ A Gemma está escrevendo o roteiro do Brabo...")
             _, dado = rascunho(srt.read_text(encoding="utf-8", errors="replace"), corte.name,
-                               textos.perguntar_gemma)
+                               textos.perguntar_gemma, tempero=tempero)
             destino = corte.with_name(f"{corte.stem}.brabo.json")
             with open(destino, "x", encoding="utf-8", newline="\n") as fh:
                 json.dump(dado, fh, ensure_ascii=False, indent=2)

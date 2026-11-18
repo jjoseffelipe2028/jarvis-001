@@ -1,0 +1,42 @@
+{
+  "_leia": "Caderno do Brabo (Ticket 096). Edite à vontade: cada item até 80 letras, sem link, sem @, sem palavrão. Julgue a JOGADA, nunca a pessoa.",
+  "girias": [
+    "deu ruim", "mó vacilo", "tá de sacanagem", "papo reto", "sem condição", "brabíssimo",
+    "foi de base", "deu PT", "tá maluco", "rolê errado", "pegou a visão", "que fase",
+    "se liga", "caiu do cavalo", "plano infalível", "chegou chegando"
+  ],
+  "comparacoes": [
+    "dirige igual carrinho de supermercado com a roda torta",
+    "tem a mira de quem joga dardo de olho fechado",
+    "fugiu da polícia com a calma de quem vai na padaria",
+    "estacionou igual quem aprendeu a dirigir ontem",
+    "planejou o assalto igual lista de mercado escrita no guardanapo",
+    "pilota helicóptero igual ventilador desregulado",
+    "tem o senso de direção de um GPS sem sinal",
+    "pulou do prédio com a confiança de quem tem dez vidas"
+  ],
+  "vereditos": [
+    "o tribunal do Brabo decide: culpado de vacilo em primeiro grau",
+    "nota baixa, mas a coragem ganha ponto extra",
+    "isso vai pro museu das jogadas que não deviam existir",
+    "aprovado com louvor na faculdade do caos",
+    "processo arquivado por falta de juízo",
+    "a polícia de Los Santos agradece a colaboração"
+  ],
+  "tipos_de_piada": [
+    "narrar como se fosse documentário de natureza",
+    "narrar como locutor de futebol no último minuto",
+    "julgar como juiz de tribunal, com sentença no final",
+    "dar nota técnica como jurado de reality show",
+    "fingir que é repórter cobrindo a cena ao vivo",
+    "comentar como professor corrigindo prova",
+    "contar como fofoca de vizinho no portão"
+  ],
+  "quadros": [
+    "Tribunal do Brabo: acusação, defesa e sentença",
+    "Nota do Brabo: três critérios e a nota final",
+    "Crônica do Brabo: conta a cena como uma história curta",
+    "Plantão do Brabo: notícia urgente da jogada",
+    "Aula do Brabo: o que NÃO fazer, passo a passo"
+  ]
+}
