@@ -255,6 +255,32 @@ class TestCenarioEnsino(unittest.TestCase):
         with self.assertRaises(ValueError):
             avatar.desenhar_cartao("rede")
 
+    def test_cartao_animado_tem_varios_quadros_e_parado_um_so(self):
+        imgs, modo = avatar.quadros_cartao("torneira", lado=60, n=4)
+        self.assertEqual((len(imgs), modo), (4, "laco"))
+        self.assertFalse(np.array_equal(imgs[0], imgs[2]))            # as gotas andaram
+        imgs, modo = avatar.quadros_cartao("reparo", lado=60)
+        self.assertEqual((len(imgs), modo), (1, "fixo"))
+        for nome in avatar.ANIMADOS:
+            self.assertIn(nome, avatar.CARTOES)                        # todo animado está na allowlist
+
+    def test_registro_fecha_e_abre_e_termina_parado(self):
+        fechando, _ = avatar.quadros_cartao("registro", lado=60, n=3)
+        abrindo, _ = avatar.quadros_cartao("abre_registro", lado=60, n=3)
+        self.assertFalse(np.array_equal(fechando[0], fechando[-1]))   # a manopla girou fechando
+        self.assertFalse(np.array_equal(abrindo[0], abrindo[-1]))     # e girou abrindo
+
+    def test_imagem_do_cartao_laco_repete_e_uma_vez_para_no_fim(self):
+        quadros = [np.full((2, 2, 4), i, np.uint8) for i in range(4)]
+        img, fixo = brabo.imagem_do_cartao((quadros, "laco"), 5 / brabo.ANIM_FPS)
+        self.assertEqual((int(img[0, 0, 0]), fixo), (1, False))        # 5 % 4 = 1
+        img, fixo = brabo.imagem_do_cartao((quadros, "uma_vez"), 99.0)
+        self.assertEqual((int(img[0, 0, 0]), fixo), (3, True))
+        img, fixo = brabo.imagem_do_cartao((quadros, "uma_vez"), 0.0)
+        self.assertEqual((int(img[0, 0, 0]), fixo), (0, False))
+        img, fixo = brabo.imagem_do_cartao(quadros[2], 7.0)            # imagem solta = parado
+        self.assertEqual((int(img[0, 0, 0]), fixo), (2, True))
+
     def test_sombra_aparece_fora_do_desenho(self):
         img = np.zeros((60, 60, 4), np.uint8)
         img[10:30, 10:30] = (255, 0, 0, 255)

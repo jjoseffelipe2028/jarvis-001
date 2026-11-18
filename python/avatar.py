@@ -316,39 +316,52 @@ def _cabeca_chuveiro(t, cx, cy, aberto=False, escala=1.0):
             t.elipse(cx + i * 26 * e, cy + 26 * e, 5 * e, 3 * e, "#7d8794")
 
 
-def _gotas(t, cx, cy, cor, linhas=4):
-    for j in range(linhas):
+def _suave(p):
+    p = min(max(float(p), 0.0), 1.0)
+    return p * p * (3 - 2 * p)
+
+
+def _gotas(t, cx, cy, cor, linhas=4, p=0.0):
+    """Gotas caindo. p de 0 a 1 = um ciclo (desce 2 fileiras e repete igualzinho)."""
+    passo = 46
+    fundo = cy + (linhas - 0.5) * passo
+    for j in range(-2, linhas):
+        y = cy + (j + 2 * p) * passo
+        if y > fundo:
+            continue
         for i in range(-3, 4):
-            t.elipse(cx + i * 30 + (j % 2) * 15, cy + j * 46, 6, 13, cor)
+            t.elipse(cx + i * 30 + (j % 2) * 15, y, 6, 13, cor)
 
 
-def _disjuntor(t, cx, y0, ligado, destaque=False, e=1.0):
+def _disjuntor(t, cx, y0, ligado, destaque=False, e=1.0, alavanca=None):
+    """alavanca: 0 = em cima (ligado) … 1 = embaixo (desligado). Sem valor: segue `ligado`."""
+    if alavanca is None:
+        alavanca = 0.0 if ligado else 1.0
     if destaque:
         t.retangulo(cx - 40 * e, y0 - 14 * e, cx + 40 * e, y0 + 194 * e, AMARELO, raio=14 * e)
     t.retangulo(cx - 30 * e, y0, cx + 30 * e, y0 + 180 * e, METAL, raio=8 * e)
     t.retangulo(cx - 26 * e, y0 + 4 * e, cx + 26 * e, y0 + 176 * e, "#ffffff", raio=7 * e)
     t.retangulo(cx - 14 * e, y0 + 30 * e, cx + 14 * e, y0 + 150 * e, "#dfe4ea", raio=5 * e)
-    if ligado:                                                          # alavanca em cima = ligado
-        t.retangulo(cx - 12 * e, y0 + 32 * e, cx + 12 * e, y0 + 88 * e, "#2b2b33", raio=5 * e)
-    else:                                                               # alavanca embaixo = desligado
-        t.retangulo(cx - 12 * e, y0 + 92 * e, cx + 12 * e, y0 + 148 * e, PERIGO, raio=5 * e)
-    t.elipse(cx, y0 + 163 * e, 6 * e, 6 * e, CERTO if ligado else PERIGO)
+    desligado = alavanca >= 0.5
+    y = y0 + (32 + 60 * alavanca) * e
+    t.retangulo(cx - 12 * e, y, cx + 12 * e, y + 56 * e, PERIGO if desligado else "#2b2b33", raio=5 * e)
+    t.elipse(cx, y0 + 163 * e, 6 * e, 6 * e, PERIGO if desligado else CERTO)
 
 
-def _c_disjuntor(t):
+def _c_disjuntor(t, p=1.0):
     t.retangulo(60, 70, 340, 330, "#c9d1da", raio=18)
     t.retangulo(74, 84, 326, 316, "#e6ebf0", raio=12)
     _disjuntor(t, 130, 110, True)
-    _disjuntor(t, 200, 110, False, destaque=True)
+    _disjuntor(t, 200, 110, False, destaque=True, alavanca=_suave(p))   # desce: desligando
     _disjuntor(t, 270, 110, True)
 
 
-def _c_gelado(t):
+def _c_gelado(t, p=0.0):
+    _gotas(t, 175, 225, "#9fd3ff", 3, p)
     _cabeca_chuveiro(t, 175, 150)
-    _gotas(t, 175, 225, "#9fd3ff", 3)
     cx, cy = 328, 72                                                   # floco de neve
     for ang in (0, 60, 120):
-        a = np.deg2rad(ang)
+        a = np.deg2rad(ang + 30 * p)                                   # gira devagar
         t.linha(cx - 46 * np.cos(a), cy - 46 * np.sin(a), cx + 46 * np.cos(a), cy + 46 * np.sin(a), 10, AZUL)
     t.elipse(cx, cy, 12, 12, "#ffffff")
 
@@ -378,22 +391,24 @@ def _c_pecas(t):
     _check(t, 200, 330, 38)
 
 
-def _c_encaixe(t):
-    _mola(t, 120, 95, 280, 95, cor="#e08c45", voltas=10, r=20)        # a nova, novinha
+def _c_encaixe(t, p=0.0):
+    q = _suave(p)
+    if q < 0.8:
+        _seta_baixo(t, 200, 128, 215)
     _cabeca_chuveiro(t, 200, 290, aberto=True)
-    _seta_baixo(t, 200, 128, 215)
+    _mola(t, 120, 95 + 70 * q, 280, 95 + 70 * q, cor="#e08c45", voltas=10, r=20)   # a nova desce
 
 
-def _c_agua(t):
+def _c_agua(t, p=0.0):
+    _gotas(t, 165, 215, "#3b8fd9", 4, p)
     _cabeca_chuveiro(t, 165, 140)
-    _gotas(t, 165, 215, "#3b8fd9", 4)
     t.elipse(325, 120, 34, 34, AZUL)                                   # registro aberto
     t.retangulo(318, 60, 332, 120, AZUL_ESCURO, raio=6)
     t.elipse(325, 120, 12, 12, "#ffffff")
     _disjuntor(t, 325, 220, False, e=0.6)                              # e o disjuntor AINDA desligado
 
 
-def _c_perigo(t):
+def _c_perigo(t, p=0.0):
     t.poligono([(200, 40), (330, 260), (70, 260)], "#1a1a1a")
     t.poligono([(200, 64), (308, 248), (92, 248)], AMARELO)
     t.retangulo(190, 120, 210, 200, "#1a1a1a", raio=8)
@@ -401,22 +416,122 @@ def _c_perigo(t):
     t.linha(40, 330, 360, 330, 16, "#1a1a1a")                          # fio derretido
     t.elipse(200, 330, 40, 18, "#6b3a1a")
     t.elipse(194, 326, 24, 10, "#e0712b")
-    for i, (x, y) in enumerate([(176, 300), (214, 290), (196, 276)]):  # fumaça
-        t.elipse(x + 100, y - 8 * i, 16, 12, "#a7adb5")
+    t.elipse(290, 330, 18, 10, "#6b3a1a")                              # 2º ponto derretido, de onde sai a fumaça
+    for i in range(3):                                                 # fumaça subindo
+        k = (p + i / 3) % 1.0
+        r = 10 + 10 * k
+        t.elipse(290 + 18 * np.sin(6.28 * k + i), 312 - 80 * k, r, r * 0.75, "#a7adb5")
 
 
-def _c_ok(t):
-    _check(t, 200, 190, 120)
+def _c_ok(t, p=1.0):
+    k = 0.35 + 0.65 * _suave(p) + 0.12 * np.sin(np.pi * min(p, 1.0))  # cresce com um pulinho
+    _check(t, 200, 190, 120 * k)
     t.elipse(200, 340, 70, 18, AMARELO)
+
+
+# --- torneira pingando (16/11) ---
+
+def _torneira(t, cx, cy, e=1.0, pingando=True, p=0.0):
+    """Torneira de parede vista de lado: cano na parede, corpo, bica para baixo e a cruzeta em cima."""
+    t.retangulo(cx - 150 * e, cy - 22 * e, cx - 120 * e, cy + 22 * e, "#c9d1da", raio=4 * e)   # canopla da parede
+    t.retangulo(cx - 125 * e, cy - 14 * e, cx - 30 * e, cy + 14 * e, METAL, raio=6 * e)        # cano
+    t.retangulo(cx - 40 * e, cy - 34 * e, cx + 40 * e, cy + 26 * e, "#b8c0c9", raio=12 * e)    # corpo
+    t.retangulo(cx - 14 * e, cy - 90 * e, cx + 14 * e, cy - 30 * e, METAL, raio=5 * e)         # haste
+    t.retangulo(cx - 52 * e, cy - 104 * e, cx + 52 * e, cy - 84 * e, "#7d8794", raio=8 * e)    # cruzeta
+    t.retangulo(cx + 20 * e, cy - 12 * e, cx + 110 * e, cy + 12 * e, METAL, raio=6 * e)        # bica
+    t.retangulo(cx + 88 * e, cy - 6 * e, cx + 110 * e, cy + 50 * e, METAL, raio=6 * e)
+    if pingando:                                                       # 3 gotas caindo em fila
+        for i in range(3):
+            k = (p + i / 3) % 1.0
+            t.elipse(cx + 99 * e, cy + (62 + 125 * k) * e, (5 + 4 * k) * e, (8 + 6 * k) * e, "#3b8fd9")
+
+
+def _reparo(t, cx, cy, cor=METAL, e=1.0):
+    """O reparo (mecanismo da torneira): rosca + corpo + borrachinha (vedante) embaixo."""
+    t.retangulo(cx - 12 * e, cy - 70 * e, cx + 12 * e, cy - 30 * e, "#7d8794", raio=4 * e)     # pino da cruzeta
+    t.retangulo(cx - 30 * e, cy - 34 * e, cx + 30 * e, cy + 10 * e, cor, raio=6 * e)           # sextavado
+    for i in range(4):                                                                          # rosca
+        t.retangulo(cx - 26 * e, cy + (14 + i * 12) * e, cx + 26 * e, cy + (20 + i * 12) * e, cor, raio=3 * e)
+    t.retangulo(cx - 20 * e, cy + 10 * e, cx + 20 * e, cy + 62 * e, cor, raio=4 * e)
+    t.elipse(cx, cy + 70 * e, 24 * e, 9 * e, "#2b2b33")                                        # vedante
+
+
+def _c_torneira(t, p=0.0):
+    t.retangulo(30, 60, 70, 360, "#e6ebf0", raio=6)                    # parede
+    t.elipse(290, 345, 60, 12, "#9fd3ff")                              # poça
+    t.elipse(290, 343, 40, 7, "#cfe9ff")
+    _torneira(t, 190, 150, p=p)
+
+
+def _registro(t, angulo, seta_horaria):
+    """Registro de esfera: manopla NA LINHA do cano = aberto; ATRAVESSADA (90°) = fechado."""
+    t.retangulo(40, 190, 360, 222, METAL, raio=10)                     # cano
+    t.elipse(200, 206, 62, 62, "#7d8794")
+    t.elipse(200, 206, 48, 48, "#b8c0c9")
+    a = np.deg2rad(angulo)
+    dx, dy = 52 * np.cos(a), 52 * np.sin(a)
+    t.linha(200 - dx, 206 - dy, 200 + dx, 206 + dy, 30, PERIGO)        # manopla
+    t.elipse(200, 206, 14, 14, "#2b2b33")
+    if seta_horaria:                                                   # seta: sentido do giro
+        t.linha(230, 110, 290, 110, 12, AZUL)
+        t.poligono([(286, 92), (316, 110), (286, 128)], AZUL)
+    else:
+        t.linha(110, 110, 170, 110, 12, AZUL)
+        t.poligono([(114, 92), (84, 110), (114, 128)], AZUL)
+
+
+def _c_registro(t, p=1.0):
+    q = _suave(p)
+    _registro(t, 90 * q, seta_horaria=True)                            # gira até ATRAVESSAR = fechado
+    if q > 0.95:
+        _check(t, 200, 320, 36)
+
+
+def _c_abre_registro(t, p=1.0):
+    q = _suave(p)
+    _registro(t, 90 * (1 - q), seta_horaria=False)                     # volta para a linha do cano = aberto
+    if q > 0.95:
+        for i, x in enumerate((372, 384)):                             # água voltando a passar
+            t.elipse(x - 20, 206 + 14 * (i - 0.5), 8, 5, "#3b8fd9")
+
+
+def _c_reparo(t):
+    _reparo(t, 120, 170)                                               # velho...
+    t.retangulo(180, 175, 220, 187, AZUL_ESCURO, raio=4)               # ... "=" ...
+    t.retangulo(180, 199, 220, 211, AZUL_ESCURO, raio=4)
+    _reparo(t, 280, 170, cor="#d9dee4")                                # ... novo, igualzinho
+    _etiqueta(t, 78, 262)
+    _etiqueta(t, 238, 262)
+    _check(t, 200, 345, 30)
+
+
+def _c_chave(t, p=0.0):
+    _torneira(t, 170, 230, e=0.8, pingando=False)
+    t.retangulo(132, 142, 208, 204, "#f2e6c9", raio=10)                # pano protegendo o metal
+    giro = -32 * (0.5 - 0.5 * np.cos(2 * np.pi * p))                   # vai e volta para a esquerda
+    a = np.deg2rad(-27 + giro)
+    t.linha(170, 172, 170 + 180 * np.cos(a), 172 + 180 * np.sin(a), 22, "#5f6873")   # cabo da chave
+    t.elipse(170, 172, 28, 28, "#5f6873")                              # boca da chave
+    t.elipse(170, 172, 13, 13, "#f2e6c9")
+    t.linha(90, 80, 150, 60, 12, AZUL)                                 # seta: gira para a esquerda (solta)
+    t.poligono([(86, 62), (100, 96), (70, 92)], AZUL)
 
 
 CARTOES = {"tomada": _tomada, "disjuntor": _c_disjuntor, "gelado": _c_gelado, "chuveiro": _c_chuveiro,
            "resistencia": _c_resistencia, "pecas": _c_pecas, "encaixe": _c_encaixe, "agua": _c_agua,
-           "perigo": _c_perigo, "ok": _c_ok}
+           "perigo": _c_perigo, "ok": _c_ok, "torneira": _c_torneira, "registro": _c_registro,
+           "abre_registro": _c_abre_registro, "reparo": _c_reparo, "chave": _c_chave}
+
+# Cartões que mexem (17/11): "laco" repete sem parar; "uma_vez" faz o movimento e para no fim.
+ANIMADOS = {"torneira": "laco", "gelado": "laco", "agua": "laco", "perigo": "laco", "chave": "laco",
+            "disjuntor": "uma_vez", "registro": "uma_vez", "abre_registro": "uma_vez", "encaixe": "uma_vez",
+            "ok": "uma_vez"}
+QUADROS_ANIMACAO = 12
 
 
-def desenhar_cartao(nome, lado=760):
-    """Cartão branco com borda amarela, sombra e o desenho do passo. Só nomes de CARTOES (allowlist)."""
+def desenhar_cartao(nome, lado=760, p=None):
+    """Cartão branco com borda amarela, sombra e o desenho do passo. Só nomes de CARTOES (allowlist).
+    `p` (0 a 1) = momento da animação; sem `p`, o cartão sai no jeito parado de sempre."""
     if nome not in CARTOES:
         raise ValueError("cartão desconhecido")
     t = Tela(lado=lado)
@@ -424,8 +539,23 @@ def desenhar_cartao(nome, lado=760):
     t.retangulo(14, 14, 386, 386, AMARELO, raio=34)                   # borda amarela
     t.retangulo(22, 22, 378, 378, "#ffffff", raio=28)
     t.zoom(0.84)
-    CARTOES[nome](t)
+    if p is None or nome not in ANIMADOS:
+        CARTOES[nome](t)
+    else:
+        CARTOES[nome](t, p)
     return t.pronta()
+
+
+def quadros_cartao(nome, lado=760, n=QUADROS_ANIMACAO):
+    """([imagens], modo). Cartão parado → 1 imagem e modo "fixo"."""
+    modo = ANIMADOS.get(nome)
+    if modo is None:
+        return [desenhar_cartao(nome, lado)], "fixo"
+    if modo == "laco":
+        ps = [i / n for i in range(n)]                  # o último não repete o primeiro (laço sem tranco)
+    else:
+        ps = [i / (n - 1) for i in range(n)]            # termina exatamente no fim do movimento
+    return [desenhar_cartao(nome, lado, p) for p in ps], modo
 
 
 def _borrar(a, raio):
