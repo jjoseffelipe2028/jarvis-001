@@ -1,6 +1,7 @@
 package io.github.jjoseffelipe2028.bracos.acoes.sentinela;
 
 import io.github.jjoseffelipe2028.bracos.auditoria.Cliente;
+import io.github.jjoseffelipe2028.bracos.seguranca.AlarmeDeTentativas;
 import io.github.jjoseffelipe2028.bracos.seguranca.Isca;
 import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /acoes/sentinela/golpe → essa mensagem tem cara de golpe? (Ticket 023). 🎣
  * POST /acoes/sentinela/proposta → essa proposta de marca é de verdade? (Ticket 030). 🤝
  * GET /acoes/sentinela/isca → alguém tocou na isca? (Ticket 034). 🪤
+ * GET /acoes/sentinela/alarme → houve 5 pedidos negados em 1 minuto? (Ticket 080). 🚨
  * Nada é alterado no PC. O token (pedido assinado) já foi conferido antes de chegar aqui.
  */
 @RestController
@@ -32,14 +34,27 @@ public class SentinelaController {
     private final DetectorDeGolpe detector;
     private final VerificadorDePropostas verificador;
     private final ObjectProvider<Isca> isca;
+    private final ObjectProvider<AlarmeDeTentativas> alarme;
 
     public SentinelaController(PortasService portas, IntegridadeService integridade, DetectorDeGolpe detector,
-            VerificadorDePropostas verificador, ObjectProvider<Isca> isca) {
+            VerificadorDePropostas verificador, ObjectProvider<Isca> isca,
+            ObjectProvider<AlarmeDeTentativas> alarme) {
         this.portas = portas;
         this.integridade = integridade;
         this.detector = detector;
         this.verificador = verificador;
         this.isca = isca;
+        this.alarme = alarme;
+    }
+
+    /** Ticket 080: quantas vezes o alarme de tentativas disparou. Só números e a hora do último disparo. */
+    @GetMapping("/alarme")
+    public AlarmeDeTentativas.Estado alarme(
+            @RequestHeader(value = Cliente.CABECALHO, required = false) String clienteBruto) {
+        AlarmeDeTentativas a = alarme.getIfAvailable();
+        AlarmeDeTentativas.Estado e = a == null ? new AlarmeDeTentativas.Estado(0, "", 0) : a.estado();
+        log.info("cliente={} acao=alarme resultado=ok disparos={}", Cliente.de(clienteBruto), e.disparos());
+        return e;
     }
 
     /** Ticket 034: quantas vezes a isca foi tocada e se o arquivo-isca mudou. Sem isca → "desligada". */

@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import sys
 import tempfile
@@ -67,6 +68,8 @@ class TestEstudioMcp(unittest.TestCase):
         self.assertEqual(chamado["nome"], "chuveiro-mestre.mp4")
         self.assertIn("Nada foi postado", r["lembrete"])
 
+    # O pacote "mcp" só existe no PC do José (requirements.txt); o robô do CI não instala.
+    @unittest.skipUnless(importlib.util.find_spec("mcp"), "pacote mcp não instalado (CI)")
     def test_servidor_nao_tem_ferramenta_de_postar(self):
         import asyncio
         srv = e.criar_servidor()

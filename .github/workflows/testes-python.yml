@@ -14,10 +14,16 @@ permissions:
 
 jobs:
   testar:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Linux E Windows (o Jarvis roda no Windows)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     defaults:
       run:
+        shell: bash
         working-directory: python
     steps:
       - name: Baixar o código

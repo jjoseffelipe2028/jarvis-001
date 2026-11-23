@@ -34,6 +34,7 @@ cd java/bracos
 | `GET` 🔒 | `/acoes/git-status` | Tem algo sem commit no repositório? (só números) | `{"branch":"main","limpo":false,"alterados":2,"novos":1,"aFrente":0,"atras":0}` |
 | `POST` 🔒 | `/acoes/video/avaliar` | Laboratório Brasil: o vídeo pode ir para a dublagem? (V1) | `{"libera":true,"motivos":["proporção 3s→1min acima de 50%"]}` |
 | `POST` 🔒 | `/acoes/video/relatorio` | Analisa a retenção e grava uma nota em `decisions/videos` (V2) | `{"arquivo":"2026-11-09-164210-retencao.md","previsao":"forte",...}` |
+| `GET` 🔒 | `/acoes/sentinela/alarme` | Alarme de tentativas: 5 pedidos negados em 1 minuto (Ticket 080) | `{"disparos":1,"ultimoDisparo":"15/11 14:00","negadosNoMinuto":0}` |
 | `GET` | `/acoes/prova?desafio=<hex>` | Aperto de mão: devolve HMAC(token, desafio) para o Python saber que é a API verdadeira | `{"prova":"74442c56..."}` |
 
 Testar na mão (com a API rodando):

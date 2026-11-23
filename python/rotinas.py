@@ -67,7 +67,8 @@ def _bom_dia(bracos, extras=None):
     hora = _tentar(bracos.hora)
     pend = _tentar(bracos.pendencias)
     git = _tentar(bracos.git_status)
-    sentinela = _sentinela(_tentar(bracos.portas), _tentar(bracos.integridade), _tentar(bracos.isca))
+    sentinela = _sentinela(_tentar(bracos.portas), _tentar(bracos.integridade), _tentar(bracos.isca),
+                           _tentar(bracos.alarme))
 
     partes = []
     if hora:
@@ -134,9 +135,37 @@ def _cobranca_cyber(pend):
         return "E a Cyber? Confira se fez a sua hora hoje."
 
 
-def _sentinela(portas, integ, isca=None):
+def _disparos(alarme):
+    """Ticket 080: quantos disparos o alarme de tentativas teve (0 se veio torto ou fora do ar)."""
+    try:
+        return max(0, int(alarme.get("disparos", 0)))
+    except (TypeError, ValueError, OverflowError, AttributeError):
+        return 0
+
+
+AVISO_ALARME = "Atenção, José: o alarme de tentativas disparou. Foram 5 pedidos negados em um minuto na API."
+
+
+def aviso_do_alarme(bracos, visto):
+    """Ticket 080: confere o alarme e devolve (frase para falar ou None, disparos já vistos).
+    Só fala quando o número de disparos SOBE: o mesmo disparo não é repetido a cada pergunta.
+    Frase FIXA: nada que veio da API é lido em voz alta. Braço fora do ar → fica quieto.
+    Impostor no lugar da API (alarme do bracos.py) → avisa também, mas nunca derruba o chat."""
+    try:
+        disparos = _disparos(_tentar(bracos.alarme))
+    except ErroBraco as e:  # só sobe do _tentar quando é alarme de segurança
+        return str(e), visto
+    except Exception:  # noqa: BLE001 — o aviso nunca pode derrubar a conversa
+        return None, visto
+    if disparos > visto:
+        return AVISO_ALARME, disparos
+    return None, max(visto, disparos)
+
+
+def _sentinela(portas, integ, isca=None, alarme=None):
     """Ticket 024: a Sentinela numa frase só (ou None se os braços falharam). Só lê; quem age é o José.
-    Ticket 034: a isca (honeytoken) tocada é o alerta MAIS grave e vem na frente."""
+    Ticket 034: a isca (honeytoken) tocada é o alerta MAIS grave e vem na frente.
+    Ticket 080: o alarme de tentativas vem logo depois da isca."""
     alertas, tranquilo = [], []
     if isca is not None:
         try:
@@ -147,6 +176,10 @@ def _sentinela(portas, integ, isca=None):
                 alertas.append("o arquivo-isca foi mexido")
         except (TypeError, ValueError, OverflowError, AttributeError):
             pass
+    if alarme is not None:
+        n = _disparos(alarme)
+        if n > 0:
+            alertas.append(f"o alarme de tentativas disparou {n} vez{'es' if n != 1 else ''}: muitos pedidos negados")
     if portas is not None:
         try:
             n = int(portas.get("alertas", 0))

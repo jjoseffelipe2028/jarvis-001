@@ -2,7 +2,8 @@
 Jarvis 001 — Super defensor 🛡️ (Ticket 044: a ronda completa num comando só)
 
 Junta todos os vigias do Jarvis numa ronda e dá uma nota geral:
-  Sentinela (portas, travas e isca) · processos (minerador escondido) · rede (aparelho novo)
+  Sentinela (portas, travas, isca e alarme) · processos (minerador escondido) · rede (aparelho novo)
+  · inicialização do Windows (Ticket 083)
   · backup 3-2-1 · placar do último duelo.
 
   python defensor.py
@@ -85,7 +86,9 @@ def _sentinela():
     import rotinas
     from bracos import Bracos
     b = Bracos()
-    frase = rotinas._sentinela(rotinas._tentar(b.portas), rotinas._tentar(b.integridade), rotinas._tentar(b.isca))
+    # Ticket 080: o alarme de tentativas também entra na Sentinela
+    frase = rotinas._sentinela(rotinas._tentar(b.portas), rotinas._tentar(b.integridade), rotinas._tentar(b.isca),
+                               rotinas._tentar(b.alarme))
     if frase is None:
         raise OSError("API desligada")
     return (ALERTA if frase.startswith("Sentinela em alerta") else OK), frase
@@ -106,6 +109,18 @@ def _rede():
     novos, _ = vigia_rede.separar(aparelhos, conhecidos)
     nivel = ATENCAO if (novos and conhecidos) or not conhecidos else OK
     return nivel, vigia_rede.frase(novos, len(aparelhos), not conhecidos)
+
+
+def _inicializacao():
+    """Ticket 083: o que liga com o Windows mudou? Só números (o detalhe é no vigia_inicio.py)."""
+    import vigia_inicio
+    r = vigia_inicio.resumo()
+    if not r["temLista"]:
+        return ATENCAO, f"{r['total']} item(ns) ligam com o Windows, sem lista de conhecidos: rode vigia_inicio.py --lembrar"
+    if r["novos"] or r["mudaram"]:
+        return ATENCAO, (f"{r['novos']} novo(s) e {r['mudaram']} que mudaram de programa na inicialização: "
+                         "rode vigia_inicio.py e confira")
+    return OK, f"{r['total']} item(ns) na inicialização, todos conhecidos"
 
 
 def _backup():
@@ -129,7 +144,7 @@ def _duelo():
 
 
 VIGIAS = [("Sentinela", _sentinela), ("Processos", _processos), ("Rede", _rede),
-          ("Backup", _backup), ("Duelo", _duelo)]
+          ("Inicialização", _inicializacao), ("Backup", _backup), ("Duelo", _duelo)]
 
 
 def main(vigias=None, pasta_da_nota="ler-do-env", agora=None):
